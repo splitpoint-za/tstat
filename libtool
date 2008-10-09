@@ -4,7 +4,7 @@
 # Generated automatically by  (GNU tstat 2.0.9)
 # NOTE: Changes made to this file will be lost: look at ltmain.sh.
 #
-# Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+# Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001
 # Free Software Foundation, Inc.
 #
 # This file is part of GNU Libtool:
@@ -44,7 +44,7 @@ available_tags=" CXX F77"
 
 # ### BEGIN LIBTOOL CONFIG
 
-# Libtool was configured on host supertramp:
+# Libtool was configured on host serverlipar.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -93,8 +93,11 @@ CC="gcc"
 # Is the compiler the GNU C compiler?
 with_gcc=yes
 
+gcc_dir=`gcc -print-file-name=. | /bin/sed 's,/\.$,,'`
+gcc_ver=`gcc -dumpversion`
+
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="grep -E"
 
 # The linker used to build libraries.
 LD="/usr/bin/ld"
@@ -147,7 +150,7 @@ pic_flag=" -fPIC -DPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=98304
+max_cmd_len=32768
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -200,7 +203,7 @@ soname_spec="\${libname}\${release}\${shared_ext}\$major"
 
 # Commands used to build and install an old-style archive.
 RANLIB="ranlib"
-old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$oldlib"
+old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs\$old_deplibs~\$RANLIB \$oldlib"
 old_postinstall_cmds="chmod 644 \$oldlib~\$RANLIB \$oldlib"
 old_postuninstall_cmds=""
 
@@ -229,11 +232,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects=""
+predep_objects=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects=""
+postdep_objects=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -243,13 +246,9 @@ predeps=""
 # shared library.
 postdeps=""
 
-# The directories searched by this compiler when creating a shared
-# library
-compiler_lib_search_dirs=""
-
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path=""
+compiler_lib_search_path=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -326,13 +325,13 @@ hardcode_automatic=no
 variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"
 
 # Whether libtool must link a program against all its dependency libraries.
-link_all_deplibs=no
+link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i486-linux-gnu/4.3.2 /usr/lib /lib"
+sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../ /lib/i386-redhat-linux/4.1.2/ /lib/ /usr/lib/i386-redhat-linux/4.1.2/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /lib/i486-linux-gnu /usr/lib/i486-linux-gnu /usr/lib/R/lib /usr/local/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -347,7 +346,7 @@ export_symbols_cmds="\$NM \$libobjs \$convenience | \$global_symbol_pipe | \$SED
 extract_expsyms_cmds=""
 
 # Symbols that should not be listed in the preloaded symbols.
-exclude_expsyms="_GLOBAL_OFFSET_TABLE_|_GLOBAL__F[ID]_.*"
+exclude_expsyms="_GLOBAL_OFFSET_TABLE_"
 
 # Symbols that must always be exported.
 include_expsyms=""
@@ -7320,7 +7319,7 @@ disable_libs=static
 # End:
 # ### BEGIN LIBTOOL TAG CONFIG: CXX
 
-# Libtool was configured on host supertramp:
+# Libtool was configured on host serverlipar.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -7369,8 +7368,11 @@ CC="g++"
 # Is the compiler the GNU C compiler?
 with_gcc=yes
 
+gcc_dir=`gcc -print-file-name=. | /bin/sed 's,/\.$,,'`
+gcc_ver=`gcc -dumpversion`
+
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="grep -E"
 
 # The linker used to build libraries.
 LD="/usr/bin/ld"
@@ -7423,7 +7425,7 @@ pic_flag=" -fPIC -DPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=98304
+max_cmd_len=32768
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -7476,7 +7478,7 @@ soname_spec="\${libname}\${release}\${shared_ext}\$major"
 
 # Commands used to build and install an old-style archive.
 RANLIB="ranlib"
-old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$oldlib"
+old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs\$old_deplibs~\$RANLIB \$oldlib"
 old_postinstall_cmds="chmod 644 \$oldlib~\$RANLIB \$oldlib"
 old_postuninstall_cmds=""
 
@@ -7502,11 +7504,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects="/usr/lib/gcc/i486-linux-gnu/4.3.2/../../../../lib/crti.o /usr/lib/gcc/i486-linux-gnu/4.3.2/crtbeginS.o"
+predep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.2/../../../crti.o /usr/lib/gcc/i386-redhat-linux/4.1.2/crtbeginS.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects="/usr/lib/gcc/i486-linux-gnu/4.3.2/crtendS.o /usr/lib/gcc/i486-linux-gnu/4.3.2/../../../../lib/crtn.o"
+postdep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.2/crtendS.o /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../crtn.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7516,13 +7518,9 @@ predeps=""
 # shared library.
 postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
-# The directories searched by this compiler when creating a shared
-# library
-compiler_lib_search_dirs="/usr/lib/gcc/i486-linux-gnu/4.3.2 /usr/lib/gcc/i486-linux-gnu/4.3.2 /usr/lib/gcc/i486-linux-gnu/4.3.2/../../../../lib /lib/../lib /usr/lib/../lib /usr/lib/gcc/i486-linux-gnu/4.3.2/../../.."
-
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path="-L/usr/lib/gcc/i486-linux-gnu/4.3.2 -L/usr/lib/gcc/i486-linux-gnu/4.3.2 -L/usr/lib/gcc/i486-linux-gnu/4.3.2/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/i486-linux-gnu/4.3.2/../../.."
+compiler_lib_search_path=`echo "-L/usr/lib/gcc/i386-redhat-linux/4.1.2 -L/usr/lib/gcc/i386-redhat-linux/4.1.2 -L/usr/lib/gcc/i386-redhat-linux/4.1.2/../../.." | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7599,13 +7597,13 @@ hardcode_automatic=no
 variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"
 
 # Whether libtool must link a program against all its dependency libraries.
-link_all_deplibs=no
+link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i486-linux-gnu/4.3.2 /usr/lib /lib"
+sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../ /lib/i386-redhat-linux/4.1.2/ /lib/ /usr/lib/i386-redhat-linux/4.1.2/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /lib/i486-linux-gnu /usr/lib/i486-linux-gnu /usr/lib/R/lib /usr/local/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7620,7 +7618,7 @@ export_symbols_cmds="\$NM \$libobjs \$convenience | \$global_symbol_pipe | \$SED
 extract_expsyms_cmds=""
 
 # Symbols that should not be listed in the preloaded symbols.
-exclude_expsyms="_GLOBAL_OFFSET_TABLE_|_GLOBAL__F[ID]_.*"
+exclude_expsyms=""
 
 # Symbols that must always be exported.
 include_expsyms=""
@@ -7629,7 +7627,7 @@ include_expsyms=""
 
 # ### BEGIN LIBTOOL TAG CONFIG: F77
 
-# Libtool was configured on host supertramp:
+# Libtool was configured on host serverlipar.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -7673,13 +7671,16 @@ LTCC="gcc"
 LTCFLAGS="-g -O2"
 
 # A language-specific compiler.
-CC="gfortran"
+CC="g77"
 
 # Is the compiler the GNU C compiler?
 with_gcc=yes
 
+gcc_dir=`gcc -print-file-name=. | /bin/sed 's,/\.$,,'`
+gcc_ver=`gcc -dumpversion`
+
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="grep -E"
 
 # The linker used to build libraries.
 LD="/usr/bin/ld"
@@ -7732,7 +7733,7 @@ pic_flag=" -fPIC"
 pic_mode=default
 
 # What is the maximum length of a command?
-max_cmd_len=98304
+max_cmd_len=32768
 
 # Does compiler simultaneously support -c and -o options?
 compiler_c_o="yes"
@@ -7785,7 +7786,7 @@ soname_spec="\${libname}\${release}\${shared_ext}\$major"
 
 # Commands used to build and install an old-style archive.
 RANLIB="ranlib"
-old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$oldlib"
+old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs\$old_deplibs~\$RANLIB \$oldlib"
 old_postinstall_cmds="chmod 644 \$oldlib~\$RANLIB \$oldlib"
 old_postuninstall_cmds=""
 
@@ -7814,11 +7815,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects=""
+predep_objects=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects=""
+postdep_objects=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7828,13 +7829,9 @@ predeps=""
 # shared library.
 postdeps=""
 
-# The directories searched by this compiler when creating a shared
-# library
-compiler_lib_search_dirs=""
-
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path=""
+compiler_lib_search_path=`echo "" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7911,13 +7908,13 @@ hardcode_automatic=no
 variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"
 
 # Whether libtool must link a program against all its dependency libraries.
-link_all_deplibs=no
+link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec="/usr/lib/gcc/i486-linux-gnu/4.3.2 /usr/lib /lib"
+sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../../i386-redhat-linux/lib/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../ /lib/i386-redhat-linux/3.4.6/ /lib/ /usr/lib/i386-redhat-linux/3.4.6/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib /lib/i486-linux-gnu /usr/lib/i486-linux-gnu /usr/lib/R/lib /usr/local/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7932,7 +7929,7 @@ export_symbols_cmds="\$NM \$libobjs \$convenience | \$global_symbol_pipe | \$SED
 extract_expsyms_cmds=""
 
 # Symbols that should not be listed in the preloaded symbols.
-exclude_expsyms="_GLOBAL_OFFSET_TABLE_|_GLOBAL__F[ID]_.*"
+exclude_expsyms="_GLOBAL_OFFSET_TABLE_"
 
 # Symbols that must always be exported.
 include_expsyms=""

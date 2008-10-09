@@ -322,6 +322,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->state = UNKNON_TYPE;
   ptp->p2p_type = 0;
   ptp->p2p_state = UNKNON_TYPE2;
+  ptp->ignore_dpi = FALSE;
 
   return (&ttp[num_tcp_pairs]);
 }
@@ -660,6 +661,12 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
     {
+       ptp_save->ignore_dpi = TRUE;
+    }
+
+#ifndef LOG_HALFDUPLEX
+  if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
+    {
       //fprintf (stdout, "  Closing a half duplex flow\n");
       tot_conn_TCP--;
       make_conn_stats (ptp_save,
@@ -698,6 +705,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       return (ptp_save);
     }
+#endif
 
   if ((ACK_SET (ptcp)) &&
       (otherdir->fin_count >= 1) && (th_ack >= (otherdir->fin_seqno + 1)))

@@ -8,7 +8,8 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  *
- * Author:	Marco Mellia, Andrea Carpani, Luca Muscariello, Dario Rossi
+ * Author:	Marco Mellia, Andrea Carpani, Luca Muscariello, Dario Rossi,
+ *              Maurizio Munafo'
  * 		Telecomunication Networks Group
  * 		Politecnico di Torino
  * 		Torino, Italy
@@ -230,7 +231,7 @@ typedef struct skype_stat
 #ifdef P2P_DETAILS
 typedef struct p2p_stat
 {
-  int pkt_type_num[7];  /* [EDK,KAD,KADU,GNU,BT,DC,KAZAA] */
+  int pkt_type_num[11];  /*  [EDK,KAD,KADU,GNU,BT,DC,KAZAA,JOOST,PPLIVE,SOPCAST,TVANTS] */
   int total_pkt;
 } p2p_stat;
 #endif
@@ -513,6 +514,7 @@ struct stcp_pair
   u_int32_t p2p_c2c_count;
   enum state_type p2p_state;
   unsigned char rtp_pt;
+  Bool ignore_dpi;
 };
 typedef struct stcp_pair tcp_pair;
 

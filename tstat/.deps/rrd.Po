@@ -1,1 +1,1 @@
-# dummy
+rrd.o rrd.o: ../tstat/rrd.c

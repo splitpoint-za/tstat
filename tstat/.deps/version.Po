@@ -1,1 +1,1 @@
-# dummy
+version.o version.o: ../tstat/version.c

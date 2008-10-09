@@ -6,5 +6,5 @@ includedir=${prefix}/include
 Name: libtstat
 Description: Tstat Shared Library
 Version: 1.0.0
-Libs: -L${libdir} -lm -lpthread -lpcap -lrrd
+Libs: -L${libdir} -lm -lpthread -lpcap 
 Cflags: -I${includedir}

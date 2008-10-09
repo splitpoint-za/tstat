@@ -322,6 +322,18 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     case IPP2P_KAZAA:
 	      (udir->p2p).pkt_type_num[6]++;
 	      break;
+	     case IPP2P_JOOST:
+	      (udir->p2p).pkt_type_num[7]++;
+	      break;
+	     case IPP2P_PPLIVE:
+	      (udir->p2p).pkt_type_num[8]++;
+	      break;
+	     case IPP2P_SOPCAST:
+	      (udir->p2p).pkt_type_num[9]++;
+	      break;
+	     case IPP2P_TVANTS:
+	      (udir->p2p).pkt_type_num[10]++;
+	      break;
 	   }
 #endif
 	}
@@ -334,7 +346,8 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       ptcp = (tcphdr *) hdr;
 
       ptp = ((tcb *) pdir)->ptp;
-      if (ptp != NULL && ptp->p2p_state != IGNORE_FURTHER_PACKETS2)
+      if (ptp != NULL && ptp->p2p_state != IGNORE_FURTHER_PACKETS2 && 
+             ptp->ignore_dpi!=TRUE )
 	{
 	  return_code =
 	    p2p_tcp_match (pip, pproto, tproto, pdir, dir, hdr, plast);
@@ -604,7 +617,7 @@ make_p2p_conn_stats (void * flow, int tproto)
 	   logline, thisflow->internal_src, thisUdir->type);
 
 #ifdef P2P_DETAILS
-  sprintf (logline, "%s %d %d %d %d %d %d",
+  sprintf (logline, "%s %d %d %d %d %d %d %d %d %d %d",
   //  9
   //  10 Emule-EDK
   //  11 Emule-KAD
@@ -613,6 +626,10 @@ make_p2p_conn_stats (void * flow, int tproto)
   //  14 Bittorrent
   //  15 DirectConnect
   //  16 Kazaa
+  //  17 Joost
+  //  18 PPLive
+  //  19 SopCast
+  //  20 TVAnts
            logline, thisUdir->p2p.total_pkt,
 	   thisUdir->p2p.pkt_type_num[0],
 	   thisUdir->p2p.pkt_type_num[1],
@@ -620,7 +637,11 @@ make_p2p_conn_stats (void * flow, int tproto)
 	   thisUdir->p2p.pkt_type_num[3],
 	   thisUdir->p2p.pkt_type_num[4],
 	   thisUdir->p2p.pkt_type_num[5],
-	   thisUdir->p2p.pkt_type_num[6]);
+	   thisUdir->p2p.pkt_type_num[6],
+	   thisUdir->p2p.pkt_type_num[7],
+	   thisUdir->p2p.pkt_type_num[8],
+	   thisUdir->p2p.pkt_type_num[9],
+	   thisUdir->p2p.pkt_type_num[10]);
 #endif
 
   thisUdir = thisS2C;
@@ -666,6 +687,10 @@ make_p2p_conn_stats (void * flow, int tproto)
   //  14 Bittorrent
   //  15 DirectConnect
   //  16 Kazaa
+  //  17 Joost
+  //  18 PPLive
+  //  19 SopCast
+  //  20 TVAnts
            logline, thisUdir->p2p.total_pkt,
 	   thisUdir->p2p.pkt_type_num[0],
 	   thisUdir->p2p.pkt_type_num[1],
@@ -673,7 +698,11 @@ make_p2p_conn_stats (void * flow, int tproto)
 	   thisUdir->p2p.pkt_type_num[3],
 	   thisUdir->p2p.pkt_type_num[4],
 	   thisUdir->p2p.pkt_type_num[5],
-	   thisUdir->p2p.pkt_type_num[6]);
+	   thisUdir->p2p.pkt_type_num[6],
+	   thisUdir->p2p.pkt_type_num[7],
+	   thisUdir->p2p.pkt_type_num[8],
+	   thisUdir->p2p.pkt_type_num[9],
+	   thisUdir->p2p.pkt_type_num[10]);
 #endif
 
   fprintf (fp_udp_logc, "%s\n", logline);
