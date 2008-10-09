@@ -724,7 +724,7 @@ int UDP_p2p_to_L7type (ucb *thisflow)
       return L7_FLOW_SKYPE_E2E;
 
     case SKYPE_OUT:
-      return L7_FLOW_SKYPE_OUT;
+      return L7_FLOW_SKYPE_E2O;
 
     case SKYPE_SIG:
       return L7_FLOW_SKYPE_SIG;

@@ -1361,6 +1361,6 @@ struct udpmatch udp_list[] = {
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
-//  {IPP2P_JOOST, SHORT_HAND_IPP2P, 22, &udp_search_joost},
+  {IPP2P_JOOST, SHORT_HAND_IPP2P, 22, &udp_search_joost},
   {0, 0, 0, NULL}
 };

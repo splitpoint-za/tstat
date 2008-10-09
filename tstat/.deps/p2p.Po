@@ -1,11 +1,11 @@
 p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
   /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
   /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h \
-  /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stddef.h \
+  /usr/lib/gcc/i386-redhat-linux/4.1.1/include/stddef.h \
   /usr/include/bits/types.h /usr/include/bits/typesizes.h \
   /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
   /usr/include/bits/wchar.h /usr/include/gconv.h \
-  /usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h \
+  /usr/lib/gcc/i386-redhat-linux/4.1.1/include/stdarg.h \
   /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
   /usr/include/bits/stdio.h /usr/include/assert.h ../tstat/tstat.h \
   ../config.h /usr/include/pthread.h /usr/include/sched.h \
@@ -22,8 +22,8 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
   /usr/include/sys/time.h /usr/include/sys/socket.h \
   /usr/include/sys/uio.h /usr/include/bits/uio.h \
   /usr/include/bits/socket.h \
-  /usr/lib/gcc/i386-redhat-linux/4.1.2/include/limits.h \
-  /usr/lib/gcc/i386-redhat-linux/4.1.2/include/syslimits.h \
+  /usr/lib/gcc/i386-redhat-linux/4.1.1/include/limits.h \
+  /usr/lib/gcc/i386-redhat-linux/4.1.1/include/syslimits.h \
   /usr/include/limits.h /usr/include/bits/posix1_lim.h \
   /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
   /usr/include/bits/posix2_lim.h /usr/include/bits/sockaddr.h \
@@ -48,9 +48,10 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
   /usr/include/bits/mathinline.h ../tstat/ipv6.h \
   /usr/include/netinet/icmp6.h /usr/include/inttypes.h ../tstat/param.h \
   ../tstat/skype.h ../tstat/msn.h ../tstat/ymsg.h ../tstat/jabber.h \
-  ../tstat/struct.h ../tstat/naivebayes.h ../tstat/histo.h ../tstat/rtp.h \
-  /usr/include/sys/param.h /usr/include/linux/param.h \
-  /usr/include/asm/param.h ../tstat/freelists.h ../tstat/rrdtool.h \
+  ../tstat/l7types.h ../tstat/struct.h ../tstat/naivebayes.h \
+  ../tstat/histo.h ../tstat/rtp.h /usr/include/sys/param.h \
+  /usr/include/linux/param.h /usr/include/asm/param.h \
+  ../tstat/freelists.h ../tstat/rrdtool.h /usr/include/rrd.h \
   ../tstat/plugin.h ../tstat/protocol.h ../tstat/dump.h \
   ../tstat/../include/libtstat.h ../tstat/ipp2p_tstat.h ../tstat/tcpL7.h
 
@@ -66,7 +67,7 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
 
 /usr/include/gnu/stubs-32.h:
 
-/usr/lib/gcc/i386-redhat-linux/4.1.2/include/stddef.h:
+/usr/lib/gcc/i386-redhat-linux/4.1.1/include/stddef.h:
 
 /usr/include/bits/types.h:
 
@@ -82,7 +83,7 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
 
 /usr/include/gconv.h:
 
-/usr/lib/gcc/i386-redhat-linux/4.1.2/include/stdarg.h:
+/usr/lib/gcc/i386-redhat-linux/4.1.1/include/stdarg.h:
 
 /usr/include/bits/stdio_lim.h:
 
@@ -152,9 +153,9 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
 
 /usr/include/bits/socket.h:
 
-/usr/lib/gcc/i386-redhat-linux/4.1.2/include/limits.h:
+/usr/lib/gcc/i386-redhat-linux/4.1.1/include/limits.h:
 
-/usr/lib/gcc/i386-redhat-linux/4.1.2/include/syslimits.h:
+/usr/lib/gcc/i386-redhat-linux/4.1.1/include/syslimits.h:
 
 /usr/include/limits.h:
 
@@ -264,6 +265,8 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
 
 ../tstat/jabber.h:
 
+../tstat/l7types.h:
+
 ../tstat/struct.h:
 
 ../tstat/naivebayes.h:
@@ -281,6 +284,8 @@ p2p.o p2p.o: ../tstat/p2p.c /usr/include/stdio.h /usr/include/features.h \
 ../tstat/freelists.h:
 
 ../tstat/rrdtool.h:
+
+/usr/include/rrd.h:
 
 ../tstat/plugin.h:
 

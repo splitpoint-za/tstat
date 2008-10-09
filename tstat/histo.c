@@ -31,6 +31,7 @@ extern Bool global_histo;
 
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
+extern struct L7_bitrates L7_udp_bitrate;
 
 
 /* Pointer to the last valid histo */
@@ -1038,13 +1039,13 @@ create_all_histo (void)
 		  65536, 1);
 
   tcp_bitrate_in = create_histo ("tcp_bitrate_in",
-				  "TCP application bitrate - incoming segments", 0,
+				  "TCP application bitrate [kbit/s] - incoming segments", 0,
 				  L7_FLOW_TOT, 1);
   tcp_bitrate_out = create_histo ("tcp_bitrate_out",
-				   "TCP application bitrate - outgoing segments", 0,
+				   "TCP application bitrate [kbit/s] - outgoing segments", 0,
 				   L7_FLOW_TOT, 1);
   tcp_bitrate_loc = create_histo ("tcp_bitrate_loc",
-				   "TCP application bitrate - local segments", 0,
+				   "TCP application bitrate [kbit/s] - local segments", 0,
 				   L7_FLOW_TOT, 1);
 
 
@@ -1822,15 +1823,15 @@ create_all_histo (void)
 
   rtcp_mm_bt_in =
     create_histo ("rtcp_mm_bt_in",
-		  "RTCP associated MM flow avg bitrate during interval [Kbit/s] - incoming flows",
+		  "RTCP associated MM flow avg bitrate during interval [kbit/s] - incoming flows",
 		  0, 5000, 1);
   rtcp_mm_bt_loc =
     create_histo ("rtcp_mm_bt_loc",
-		  "RTCP associated MM flow avg bitrate during interval [Kbit/s] - local flows",
+		  "RTCP associated MM flow avg bitrate during interval [kbit/s] - local flows",
 		  0, 5000, 1);
   rtcp_mm_bt_out =
     create_histo ("rtcp_mm_bt_out",
-		  "RTCP associated MM flow average bitrate during interval [Kbit/s] - outgoing flows",
+		  "RTCP associated MM flow average bitrate during interval [kbit/s] - outgoing flows",
 		  0, 5000, 1);
 
   rtcp_bt_in =
@@ -1881,6 +1882,15 @@ create_all_histo (void)
 		  "Number of tracked UDP flow per applications - local flows",
                    0, L7_FLOW_TOT, 1);
 
+  udp_bitrate_in = create_histo ("udp_bitrate_in",
+				  "UDP application bitrate [kbit/s] - incoming segments", 0,
+				  L7_FLOW_TOT, 1);
+  udp_bitrate_out = create_histo ("udp_bitrate_out",
+				   "UDP application bitrate [kbit/s] - outgoing segments", 0,
+				   L7_FLOW_TOT, 1);
+  udp_bitrate_loc = create_histo ("udp_bitrate_loc",
+				   "UDP application bitrate [kbit/s] - local segments", 0,
+				   L7_FLOW_TOT, 1);
 
   /* Microsoft messenger  classification */
 
@@ -1946,6 +1956,10 @@ update_fake_histos ()
   fake_histo_bitrate_update (tcp_bitrate_in, elapsed_time, L7_bitrate.in, L7_FLOW_TOT);
   fake_histo_bitrate_update (tcp_bitrate_out, elapsed_time, L7_bitrate.out, L7_FLOW_TOT);
   fake_histo_bitrate_update (tcp_bitrate_loc, elapsed_time, L7_bitrate.loc, L7_FLOW_TOT);
+
+  fake_histo_bitrate_update (udp_bitrate_in, elapsed_time, L7_udp_bitrate.in, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_out, elapsed_time, L7_udp_bitrate.out, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_loc, elapsed_time, L7_udp_bitrate.loc, L7_FLOW_TOT);
 
 #ifdef MSN_CLASSIFIER
   msn_get_average ();

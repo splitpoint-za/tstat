@@ -65,8 +65,7 @@
 #define L7_FLOW_SOPCAST         31
 #define L7_FLOW_TVANTS          32
 
-#define L7_FLOW_SKYPE_OUT       33
-#define L7_FLOW_SKYPE_SIG       34
+#define L7_FLOW_SKYPE_SIG       33
 
-#define L7_FLOW_TOT             35
+#define L7_FLOW_TOT             34
 

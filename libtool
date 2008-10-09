@@ -44,7 +44,7 @@ available_tags=" CXX F77"
 
 # ### BEGIN LIBTOOL CONFIG
 
-# Libtool was configured on host serverlipar.polito.it:
+# Libtool was configured on host servermisure.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -328,10 +328,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../ /lib/i386-redhat-linux/4.1.2/ /lib/ /usr/lib/i386-redhat-linux/4.1.2/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
+sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../ /lib/i386-redhat-linux/4.1.1/ /lib/ /usr/lib/i386-redhat-linux/4.1.1/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/local/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/openmpi /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7319,7 +7319,7 @@ disable_libs=static
 # End:
 # ### BEGIN LIBTOOL TAG CONFIG: CXX
 
-# Libtool was configured on host serverlipar.polito.it:
+# Libtool was configured on host servermisure.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -7504,11 +7504,11 @@ striplib="strip --strip-unneeded"
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
-predep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.2/../../../crti.o /usr/lib/gcc/i386-redhat-linux/4.1.2/crtbeginS.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
+predep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.1/../../../crti.o /usr/lib/gcc/i386-redhat-linux/4.1.1/crtbeginS.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place after the objects being linked to create a
 # shared library.
-postdep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.2/crtendS.o /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../crtn.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
+postdep_objects=`echo "/usr/lib/gcc/i386-redhat-linux/4.1.1/crtendS.o /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../crtn.o" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Dependencies to place before the objects being linked to create a
 # shared library.
@@ -7520,7 +7520,7 @@ postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
 
 # The library search path used internally by the compiler when linking
 # a shared library.
-compiler_lib_search_path=`echo "-L/usr/lib/gcc/i386-redhat-linux/4.1.2 -L/usr/lib/gcc/i386-redhat-linux/4.1.2 -L/usr/lib/gcc/i386-redhat-linux/4.1.2/../../.." | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
+compiler_lib_search_path=`echo "-L/usr/lib/gcc/i386-redhat-linux/4.1.1 -L/usr/lib/gcc/i386-redhat-linux/4.1.1 -L/usr/lib/gcc/i386-redhat-linux/4.1.1/../../.." | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method="pass_all"
@@ -7600,10 +7600,10 @@ variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COM
 link_all_deplibs=unknown
 
 # Compile-time system search path for libraries
-sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../i386-redhat-linux/4.1.2/ /usr/lib/gcc/i386-redhat-linux/4.1.2/../../../ /lib/i386-redhat-linux/4.1.2/ /lib/ /usr/lib/i386-redhat-linux/4.1.2/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
+sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../../i386-redhat-linux/lib/i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../i386-redhat-linux/4.1.1/ /usr/lib/gcc/i386-redhat-linux/4.1.1/../../../ /lib/i386-redhat-linux/4.1.1/ /lib/ /usr/lib/i386-redhat-linux/4.1.1/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/local/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/openmpi /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""
@@ -7627,7 +7627,7 @@ include_expsyms=""
 
 # ### BEGIN LIBTOOL TAG CONFIG: F77
 
-# Libtool was configured on host serverlipar.polito.it:
+# Libtool was configured on host servermisure.polito.it:
 
 # Shell to use when invoking shell scripts.
 SHELL="/bin/sh"
@@ -7914,7 +7914,7 @@ link_all_deplibs=unknown
 sys_lib_search_path_spec=`echo " /usr/lib/gcc/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../../i386-redhat-linux/lib/i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../../i386-redhat-linux/lib/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../i386-redhat-linux/3.4.6/ /usr/lib/gcc/i386-redhat-linux/3.4.6/../../../ /lib/i386-redhat-linux/3.4.6/ /lib/ /usr/lib/i386-redhat-linux/3.4.6/ /usr/lib/" | $SED -e "s@${gcc_dir}@\${gcc_dir}@g;s@${gcc_ver}@\${gcc_ver}@g"`
 
 # Run-time system search path for libraries
-sys_lib_dlsearch_path_spec="/lib /usr/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
+sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/local/lib hwcap 0 nosegneg hwcap 0 nosegneg /usr/lib/openmpi /usr/lib/mysql /usr/lib/opencryptoki /usr/lib/opencryptoki/stdll /usr/lib/qt-3.3/lib /usr/lib/qt4/lib "
 
 # Fix the shell variable $srcfile for the compiler.
 fix_srcfile_path=""

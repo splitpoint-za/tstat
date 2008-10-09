@@ -38,7 +38,7 @@
 #define HAVE_PCAP_H 1
 
 /* Define to 1 if you have the <rrd.h> header file. */
-/* #undef HAVE_RRD_H */
+#define HAVE_RRD_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1

@@ -86,14 +86,14 @@ DIST_SOURCES = $(tstat_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run aclocal-1.9
+ACLOCAL = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run aclocal-1.9
 AMDEP_FALSE = #
 AMDEP_TRUE = 
-AMTAR = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run tar
+AMTAR = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run tar
 AR = ar
-AUTOCONF = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run autoconf
-AUTOHEADER = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run autoheader
-AUTOMAKE = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run automake-1.9
+AUTOCONF = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run autoconf
+AUTOHEADER = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run autoheader
+AUTOMAKE = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run automake-1.9
 AWK = gawk
 
 ################################################################## 
@@ -135,14 +135,14 @@ INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = ${SHELL} $(install_sh) -c -s
 LDFLAGS = 
 LIBOBJS = 
-LIBS = -lpcap -lpthread -lm 
+LIBS = -lrrd -lpcap -lpthread -lm 
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIBTSTAT_FALSE = 
 LIBTSTAT_TRUE = #
 LIBTSTAT_VERSION = 1.0.0
 LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/munafo/software/tstat/trunk/config/missing --run makeinfo
+MAKEINFO = ${SHELL} /home/tesi/finamore/HOME_LOC/tstat-svn/config/missing --run makeinfo
 OBJEXT = o
 PACKAGE = tstat
 PACKAGE_BUGREPORT = <mellia@mail.tlc.polito.it> <rossi@mail.tlc.polito.it>
@@ -153,14 +153,14 @@ PACKAGE_VERSION = 2.0.9
 PATH_SEPARATOR = :
 PCAP_LDLINK = -lpcap
 RANLIB = ranlib
-RRD_LDLINK = 
+RRD_LDLINK = -lrrd
 SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = strip
 VERSION = 2.0.9
 V_CCOPT = 
-V_DEFINES =  -D_BSD_SOURCE
+V_DEFINES =  -D_BSD_SOURCE -DHAVE_RRDTOOL
 V_INCLS = 
 ac_ct_AR = ar
 ac_ct_CC = gcc
@@ -192,7 +192,7 @@ host_os = linux-gnu
 host_vendor = pc
 includedir = ${prefix}/include
 infodir = ${prefix}/info
-install_sh = /home/munafo/software/tstat/trunk/config/install-sh
+install_sh = /home/tesi/finamore/HOME_LOC/tstat-svn/config/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localstatedir = ${prefix}/var
@@ -297,7 +297,7 @@ target_alias =
 # format of the DAG tool
 #DEFINES += -DGROK_DAG
 # define GROK_LIVE_TCPDUMP for live capturing with pcap library
-DEFINES =  -D_BSD_SOURCE -DBUILT_USER="\"`whoami`\"" \
+DEFINES =  -D_BSD_SOURCE -DHAVE_RRDTOOL -DBUILT_USER="\"`whoami`\"" \
 	-DBUILT_HOST="\"`hostname`\"" -DBUILT_DATE="\"`date`\"" \
 	-DMSN_CLASSIFIER -DYMSG_CLASSIFIER -DXMPP_CLASSIFIER \
 	-DRTSP_CLASSIFIER -DRTP_CLASSIFIER -DP2P_CLASSIFIER \
@@ -342,7 +342,7 @@ CCOPT = -Wall
 AM_CFLAGS = $(CCOPT) $(DEFINES) 
 
 # Standard LIBS
-LDLIBS = -lpcap -lpthread -lm  ${PCAP_LDLIBS} ${DPMI_LDLIBS}
+LDLIBS = -lrrd -lpcap -lpthread -lm  ${PCAP_LDLIBS} ${DPMI_LDLIBS}
 # for solaris, you probably want:
 #	LDLIBS = -lpcap -lnsl -lsocket -lm
 # for HP, I'm told that you need:

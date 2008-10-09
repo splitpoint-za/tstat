@@ -396,6 +396,9 @@ struct double_histo_list *udp_port_dst_out;
 struct double_histo_list *udp_port_dst_loc;
 struct double_histo_list *udp_port_flow_dst;
 
+struct double_histo_list *udp_bitrate_in;
+struct double_histo_list *udp_bitrate_out;
+struct double_histo_list *udp_bitrate_loc;
 
       /* stream histograms */
 
