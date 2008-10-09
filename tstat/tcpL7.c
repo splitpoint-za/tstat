@@ -31,6 +31,7 @@ int map_flow_type(tcp_pair *thisflow);
 
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
+extern struct L7_bitrates L7_udp_bitrate;
 
 void
 tcpL7_init ()
@@ -669,3 +670,29 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
 
   return;
 }
+
+void
+make_udpL7_rate_stats (ucb * thisflow, int len)
+{
+   int type;
+   type = UDP_p2p_to_L7type(thisflow);
+
+   /* skype bitrate is managed by skype.c since classification is done 
+      at flow end */
+      
+   if (internal_src && !internal_dst)
+    {
+       L7_udp_bitrate.out[type] += len;
+    }
+  else if (!internal_src && internal_dst)
+    {
+       L7_udp_bitrate.in[type] += len;
+    }
+  else if (internal_src && internal_dst)
+    {
+       L7_udp_bitrate.loc[type] += len;
+    }
+
+  return;
+}
+

@@ -391,6 +391,9 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     // 
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
 
+    //if (thisdir != NULL && thisdir->pup != NULL)
+    make_udpL7_rate_stats(thisdir, ntohs(pip->ip_len));
+
   return (pup_save);
 }
 

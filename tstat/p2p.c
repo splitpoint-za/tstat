@@ -715,13 +715,20 @@ int UDP_p2p_to_L7type (ucb *thisflow)
    switch(thisflow->type)
    {
     case RTP:
+      return L7_FLOW_RTP;
+
     case RTCP:
+      return L7_FLOW_RTCP;
+
     case SKYPE_E2E:
+      return L7_FLOW_SKYPE_E2E;
+
     case SKYPE_OUT:
+      return L7_FLOW_SKYPE_OUT;
+
     case SKYPE_SIG:
-    default:
-      printf("ERROR: UDP_p2p_to_L7type cannot classify here!!!");
-      exit(1);
+      return L7_FLOW_SKYPE_SIG;
+
       
     case P2P_EDK:
       return L7_FLOW_EDK;
@@ -759,6 +766,7 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:
+    default:
       return L7_FLOW_UNKNOWN;
    }
 }

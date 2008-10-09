@@ -743,9 +743,9 @@ struct L4_bitrates
 
 struct L7_bitrates
 {
-  unsigned long long in[29];  /* unsigned long long in[L7_FLOW_TOT] */
-  unsigned long long out[29]; /* unsigned long long out[L7_FLOW_TOT] */
-  unsigned long long loc[29]; /* unsigned long long loc[L7_FLOW_TOT] */
+  unsigned long long in[L7_FLOW_TOT];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[L7_FLOW_TOT]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[L7_FLOW_TOT]; /* unsigned long long loc[L7_FLOW_TOT] */
 };
 
 #ifdef HAVE_RRDTOOL

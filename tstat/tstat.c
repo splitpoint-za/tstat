@@ -143,6 +143,7 @@ unsigned long int f_RTP_tunneled_TCP_count = 0;	/* total RTP flow tunneled on TC
 
 struct L4_bitrates L4_bitrate;
 struct L7_bitrates L7_bitrate;
+struct L7_bitrates L7_udp_bitrate;
 
 static u_long pcount = 0;   //global packet counter
 static u_long fpnum = 0;    //per file packet counter
