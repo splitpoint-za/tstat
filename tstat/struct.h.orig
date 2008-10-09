@@ -1,0 +1,786 @@
+/*
+ *
+ * Copyright (c) 2001
+ *	Politecnico di Torino.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * Author:	Marco Mellia, Andrea Carpani, Luca Muscariello, Dario Rossi
+ * 		Telecomunication Networks Group
+ * 		Politecnico di Torino
+ * 		Torino, Italy
+ *              http://www.tlc-networks.polito.it/index.html
+ *		mellia@mail.tlc.polito.it, rossi@mail.tlc.polito.it
+ *
+ * Tstat is deeply based on TCPTRACE. The authors would like to thank
+ * Shawn Ostermann for the development of TCPTRACE.
+ *
+*/
+
+/* we want LONG LONG in some places */
+#if SIZEOF_UNSIGNED_LONG_LONG_INT >= 8
+#define HAVE_LONG_LONG
+typedef unsigned long long int u_llong;
+typedef long long int llong;
+#else /* LONG LONG */
+typedef unsigned long int u_llong;
+typedef long int llong;
+#endif /* LONG LONG */
+
+/* type for a TCP sequence number, ACK, FIN, or SYN */
+typedef u_long seqnum;
+
+/* length of a segment */
+typedef u_long seglen;
+
+/* type for a quadrant number */
+typedef u_char quadnum;		/* 1,2,3,4 */
+
+/* type for a TCP port number */
+typedef u_short portnum;
+
+/* type for an IP address */
+/* IP address can be either IPv4 or IPv6 */
+typedef struct ipaddr
+{
+  u_char addr_vers;		/* 4 or 6 */
+  union
+  {
+    struct in_addr ip4;
+#ifdef SUPPORT_IPV6
+    struct in6_addr ip6;
+#endif
+  }
+  un;
+}
+ipaddr;
+
+
+/* type for a timestamp */
+typedef struct timeval timeval;
+#define ZERO_TIME(ptv)(((ptv)->tv_sec == 0) && ((ptv)->tv_usec == 0))
+#define time2double(t) ((double) (t).tv_sec * 1000000 + (double) (t).tv_usec)
+
+/* type for a Boolean */
+typedef u_char Bool;
+#define TRUE	1
+#define FALSE	0
+#define BOOL2STR(b) (b)?"TRUE":"FALSE"
+
+/* ACK types */
+enum t_ack
+{ NORMAL = 1,			/* no retransmits, just advance */
+  AMBIG = 2,			/* segment ACKed was rexmitted */
+  CUMUL = 3,			/* doesn't advance */
+  TRIPLE = 4,			/* triple dupack */
+  NOSAMP = 5
+};				/* covers retransmitted segs, no rtt sample */
+
+/* type for an internal file pointer */
+typedef struct mfile MFILE;
+
+extern unsigned long int fcount;	/* total flow number number */
+
+/* first and last packet timestamp */
+extern timeval first_packet;
+extern timeval last_packet;
+
+/* counters */
+// LM
+extern u_long tcp_trace_count_outgoing;
+extern u_long tcp_trace_count_incoming;
+extern u_long tcp_trace_count_local;
+extern u_long udp_trace_count;
+
+
+/* Skype */
+/* may be carried over TCP/UDP */
+
+typedef struct deltaT_stat
+{
+  timeval last_time;
+  double sum;
+  int n;
+} deltaT_stat;
+
+typedef struct random_stat
+{
+  int rnd_bit_histo[N_RANDOM_BIT_VALUES][N_BLOCK];	// fa il CHI indipendentemente sui primi 6 blocchi
+  int rnd_n_samples;
+} random_stat;
+
+  /* DB start */
+#ifdef MSN_CLASSIFIER
+typedef struct msn_stat
+{
+
+  timeval login;
+  timeval logout;
+  timeval start_chat;
+  timeval end_chat;
+
+  /* signaling flags */
+
+  unsigned MSN_VER_count:1;
+  unsigned MSN_CVR_count:1;
+  unsigned MSN_USR_count:1;
+  unsigned MSN_XFR_count:1;
+  unsigned MSN_GCF_count:1;
+  unsigned MSN_RNG_count:1;
+  unsigned MSN_ANS_count:1;
+  unsigned MSN_IRO_count:1;
+  unsigned MSN_BYE_count:1;
+  unsigned MSN_OUT_count:1;
+  unsigned POST_count:1;
+  unsigned arrived:1;
+  unsigned departed:1;
+
+  /* message counters */
+
+  unsigned MSN_CAL_count:3;
+  unsigned MSN_JOI_count:3;
+  unsigned MSN_MSG_count;
+  unsigned MSN_MSG_A_count;
+  unsigned MSN_MSG_D_count;
+  unsigned MSN_MSG_N_count;
+  unsigned MSN_MSG_U_count;
+  unsigned MSN_MSG_Y_count;
+
+  unsigned MSN_PNG_count;
+  unsigned MSN_QNG_count;
+  unsigned MSN_CHL_count;
+  unsigned MSN_QRY_count;
+
+  int MFT;			/* Msn Flow Type */
+  char MSNPversion[7];
+
+} msn_stat;
+#endif
+
+#ifdef YMSG_CLASSIFIER
+typedef struct ymsg_stat
+{
+
+  unsigned YMSG_AUTH_RESP_count:1;
+  unsigned YMSG_LIST_count:1;
+  unsigned YMSG_SKINNAME_count:1;
+  unsigned YMSG_NOTIFY_count;
+  unsigned YMSG_MESSAGE_count;
+  unsigned YMSG_P2Pcheck_count:1;
+  unsigned YMSG_P2P_count:1;
+
+  int YFT;			/* Yahoo! Flow Type */
+  int YMSGPversion;
+
+} ymsg_stat;
+#endif
+
+#ifdef XMPP_CLASSIFIER
+typedef struct jabber_stat
+{
+
+  unsigned PRESENCE_count:1;
+  unsigned MESSAGE_count;
+
+  int JFT;			/* Jabber Flow Type */
+ /* int XMPPversion; */
+
+} jabber_stat;
+#endif
+ /* DB end */
+
+typedef struct skype_stat
+{
+  /* valid for both TCP/UDP */
+  struct win
+  {
+    timeval start;
+    int pktsize_max;
+    int pktsize_min;
+    int bytes;
+  } win;
+
+  /* Count pure video packets and audio or audio+video packets */
+  int video_pkts;
+  int audiovideo_pkts;
+  int skype_type;
+
+  /* valid for UDP only */
+  int pkt_type_num[TOTAL_SKYPE_KNOWN_TYPE];	/* count the number of
+						   different known types */
+  u_int32_t OUT_data_block;	/* signature for the SKYPE_OUT_DATA */
+
+  deltaT_stat stat[TOTAL_SKYPE_KNOWN_TYPE];
+  random_stat random;
+#ifdef RUNTIME_SKYPE
+  timeval LastSkypePrint_time;
+#else
+#ifdef RUNTIME_SKYPE_RESET
+  timeval LastSkypePrint_time;
+#endif
+#endif
+
+} skype_stat;
+
+/* Skype */
+
+#ifdef P2P_DETAILS
+typedef struct p2p_stat
+{
+  int pkt_type_num[7];  /* [EDK,KAD,KADU,GNU,BT,DC,KAZAA] */
+  int total_pkt;
+} p2p_stat;
+#endif
+
+#ifdef OLD
+/* test 2 IP addresses for equality */
+#define IP_SAMEADDR(addr1,addr2) (((addr1).s_addr) == ((addr2).s_addr))
+
+/* copy IP addresses */
+#define IP_COPYADDR(toaddr,fromaddr) ((toaddr).s_addr = (fromaddr).s_addr)
+#endif
+
+typedef struct segment
+{
+  seqnum seq_firstbyte;		/* seqnumber of first byte */
+  seqnum seq_lastbyte;		/* seqnumber of last byte */
+  u_char retrans;		/* retransmit count */
+  u_int acked;			/* how MANY times has has it been acked? */
+  timeval time;			/* time the segment was sent */
+  /* LM start - add field to implement an heuristic to identify 
+     loss packets within a flow
+   */
+  u_short ip_id;		/* 16 bit ip identification field  */
+  char type_of_segment;
+  /* LM stop */
+  struct segment *next;
+  struct segment *prev;
+}
+segment;
+
+typedef struct quadrant
+{
+  segment *seglist_head;
+  segment *seglist_tail;
+  Bool full;
+  u_long no_of_segments;
+  struct quadrant *prev;
+  struct quadrant *next;
+}
+quadrant;
+
+typedef struct seqspace
+{
+  quadrant *pquad[4];
+}
+seqspace;
+
+typedef struct upper_protocols
+{
+  timeval f_http;
+  timeval f_rtsp;
+  timeval f_rtp;
+  timeval f_icy;
+} upper_protocols;
+
+typedef struct tcb
+{
+  struct bayes_classifier *bc_avgipg;
+  struct bayes_classifier *bc_pktsize;
+
+  /* parent pointer */
+  struct stcp_pair *ptp;
+
+  seqnum highest_seqno;		/* to identify the end of the data */
+  Bool data_to_be_acked;	/* true if waiting for an ack */
+  timeval payload_start_time;	/* time of first data pkt ... */
+  timeval payload_end_time;	/* time of last valid ack... */
+
+  /* TCP information */
+  seqnum ack;
+  seqnum seq;
+  seqnum syn;
+  seqnum fin;
+  seqnum fin_seqno;
+  seqnum windowend;
+  timeval time;
+
+  /* TCP options */
+  u_int mss;
+  Bool f1323_ws;		/* did he request 1323 window scaling? */
+  Bool f1323_ts;		/* did he request 1323 timestamps? */
+  Bool fsack_req;		/* did he request SACKs? */
+  u_char window_scale;
+
+  /* statistics added */
+  u_long ip_bytes;		/* bytes (Hdr IP + Payload IP) sent including SYN-FIN and rexmits */
+  u_long data_bytes;
+  u_long data_pkts;
+  u_long data_pkts_push;
+  u_long unique_bytes;		/* bytes sent (-FIN/SYN), excluding rexmits */
+  u_int rexmit_bytes;
+  u_int rexmit_pkts;
+  u_long ack_pkts;
+  u_long pureack_pkts;		/* mallman - pure acks, no data */
+  u_int win_max;
+  u_int win_min;
+  u_int win_tot;
+  u_int win_curr;
+  u_int win_zero_ct;
+  u_int min_seq;
+  u_int max_seq;
+  u_long packets;
+  u_char syn_count;
+  u_char fin_count;
+  Bool closed;
+  u_char reset_count;		/* resets SENT */
+  u_int min_seg_size;
+  u_int max_seg_size;
+  u_int out_order_pkts;		/* out of order packets */
+  u_int sacks_sent;		/* sacks returned */
+
+  /* .a.c. cwnd stats */
+  u_int cwnd_max;
+  u_int cwnd_flag;
+
+  /* did I detect any "bad" tcp behavior? */
+  /* at present, this means: */
+  /*  - SYNs retransmitted with different sequence numbers */
+  /*  - FINs retransmitted with different sequence numbers */
+  Bool bad_behavior;
+
+  /* added for initial window stats (for Mallman) */
+  u_int initialwin_bytes;	/* initial window (in bytes) */
+  u_int initialwin_segs;	/* initial window (in segments) */
+  Bool data_acked;		/* has any non-SYN data been acked? */
+
+  /* added for (estimated) congestions window stats (for Mallman) */
+  u_long cwin_max;
+  u_long cwin_min;
+
+  /* RTT stats for singly-transmitted segments */
+  double rtt_last;		/* RTT as of last good ACK (microseconds) */
+  u_long rtt_min;
+  u_long rtt_max;
+  double rtt_sum;		/* for averages */
+  double rtt_sum2;		/* sum of squares, for stdev */
+  double srtt;			/* smoothed RTT estimation */
+  double rttvar;		/* smoothed stdv estimation */
+  u_int rtt_count;		/* for averages */
+/* MGM */
+  /* Duplicated and rtx counters */
+  u_int rtx_RTO;
+  u_int rtx_FR;
+  u_int reordering;
+  u_int net_dup;
+  u_int unknown;
+  u_int flow_control;
+  u_int unnecessary_rtx_FR;
+  u_int unnecessary_rtx_RTO;
+    /*LM*/ u_int ttl_min;
+  u_int ttl_max;
+  /* TOPIX */
+  u_llong ttl_tot;
+  double sum_jitter;
+  float max_jitter;
+  float min_jitter;
+  double sum_delta_t;
+  int n_delta_t;
+  /* end TOPIX */
+
+  /* ACK Counters */
+  u_long rtt_cumack;		/* segments only cumulativly ACKed */
+  u_long rtt_nosample;		/* segments ACKED, but after retransmission */
+  /* of earlier segments, so sample isn't */
+  /* valid */
+  u_long rtt_unkack;		/* unknown ACKs  ??? */
+  u_long rtt_dupack;		/* duplicate ACKs */
+  u_long rtt_triple_dupack;	/* triple duplicate ACKs */
+  /* retransmission information */
+  seqspace *ss;			/* the sequence space */
+  u_long retr_max;		/* maximum retransmissions ct */
+  u_long retr_min_tm;		/* minimum retransmissions time */
+  u_long retr_max_tm;		/* maximum retransmissions time */
+  double retr_tm_sum;		/* for averages */
+  double retr_tm_sum2;		/* sum of squares, for stdev */
+  u_long retr_tm_count;		/* for averages */
+
+  /* Instantaneous throughput info */
+  timeval thru_firsttime;	/* time of first packet this interval */
+  u_long thru_bytes;		/* number of bytes this interval */
+  u_long thru_pkts;		/* number of packets this interval */
+  timeval thru_lasttime;	/* time of previous segment */
+
+  /* data transfer time stamps - mallman */
+  timeval first_data_time;
+  timeval last_data_time;
+
+
+  /* for tracking unidirectional idle time */
+  timeval last_time;		/* last packet SENT from this side */
+  u_llong idle_max;		/* maximum idle time observed (usecs) */
+
+  upper_protocols u_protocols;
+  skype_stat skype;
+#ifdef MSN_CLASSIFIER
+    msn_stat msn;
+#endif
+#ifdef YMSG_CLASSIFIER
+  ymsg_stat ymsg;
+#endif
+#ifdef XMPP_CLASSIFIER
+  jabber_stat jabber;
+#endif
+}
+tcb;
+
+
+typedef u_long hash;
+
+typedef struct
+{
+  ipaddr a_address;
+  ipaddr b_address;
+  portnum a_port;
+  portnum b_port;
+  hash hash;
+}
+tcp_pair_addrblock;
+
+enum state_type
+{ UNKNON_TYPE = 0,
+  RTSP_COMMAND,
+  RTSP_RESPONSE,
+  HTTP_COMMAND,
+  HTTP_RESPONSE,
+#ifdef MSN_CLASSIFIER
+  MSN_VER_C2S,
+  MSN_VER_S2C,
+  MSN_USR_C2S,
+  MSN_USR_S2C,
+  MSN_ANS_COMMAND,
+  MSN_IRO_COMMAND,
+#endif
+#ifdef YMSG_CLASSIFIER
+  YMSGP,
+#endif  
+#ifdef XMPP_CLASSIFIER
+  XMPP,
+#endif  
+  SMTP_OPENING,
+  POP3_OPENING,
+  IMAP_OPENING,
+  IGNORE_FURTHER_PACKETS
+};
+
+// MGM get rid of this!
+enum state2_type
+{ UNKNON_TYPE2 = 0,
+  MORE_PACKETS2,
+  IGNORE_FURTHER_PACKETS2
+};
+
+
+struct stcp_pair
+{
+
+  /* endpoint identification */
+  tcp_pair_addrblock addr_pair;
+
+  /* connection naming information */
+  Bool internal_src;
+  Bool internal_dst;
+
+  /* connection information */
+  unsigned long int id_number;
+  timeval first_time;
+  timeval last_time;
+  u_long packets;
+  tcb c2s;
+  tcb s2c;
+
+  /*streaming information (Topix) */
+  u_int32_t con_type;
+  enum state_type state;
+  u_int32_t p2p_type;
+  enum state_type p2p_state;
+  unsigned char rtp_pt;
+};
+typedef struct stcp_pair tcp_pair;
+
+typedef struct tcphdr tcphdr;
+
+typedef struct ptp_snap
+{
+  tcp_pair_addrblock addr_pair;	/* just a copy */
+  struct ptp_snap *next;
+  tcp_pair *ptp;
+  tcp_pair **ttp_ptr;
+}
+ptp_snap;
+
+extern int num_tcp_pairs;	/* how many pairs are in use */
+extern tcp_pair **ttp;		/* array of pointers to allocated pairs */
+
+/* What UDP payload is in this flow */
+enum udp_type
+{ UDP_UNKNOWN = 0,
+  FIRST_RTP,
+  FIRST_RTCP,
+  RTP,
+  RTCP,
+  SKYPE_E2E,            //DO NOT CHANGE SKYPE LABELS ORDER!!
+  SKYPE_E2E_BAYES,
+  SKYPE_E2E_CHI,
+  SKYPE_E2E_BAYES_CHI,
+  SKYPE_OUT, 
+  SKYPE_OUT_BAYES,
+  SKYPE_OUT_CHI,
+  SKYPE_OUT_BAYES_CHI,
+  SKYPE_SIG, 
+  SKYPE_BAYES_CHI,
+  SKYPE_BAYES,
+  SKYPE_CHI,
+  P2P_EDK, 
+  P2P_KAD,
+  P2P_KADU,
+  P2P_GNU, 
+  P2P_BT,
+  P2P_DC, 
+  P2P_KAZAA,
+  P2P_JOOST,
+  P2P_PPLIVE,
+  P2P_SOPCAST,
+  P2P_TVANTS,
+  LAST_UDP_PROTOCOL
+};
+
+#define print_udp_type \
+{ \
+ enum udp_type temp; \
+ temp = UDP_UNKNOWN; \
+ printf("UNKNOWN = %d\n",temp); \
+ temp = FIRST_RTP; \
+ printf("FIRST_RTP = %d\n",temp); \
+ temp = FIRST_RTCP; \
+ printf("FIRST_RTCP = %d\n",temp); \
+ temp = RTP; \
+ printf("RTP = %d\n",temp); \
+ temp = RTCP; \
+ printf("RTCP = %d\n",temp); \
+ temp = SKYPE_E2E; \
+ printf("SKYPE_E2E = %d\n",temp); \
+ temp = SKYPE_OUT; \
+ printf("SKYPE_OUT = %d\n",temp); \
+ temp = SKYPE_SIG; \
+ printf("SKYPE_SIG = %d\n",temp); \
+ temp = P2P_EDK; \
+ printf("P2P_EDK = %d\n",temp); \
+ temp = P2P_KAD; \
+ printf("P2P_KAD = %d\n",temp); \
+ temp = P2P_KADU; \
+ printf("P2P_KADU = %d\n",temp); \
+ temp = P2P_GNU; \
+ printf("P2P_GNU = %d\n",temp); \
+ temp = P2P_BT; \
+ printf("P2P_BT = %d\n",temp); \
+ temp = P2P_DC; \
+ printf("P2P_DC = %d\n",temp); \
+ temp = P2P_KAZAA; \
+ printf("P2P_KAZAA = %d\n",temp); \
+ temp = P2P_JOOST; \
+ printf("P2P_JOOST = %d\n",temp); \
+ temp = P2P_PPLIVE; \
+ printf("P2P_PPLIVE = %d\n",temp); \
+ temp = P2P_SOPCAST; \
+ printf("P2P_SOPCAST = %d\n",temp); \
+ temp = P2P_TVANTS; \
+ printf("P2P_TVANTS = %d\n",temp); \
+}
+
+
+
+typedef struct rtp
+{
+
+  u_int16_t packets_win[WIN];	/* the sliding window vector used to track
+				   seqnum */
+  Bool w;			/* true if we got a full window */
+  u_int16_t initial_seqno;
+  u_int16_t largest_seqno;
+  u_long pnum;			/* number of segments */
+  u_int32_t ssrc;
+  timeval first_time;
+  timeval last_time;
+  long int n_out_of_sequence;
+  double sum_delta_t;
+  int n_delta_t;
+  int transit;
+  u_int32_t first_ts;
+  u_int32_t largest_ts;
+  double jitter;
+  float jitter_max;
+  float jitter_min;
+  long int n_dup;
+  long int n_late;
+  long int n_lost;
+  int burst;
+  u_llong data_bytes;
+  /* topix */
+  unsigned char pt;
+  int bogus_reset_during_flow; /* some Cisco implementation reset seqno ... */
+  /* end topix */
+} rtp;
+
+
+typedef struct rtcp
+{
+  u_long pnum;			/* number of segments */
+  u_int64_t initial_data_bytes;
+  double sum_delta_t;		/* total interarrival time so far */
+  timeval first_time;
+  timeval last_time;
+  u_int32_t ssrc;
+
+  timeval last_SR;
+  u_int32_t last_SR_id;
+  u_int32_t tx_p;
+  u_int32_t tx_b;
+
+  double jitter_sum;
+  double jitter_max;
+  double jitter_min;
+  u_int32_t jitter_samples;
+
+  double rtt_sum;
+  double rtt_max;
+  double rtt_min;
+  u_int32_t rtt_samples;
+
+  int32_t c_lost;
+  u_int8_t f_lost;
+  double f_lost_sum;
+  int rtcp_header_error;
+} rtcp;
+
+
+/* minimal support for UDP "connections" */
+typedef struct ucb
+{
+  struct bayes_classifier *bc_avgipg;
+  struct bayes_classifier *bc_pktsize;
+
+  /* parent pointer */
+  struct sudp_pair *pup;
+
+  timeval first_pkt_time;	/* time of the first pkt seen */
+  timeval last_pkt_time;	/* time of the last pkt seen */
+  enum udp_type type;
+
+  union
+  {
+    rtp rtp;
+    rtcp rtcp;
+  } flow;
+  /* statistics added */
+  u_llong data_bytes;
+  u_llong packets;
+    /*TOPIX*/ u_int ttl_min;
+  u_int ttl_max;
+  u_llong ttl_tot;
+  /*end TOPIX */
+
+  /* skype */
+  skype_stat skype;
+  int lastnumpkt;
+  /* end skype */
+
+#ifdef P2P_DETAILS
+  int is_p2p;
+  p2p_stat p2p;
+#endif
+
+#ifdef CHECK_UDP_DUP
+  /* dupe verify */
+  u_short last_ip_id;		/* 16 bit ip identification field  */
+  u_short last_len;		/* length of the last packet  */
+#endif
+}
+ucb;
+
+
+typedef tcp_pair_addrblock udp_pair_addrblock;
+
+struct sudp_pair
+{
+  /* endpoint identification */
+  udp_pair_addrblock addr_pair;
+
+  /* connection naming information */
+  Bool internal_src;
+  Bool internal_dst;
+
+  /* connection information */
+  timeval first_time;
+  timeval last_time;
+  u_llong packets;
+  ucb c2s;
+  ucb s2c;
+
+  /* linked list of usage */
+  struct sudp_pair *next;
+};
+typedef struct sudp_pair udp_pair;
+typedef struct udphdr udphdr;
+
+struct L4_bitrates
+{
+  unsigned long long in[4];
+  unsigned long long out[4];
+  unsigned long long loc[4];
+};
+
+struct L7_bitrates
+{
+  unsigned long long in[29];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[29]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[29]; /* unsigned long long loc[L7_FLOW_TOT] */
+};
+
+#ifdef HAVE_RRDTOOL
+/*-----------------------------------------------------------*/
+/* RRDtools 				                     */
+
+struct rrdconf
+{
+  Bool rrd;			/* boolean: whether to use rrd on this histo */
+  Bool avg, min, max, var, stdev, idxoth, hit;	/* statistical var to dump */
+  int *idx;			/* indexes to dump */
+  int idxno;
+  double *prc;			/* percentiles to dump */
+  int prcno;
+};
+
+struct rrdstat
+{
+  double avg, min, max, pseudovar;	/* actual values of the statistical var to dump */
+  long count;
+  timeval last;
+};
+/*-----------------------------------------------------------*/
+#endif
+
+
+/* Struct to evaluate the average of n(t) */
+typedef struct win_stat
+{
+  char name[10];		/* name of observed struct */
+  timeval t0;			/* Initial time of this observation window */
+  timeval t;			/* Last measurement time */
+  int n;			/* Last measurement value */
+  double tot;			/* Integral of n(t) */
+
+} win_stat;

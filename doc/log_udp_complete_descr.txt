@@ -1,0 +1,42 @@
+Tstat produces a "log_udp_complete" file which logs every UDP possible flow 
+pair tracked by tstat. 
+By default, only P2P UDP traffic is logged here. UDP information for 
+other application protocols (Skype, IM protocols, etc.) is logged in the
+protocol own log_*_complete file. 
+It's possible to log all the UDP traffic by defining LOG_ALL_UDP.
+
+An UDP flow pair is identified when the first UDP segment is observed for a 
+UDP socket pair, and is ended when no packet has been observed 
+(from both sides) for UDP_IDLE_TIME microsec (defined in param.h). 
+By default is set to 5 min.
+
+Values are separated by spaces.
+
+Each line is composed of two parts: values referring to the "client"
+host (i.e. the host source of the first segment for the flow), 
+and values referring to the "server" host (i.e. the destination of the first
+segment of the flow).
+
+Here it follows a brief description of the columns.
+
+############################################################################
+#Col n# Short desc      # Long descr                                      #
+############################################################################
+#  1  # Client IP addr # IP addresses of the 'client' 
+#  2  # Client UDP port# UDP port addresses for the 'client'
+#  3  # First time     # 'Client' first packet time (Unix Epoch time) [s]
+#  4  # Completion time# Time between the first and the last packet from the 'client' [s]
+#  5  # Data bytes     # Number of bytes transmitted in the payload
+#  6  # Packets        # Total number of packets observed from the 'client'
+#  7  # Internal       # Bool set to 1 if the 'client' has internal IP
+#  8  # UDP Type       # Protocol type for the 'client'->'server' semiflow. See the udp_type enum in struct.h
+############################################################################
+#  9  # Server IP addr # IP addresses of the 'server' 
+# 10  # Server UDP port# UDP port addresses for the 'server'
+# 11  # First time     # 'Server' first packet time (Unix Epoch time) [s]
+# 12  # Completion time# Time between the first and the last packet from the 'server' [s]
+# 13  # Data bytes     # Number of bytes transmitted in the payload
+# 14  # Packets        # Total number of packets observed from the 'server'
+# 15  # Internal       # Bool set to 1 if the 'server' has internal IP
+# 16  # UDP Type       # Protocol type for the 'server'->'client' semiflow. See the udp_type enum in struct.h
+############################################################################

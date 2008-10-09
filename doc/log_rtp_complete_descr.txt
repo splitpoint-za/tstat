@@ -1,0 +1,86 @@
+Tstat produces a "log_complete" and "log_nocomplete" files which log every
+TCP connection that has been tracked by Tstat. Similarly, a
+log_mm_complete file tracks downs all multimedia flows.
+
+RTP tunnelled over UDP
+
+Being it impossible to detect RTP/RTCP flows, a heuristic metodology has
+been implemented. A state machine is used, to track RTP flows. At the first
+UDP packet, it is labeled as "unknown".  For each new UDP flows, Tstat
+double checks if the UDP payload may be an RTP/RTCP packet. This is done by
+double checking that
+- the version field is set to 2
+- the payload type field has an admissible values (for RTP ot for RTCP)
+- the UDP port is larger than 1024 and is even/odd for RTP/RTCP
+if so, the flow is marked as possible RTP/RTCP flow (first_RTP/first_RTCP
+status).
+
+When the second UDP segment of this UDP flow (same IP/ports) is observed,
+then Tstat double checks that it may still be interpreted as RTP/RTCP.
+In the case of RTP flows, it checks that
+- the version is equal to 2
+- the same ssrc is present
+- the seqno is the expected one
+- the payload type is the same as before.
+Then the flows is marked as RTP and its analysis may start
+For RTCP flows, a simples heuristic is used:
+- the version must be equal to 2
+- the payload type must be a correct one
+if so, the flow is considered a RTCP flow and its analysis may start.
+
+For each RTP flow which is successfully tracked, a line in the
+log_mm_complete file will be written when the flows ends.
+
+RTP tunnelled over TCP/HTTP/RTSP
+
+[to be done]
+
+Here it follows a brief description of the columns.
+
+############################################################################
+#Col n# Short desc      # Long descr                                      #
+###########################################################################
+#  1  # Type           # 1 if tunnelled over TCP, 2 if tunnelled over UDP
+#  2  # Protocol       # bitmask stating the kind of tunnel, see protocol.h
+#  3  # TX IP addr     # IP addresses of the transmitter
+#  4  # TX port        # port addresses of the transmitter
+#  5  # RX IP addr     # IP addresses of the receiver
+#  6  # RX port        # port addresses of the receiver
+#  7  # pnum           # total number of packets observed
+#  8  # Average IPG    # average Inter Packet Gap
+#  9  # Average Jitter # Average Jitter
+# 10  # Out of sequence# total number of out of sequence packets observed
+# 11  # Duplicate      # total number of duplicate packets observed
+# 12  # Internal TX    # 1 if the IP TX address was internal
+# 13  # Internal RX    # 1 if the IP RX address was internal
+# 14  # TTL min        # minimum TTL observed during flow lifetime
+# 15  # TTL max        # maximum TTL observed during flow lifetime
+# 16  # TTL average    # average TTL observed during flow lifetime
+# 17  # Duration       # Duration of the flow in s
+# 18  # Data amount    # amount of bytes trasmitted
+# 19  # Bitrate [b/s]  # average bitrate of the flow
+###########################################################################
+# if RTP over UDP                                                         #
+###########################################################################
+# 20  # SSRC           # SSRC identifier in case of RTP over UDP
+# 21  # Late           # out of sequence packets received too late
+# 22  # Lost           # number of missing packets
+###########################################################################
+# if RTP over TCP                                                         #
+###########################################################################
+# 20  # TX Average rtt # Average TX RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
+# 21  # TX rtt min     # Minimum TX RTT observed during connection lifetime [ms]
+# 22  # TX rtt max     # Maximum TX RTT observed during connection lifetime [ms]
+# 23  # TX Stdev rtt   # Standard deviation of the TX RTT [ms]
+# 24  # TX rtt count   # Number of valid TX RTT observation
+# 25  # RX Average rtt # Average RX RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
+# 26  # RX rtt min     # Minimum RX RTT observed during connection lifetime [ms]
+# 27  # RX rtt max     # Maximum RX RTT observed during connection lifetime [ms]
+# 28  # RX Stdev rtt   # Standard deviation of the RX RTT [ms]
+# 29  # RX rtt count   # Number of valid RX RTT observation
+# 30  # HTTP time      # Relative time when HTTP flow recognized
+# 31  # RTSP time      # Relative time when RTSP flow recognized
+# 32  # RTP  time      # Relative time when RTP flow recognized
+# 33  # ICY  time      # Relative time when ICY flow recognized
+
+

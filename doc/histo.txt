@@ -1,0 +1,184 @@
+#name		|min	|bin_size	|max	|description#flow_number	|0	|1	|4	|#Number of tracked TCP/UDP/RTP/RTCP flow
+#rtcp_avg_inter_delay_loc	|0	|1	|5000	|#RTCP interarrival delay - local flows
+#rtcp_avg_inter_delay_out	|0	|1	|5000	|#RTCP interarrival delay - outgoing flows
+#rtcp_avg_inter_delay_in	|0	|1	|5000	|#RTCP interarrival delay - incoming flows
+#rtcp_cl_p_loc	|0	|1	|3000	|#RTCP flow lenght [packet] - local flows
+#rtcp_cl_p_in	|0	|1	|3000	|#RTCP flow lenght [packet] - incoming flows
+#rtcp_cl_p_out	|0	|1	|3000	|#RTCP flow lenght [packet] - outgoing flows
+#rtp_oos_p_loc	|0	|1	|0	|#RTP number of  out of sequence packets - local flows
+#rtp_oos_p_out	|0	|1	|0	|#RTP number of  out of sequence packets - outgoing flows
+#rtp_oos_p_in	|0	|1	|0	|#RTP number of  out of sequence packets - incoming flows
+#rtp_reord_delay_loc	|0	|1	|100	|#RTP delay of reordered packets - local flows
+#rtp_reord_delay_out	|0	|1	|100	|#RTP delay of reordered packets - outgoing flows
+#rtp_reord_delay_in	|0	|1	|100	|#RTP delay of reordered packets - incoming flows 
+#rtp_reord_p_n_loc	|0	|1	|0	|#RTP number of reordered packets - local flows
+#rtp_reord_p_n_out	|0	|1	|0	|#RTP number of reordered packets - outgoing flows
+#rtp_reord_p_n_in	|0	|1	|0	|#RTP number of reordered packets - incoming flows 
+#rtp_burst_loss_loc	|0	|1	|20	|#RTP burst lenght [packet] - local flows
+#rtp_burst_loss_out	|0	|1	|20	|#RTP burst lenght [packet] - outgoing flows
+#rtp_burst_loss_in	|0	|1	|20	|#RTP burst lenght [packet]- incoming flows 
+#rtp_p_late_loc	|0	|1	|1000	|#RTP prob of late packets - local flows
+#rtp_p_late_out	|0	|1	|1000	|#RTP prob of late packets - outgoing flows
+#rtp_p_late_in	|0	|1	|1000	|#RTP prob of late packets - incoming flows 
+#rtp_p_lost_loc	|0	|1	|1000	|#RTP prob of lost packets - local flows
+#rtp_p_lost_out	|0	|1	|1000	|#RTP prob of lost packets - outgoing flows
+#rtp_p_lost_in	|0	|1	|1000	|#RTP prob of lost packets - incoming flows 
+#rtp_p_dup_loc	|0	|1	|1000	|#RTP prob of duplicate packets - local flows
+#rtp_p_dup_out	|0	|1	|1000	|#RTP prob of duplicate packets - outgoing flows
+#rtp_p_dup_in	|0	|1	|1000	|#RTP prob of duplicate packets - incoming flows 
+#rtp_p_oos_loc	|0	|1	|1000	|#RTP percentage of  out-of-sequence packets local flows
+#rtp_p_oos_out	|0	|1	|1000	|#RTP percentage of  out-of-sequence packets - outgoing flows
+#rtp_p_oos_in	|0	|1	|1000	|#RTP percentage of  out-of-sequence packets - incoming flows
+#rtp_n_oos_loc	|0	|1	|100	|#RTP number of  out-of-sequence packets - local flows
+#rtp_n_oos_out	|0	|1	|100	|#RTP number of  out-of-sequence packets - outgoing flows
+#rtp_n_oos_in	|0	|1	|100	|#RTP number of  out-of-sequence packets - incoming flows 
+#rtp_avg_jitter_loc	|0	|1	|5000	|#RTP average jitter - local flows
+#rtp_avg_jitter_out	|0	|1	|5000	|#RTP average jitter - outgoing flows
+#rtp_avg_jitter_in	|0	|1	|5000	|#RTP average jitter - incoming flows
+#rtp_avg_delay_loc	|0	|1	|5000	|#RTP average delay - local flows
+#rtp_avg_delay_out	|0	|1	|5000	|#RTP average delay - outgoing flows
+#rtp_avg_delay_in	|0	|1	|5000	|#RTP average delay - incoming flows
+#rtp_cl_p_loc	|0	|10	|50000	|#RTP flow lenght [packet] - local flows
+#rtp_cl_p_in	|0	|10	|50000	|#RTP flow lenght [packet] - incoming flows
+#rtp_cl_p_out	|0	|10	|50000	|#RTP flow lenght [packet] - outgoing flows
+#rtp_tot_time_loc	|0	|1	|1800	|#RTP flow lifetime [ms] - local flows
+#rtp_tot_time_out	|0	|1	|1800	|#RTP flow lifetime [ms] - outgoing flows
+#rtp_tot_time_in	|0	|1	|1800	|#RTP flow lifetime [ms] - incoming flows
+#udp_port_flow_dst	|0	|1	|65536	|#UDP destination port per flow
+#udp_port_dst_loc	|0	|1	|65536	|#UDP destination port - local packets
+#udp_port_dst_out	|0	|1	|65536	|#UDP destination port - outgoing packets
+#udp_port_dst_in	|0	|1	|65536	|#UDP destination post - incoming packets
+#udp_tot_time	|0	|50	|720000	|#UDP flow lifetime [ms]
+#udp_cl_b_l_loc	|0	|50000	|50000000	|#UDP flow lenght [byte] - local
+#udp_cl_b_l_in	|0	|50000	|50000000	|#UDP flow lenght [byte] - incoming
+#udp_cl_b_l_out	|0	|50000	|50000000	|#UDP flow lenght [byte] - outgoing
+#udp_cl_b_s_loc	|0	|50	|50000	|#UDP flow lenght [byte] - local
+#udp_cl_b_s_in	|0	|50	|50000	|#UDP flow lenght [byte] - incoming
+#udp_cl_b_s_out	|0	|50	|50000	|#UDP flow lenght [byte] - outgoing
+#udp_cl_p_loc	|0	|1	|1000	|#UDP flow lenght [packet] - local
+#udp_cl_p_in	|0	|1	|1000	|#UDP flow lenght [packet] - incoming
+#udp_cl_p_out	|0	|1	|1000	|#UDP flow lenght [packet] - outgoing
+#tcp_interrupted	|0	|1	|1	|#TCP Early interrupted flows
+#tcp_thru_s2c	|0	|1	|1000	|#TCP throughput [Kbps] - server flows
+#tcp_thru_c2s	|0	|1	|1000	|#TCP throughput [Kbps] - client flows
+#tcp_tot_time	|0	|50	|720000	|#TCP flow lifetime [ms]
+#tcp_unnecessary_rtx_FR_s2c	|0	|1	|100	|#TCP number of Unneeded FR retransmission - server flows
+#tcp_unnecessary_rtx_FR_c2s	|0	|1	|100	|#TCP number of Unneeded FR retransmission - client flows
+#tcp_unnecessary_rtx_FR_loc	|0	|1	|100	|#TCP number of Unneeded FR retransmission - local flows
+#tcp_unnecessary_rtx_FR_out	|0	|1	|100	|#TCP number of Unneeded FR retransmission - outgoing flows
+#tcp_unnecessary_rtx_FR_in	|0	|1	|100	|#TCP number of Unneeded FR retransmission - incoming flows
+#tcp_unnecessary_rtx_RTO_s2c	|0	|1	|100	|#TCP number of Unneeded RTO retransmission - server flows
+#tcp_unnecessary_rtx_RTO_c2s	|0	|1	|100	|#TCP number of Unneeded RTO retransmission - client flows
+#tcp_unnecessary_rtx_RTO_loc	|0	|1	|100	|#TCP number of Unneeded RTO retransmission - local flows
+#tcp_unnecessary_rtx_RTO_out	|0	|1	|100	|#TCP number of Unneeded RTO retransmission - outgoing flows
+#tcp_unnecessary_rtx_RTO_in	|0	|1	|100	|#TCP number of Unneeded RTO retransmission - incoming flows
+#tcp_flow_control_s2c	|0	|1	|100	|#TCP number of Flow Control - server flows
+#tcp_flow_control_c2s	|0	|1	|100	|#TCP number of Flow Control - client flows
+#tcp_flow_control_loc	|0	|1	|100	|#TCP number of Flow Control - local flows
+#tcp_flow_control_out	|0	|1	|100	|#TCP number of Flow Control - outgoing flows
+#tcp_flow_control_in	|0	|1	|100	|#TCP number of Flow Control - incoming flows
+#tcp_unknown_s2c	|0	|1	|100	|#TCP number of unknown anomalies - server flows
+#tcp_unknown_c2s	|0	|1	|100	|#TCP number of unknown anomalies - client flows
+#tcp_unknown_loc	|0	|1	|100	|#TCP number of unknown anomalies - local flows
+#tcp_unknown_out	|0	|1	|100	|#TCP number of unknown anomalies - outgoing flows
+#tcp_unknown_in	|0	|1	|100	|#TCP number of unknown anomalies - incoming flows
+#tcp_net_dup_s2c	|0	|1	|100	|#TCP number of Network duplicates - server flows
+#tcp_net_dup_c2s	|0	|1	|100	|#TCP number of Network duplicates - client flows
+#tcp_net_dup_out	|0	|1	|100	|#TCP number of Network duplicates - local flows
+#tcp_net_dup_out	|0	|1	|100	|#TCP number of Network duplicates - outgoing flows
+#tcp_net_dup_in	|0	|1	|100	|#TCP number of Network duplicates - incoming flows
+#tcp_reordering_s2c	|0	|1	|100	|#TCP number of packet reordering - server flows
+#tcp_reordering_c2s	|0	|1	|100	|#TCP number of packet reordering - client flows
+#tcp_reordering_loc	|0	|1	|100	|#TCP number of packet reordering - local flows
+#tcp_reordering_out	|0	|1	|100	|#TCP number of packet reordering - outgoing flows
+#tcp_reordering_in	|0	|1	|100	|#TCP number of packet reordering - incoming flows
+#tcp_rtx_FR_s2c	|0	|1	|100	|#TCP number of FR Retransmission - server flows
+#tcp_rtx_FR_c2s	|0	|1	|100	|#TCP Number of FR Retransmission - client flows
+#tcp_rtx_FR_loc	|0	|1	|100	|#TCP Number of FR Retransmission - local flows
+#tcp_rtx_FR_out	|0	|1	|100	|#TCP Number of FR Retransmission - outgoing flows
+#tcp_rtx_FR_in	|0	|1	|100	|#TCP number of FR Retransmission - incoming flows
+#tcp_rtx_RTO_s2c	|0	|1	|100	|#TCP Number of RTO Retransmission - server flows
+#tcp_rtx_RTO_c2s	|0	|1	|100	|#TCP Number of RTO Retransmission - client flows
+#tcp_rtx_RTO_loc	|0	|1	|100	|#TCP Number of RTO Retransmission - local flows
+#tcp_rtx_RTO_out	|0	|1	|100	|#TCP Number of RTO Retransmission - outgoing flows
+#tcp_rtx_RTO_in	|0	|1	|100	|#TCP Number of RTO Retransmission - incoming flows
+#tcp_anomalies_s2c	|0	|1	|64	|#TCP total number of anomalies - server flows
+#tcp_anomalies_c2s	|0	|1	|64	|#TCP total number of anomalies - client flows
+#tcp_anomalies_loc	|0	|1	|64	|#TCP total number of anomalies - local flows
+#tcp_anomalies_out	|0	|1	|64	|#TCP total number of anomalies - outgoing flows
+#tcp_anomalies_in	|0	|1	|64	|#TCP total number of anomalies - incoming flows
+#tcp_rtt_cnt_s2c	|0	|1	|200	|#TCP flow RTT valid samples - server flows
+#tcp_rtt_cnt_c2s	|0	|1	|200	|#TCP flow RTT valid samples - client flows
+#tcp_rtt_cnt_loc	|0	|1	|200	|#TCP flow RTT valid samples - local flows
+#tcp_rtt_cnt_in	|0	|1	|200	|#TCP flow RTT valid samples - incoming flows
+#tcp_rtt_cnt_out	|0	|1	|200	|#TCP flow RTT valid samples - outgoing flows
+#tcp_rtt_stdev_s2c	|0	|10	|3500	|#TCP flow RTT standard deviation [ms] - server flows
+#tcp_rtt_stdev_c2s	|0	|10	|3500	|#TCP flow RTT standard deviation [ms] - client flows
+#tcp_rtt_stdev_loc	|0	|10	|3500	|#TCP flow RTT standard deviation [ms] - local flows
+#tcp_rtt_stdev_in	|0	|10	|3500	|#TCP flow RTT standard deviation [ms] - incoming flows
+#tcp_rtt_stdev_out	|0	|10	|3500	|#TCP flow RTT standard deviation [ms] - outgoing flows
+#tcp_rtt_max_s2c	|0	|10	|3500	|#TCP flow maximum RTT [ms] - server flows
+#tcp_rtt_max_c2s	|0	|10	|3500	|#TCP flow maximum RTT [ms] - client flows
+#tcp_rtt_max_loc	|0	|10	|3500	|#TCP flow maximum RTT [ms] - local flows
+#tcp_rtt_max_in	|0	|10	|3500	|#TCP flow maximum RTT [ms] - incoming flows
+#tcp_rtt_max_out	|0	|10	|3500	|#TCP flow maximum RTT [ms] - outgoing flows
+#tcp_rtt_avg_s2c	|0	|10	|3500	|#TCP flow average RTT [ms] - server flows
+#tcp_rtt_avg_c2s	|0	|10	|3500	|#TCP flow average RTT [ms] - client flows
+#tcp_rtt_avg_loc	|0	|10	|3500	|#TCP flow average RTT [ms] - local flows
+#tcp_rtt_avg_in	|0	|10	|3500	|#TCP flow average RTT [ms] - incoming flows
+#tcp_rtt_avg_out	|0	|10	|3500	|#TCP flow average RTT [ms] - outgoing flows
+#tcp_rtt_min_s2c	|0	|10	|3500	|#TCP flow minimum RTT [ms] - server flows
+#tcp_rtt_min_c2s	|0	|10	|3500	|#TCP flow minimum RTT [ms] - client flows
+#tcp_rtt_min_loc	|0	|10	|3500	|#TCP flow minimum RTT - local flows
+#tcp_rtt_min_in	|0	|10	|3500	|#TCP flow minimum RTT [ms]- incoming flows
+#tcp_rtt_min_out	|0	|10	|3500	|#TCP flow minimum RTT [ms] - outgoing flows
+#tcp_cl_b_l_s2c	|0	|50000	|50000000	|#TCP flow lenght [byte] - coarse granularity histogram - server flows
+#tcp_cl_b_l_c2s	|0	|50000	|50000000	|#TCP flow lenght [byte] - coarse granularity histogram - client flows
+#tcp_cl_b_s_s2c	|0	|50	|50000	|#TCP flow lenght [byte] - fine granularity histogram - server flows
+#tcp_cl_b_s_c2s	|0	|50	|50000	|#TCP flow lenght [byte] - fine granularity histogram - client flows
+#tcp_cl_b_l_loc	|0	|50000	|50000000	|#TCP flow lenght [byte] - coarse granularity histogram - local flows
+#tcp_cl_b_l_in	|0	|50000	|50000000	|#TCP flow lenght [byte] - coarse granularity histogram - incoming flows
+#tcp_cl_b_l_out	|0	|50000	|50000000	|#TCP flow lenght [byte] - coarse granularity histogram - outgoing flows
+#tcp_cl_b_s_loc	|0	|50	|50000	|#TCP flow lenght [byte] - fine granularity histogram - local flows
+#tcp_cl_b_s_in	|0	|50	|50000	|#TCP flow lenght [byte] - fine granularity histogram - incoming flows
+#tcp_cl_b_s_out	|0	|50	|50000	|#TCP flow lenght [byte] - fine granularity histogram - outgoing flows
+#tcp_cl_p_s2c	|0	|1	|1000	|#TCP flow lenght [packet] - server flows
+#tcp_cl_p_c2s	|0	|1	|1000	|#TCP flow lenght [packet] - clientflows
+#tcp_cl_p_loc	|0	|1	|1000	|#TCP flow lenght [packet] - local flows
+#tcp_cl_p_in	|0	|1	|1000	|#TCP flow lenght [packet] - incoming flows
+#tcp_cl_p_out	|0	|1	|1000	|#TCP flow lenght [packet] - outgoing flows
+#tcp_cwnd	|0	|256	|65536	|#TCP in-flight-size [byte]
+#tcp_win_max	|0	|256	|65536	|#TCP max RWND [byte]
+#tcp_win_avg	|0	|256	|65536	|#TCP average RWND [byte]
+#tcp_win_ini	|0	|256	|65536	|#TCP initial RWND [byte]
+#tcp_mss_used	|0	|4	|1600	|#TCP negotiated MSS [byte]
+#tcp_mss_b	|0	|4	|1600	|#TCP declared server MSS [byte]
+#tcp_mss_a	|0	|4	|1600	|#TCP declared client MSS [byte]
+#tcp_opts_TS	|1	|1	|4	|#TCP option: Timestamp
+#tcp_opts_WS	|1	|1	|4	|#TCP option: WindowScale
+#tcp_opts_SACK	|1	|1	|4	|#TCP option: SACK
+#tcp_port_syn_dst_loc	|0	|1	|65536	|#TCP destination port of SYN segments - local segments
+#tcp_port_syn_dst_out	|0	|1	|65536	|#TCP destination port of SYN segments - outgoing segments
+#tcp_port_syn_dst_in	|0	|1	|65536	|#TCP destination port of SYN segments - incoming segments
+#tcp_port_syn_src_loc	|0	|1	|65536	|#TCP source port of SYN segments - local segments
+#tcp_port_syn_src_out	|0	|1	|65536	|#TCP source port of SYN segments - outgoing segments
+#tcp_port_syn_src_in	|0	|1	|65536	|#TCP source port of SYN segments - incoming segments
+#tcp_port_dst_loc	|0	|1	|65536	|#TCP destination port - local segments
+#tcp_port_dst_out	|0	|1	|65536	|#TCP destination port - outgoing segments
+#tcp_port_dst_in	|0	|1	|65536	|#TCP destination port - incoming segments
+#tcp_port_src_loc	|0	|1	|65536	|#TCP source port - local segments
+#tcp_port_src_out	|0	|1	|65536	|#TCP source port - outgoing segments
+#tcp_port_src_in	|0	|1	|65536	|#TCP source port - incoming segments
+#ip_tos_loc	|1	|1	|257	|#IP TOS - local packets
+#ip_tos_in	|1	|1	|257	|#IP TOS - incoming packets
+#ip_tos_out	|1	|1	|257	|#IP TOS - outgoing packets
+#ip_ttl_loc	|1	|1	|257	|#IP TTL - local packets
+#ip_ttl_in	|1	|1	|257	|#IP TTL - incoming packets
+#ip_ttl_out	|1	|1	|257	|#IP TTL - outgoing packtes
+#ip_len_loc	|0	|4	|1600	|#IP packet lenght [byte] - local packets
+#ip_len_in	|0	|4	|1600	|#IP packet lenght [byte] - incoming packets
+#ip_len_out	|0	|4	|1600	|#IP packet lenght [byte] - outgoing packets
+#ip_protocol_loc	|0	|1	|256	|#IP protocol - local packets
+#ip_protocol_out	|0	|1	|256	|#IP protocol - outgoing packets
+#ip_protocol_in	|0	|1	|256	|#IP protocol - incoming packets
+

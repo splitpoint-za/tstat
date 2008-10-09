@@ -1,0 +1,7 @@
+News in 2.0.9 
+-------------
+* Updated internal DPI classifier
+* Added dump file generation w.r.t DPI classification
+* Added libtstat compilation, a shared library to use Tstat 
+  features with other tools
+* Added a new compact format for log files

@@ -1,0 +1,65 @@
+Wed Jun  8, 2005
+
+Version 1.0
+- Integration with RRDtool
+- Live analysis with libpcap and DAG interface
+- pthread to support live analyis on fast links
+- new RTP/RTCP flow analysis
+- new TCP out-of-sequence and duplicate classification
+- lot of new measurements tune-up
+- updated code to TCPTrace ver 6.6.x
+- many bug fixes
+- uniformated naming to English (possibly) language
+- many more...
+
+
+---------------------------------------------------------
+
+Fri May 3, 2002 
+
+Changes:
+- Modified the internal structures, so that memory usage is much reduced.
+Now Tstat can easily handle >300Mbit/s link, and more than 200000 flow on
+a 1Giga PC. Thanks to this, it is also about 3 times faster.
+
+- Changed a bit the histogram generation:
+ 
+protocol_ent, protocol_usc now store the IP protocol field directly so
+   that it is possible for example to distinguish not only among
+   {TCP,UDP,other}, but among all the protocols;
+  
+TCP_PORT now distinguishes among;
+   tcp_port_src_ent,tcp_port_src_ent,tcp_port_src_ent,tcp_port_src_ent
+   TCP_PORT_SYN distinguishes among;
+tcp_port_syn_src_ent, tcp_port_syn_src_ent, tcp_port_syn_src_ent,
+   tcp_port_syn_src_ent as well;
+  
+a new measure on the UDP traffic: udp_port_dst_ent,
+   udp_port_dst_usc histograms the destination port seen on UDP
+   packets;
+  
+new limits on ip_len_* stat: up to 1600bytes so that
+   "strange" or malformed Ethernet MTU can be identified;
+  
+new measure: flow_number stores the number of flows analized
+   in the last period;
+
+- Changed the output format of the histograms: now it stores only the
+number of hits, without the measure name, start and stopping range. This
+saves a lot of disks space. The last time interval histograms are saved in the
+LAST subdir, because it can be shorter than an entire analisys time
+interval.
+
+- Updated the post-processing scripts to handle the new output format.
+
+- Changed the output files log_complete and log_nocomplete.
+
+- New input file format: Dag DAG systems used to monitor Gigabit speed
+links. Since DAG format stores two traces ("incoming" and "outgoing"
+traces), Tstat is able to read two traces at the same time. Use option -2
+to use this. This is mainly a quick hack to let tstat run on traces
+collected using this kind of equipement...
+
+- A lot of other minor changes and bug fixes.
+
+                                /\/\/\rco

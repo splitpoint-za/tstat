@@ -1,0 +1,239 @@
+19/7/07 -RB
+-Corretto baco sul numero di pacchetti persi per flussi RTP piu piccoli di WINDOW_SIZE pacchetti
+
+
+7/7/06 -RB
+-Integrato controllo duplicati per UDP fatto da Marco
+
+6/7/06 -RB
+-Aggiunto decodifica RTCP: reciever reports e sender reports.
+-Seguenti istogrammi:
+	rtcp_cl_b - RTCP flow length [bytes]
+	rtcp_mm_cl_b - associated MM flow length [bytes]
+	rtcp_mm_cl_p - associated MM flow length [packets]
+	rtcp_mm_bt - associated MM flow bitrate (sampled at each sender report)
+	rtcp_bt	- RTCP flow bitrate [Kbit/s]
+	rtcp_jitter - associated MM flow jitter (sampled at each reciever report)
+	rtcp_rtt - associated MM flow RTT (sampled at each reciever report)
+	rtcp_lost - associated MM flow lost packets per interval (sampled at each receiver report)
+	rtcp_f_lost - associated MM flow fraction of lost packets per interval (sampled at each receiver report)
+	rtcp_t_lost - associated MM flow total number of packets lost 
+-Nuovo formato del file log_mm_complete
+	COMMON METRICS
+	-------------------------------------------------------------
+	01 Type
+	02 Protocol
+	03 Source IP address
+	04 Source port
+	05 Destination IP address
+	06 Destination port
+	07 Packet number
+	08 Average inter packet gap
+	09 Average jitter
+	10 Max jitter
+	11 Min jitter
+	12 Internal source
+	13 Internal Destination
+	14 Average TTL
+	15 Max TTL
+	16 Min TTL
+	17 Flow start [s]
+	18 Flow duration [s] 
+	19 Data amount
+	20 Average bitrate [b/s]
+The following colons depend on the flow type:
+	RTP METRICS
+	-------------------------------------------------------------
+	21 Ssrc (Source identifier)
+	22 Lost packets
+	23 Out of sequence packets
+	24 Duplicated packets
+	25 Late packets
+	26 Payload type
+
+	RTCP
+	-------------------------------------------------------------
+	21 Ssrc (source identifier)
+	22 Lost packets
+	23 Associated MM flow length [packets]
+	24 Associated MM flow length [bytes]
+	25 Average RTT
+	26 Max RTT
+	27 Min RTT
+	28 RTT samples
+	
+	TCP
+	-------------------------------------------------------------
+	21 First HTTP packet
+	22 First RTSP packet
+	23 Out of sequence packets
+	24 Duplicated packets
+	25 Average RTT
+	26 Max RTT
+	27 Min RTT
+	28 RTT samples
+	29 RTT variance
+	30 Average RTT
+	31 Max RTT
+	32 Min RTT
+	33 RTT samples
+	34 RTT variance
+	35 First RTP packet
+	36 First ICY packet
+
+4/7/06 - RB
+-Migliorato identificazione flussi RTCP includendo controllo su SSRC
+-Corretto baco quando si disbilitava i GLOBAL histo
+
+29/6/06 - RB
+- Aggiunto opzione -g che permette di fare i histogrammi globali
+
+9/6/06 - RB
+-Cambiato ParseArg. Adesso usa getopt_long per parsificare. (tstat.c)
+TODO: need to check the -dag option
+-Cambiate strkmp() in strstr() (tcptype.c)
+
+5/5/06 - RB - MGM
+
+Eliminato piccolo bug che riallocava "basename" ad ogni chiamata di create_new_outfiles()
+
+Corretto dump bitrate se viene interrotto TSTAT da CRTL+C o finisce la traccia...
+
+4/5/06 - RB
+
+Corretto problema overflow su bitrate. Usa unsigned long long int per contteggio byte in delta T
+
+3/5/06 - MGM RB
+
+Messo a posto problema statistiche bitrate dovuto a thread
+Corretto baco proto_register() che non creava correttamente la lista
+Corretto calcolo ip_bitrate per conversione Byte-> errata
+
+1/5/06 - MGM
+
+Corretti bachi per funzionare sotto x86_64
+  MemCpy_OPTIMIZED
+  cast (unsigned) in cast (unsigned long)
+
+Spostato funzioni gestione timeval da tstat.c a output.c
+
+28/4/06 - MGM DR
+
+Corretta definizione histogrammi coerentemente con limite RRDTOOL a 19 caratteri
+
+Aggiunto flag -L -> no log engine
+Corretto flag -S -> no histo engine
+
+
+19/4/06 - MGM
+Corretto baco che non faceva vedere le statistiche di pcap in modalita' live: spostato chiamata a cleanup() fuori da if...
+
+13/4/06 - MGM
+Corretto Makefile.in per aggiungere le dipendenze dei nuovi moduli
+Iniziato decodifica SKYPE
+Aggiunto modulo skype.h skype.c con embrione di meccanismo identificazione
+
+23/3/06 - MGM
+
+Cambiato tcpdump.c per permettere la cattura anche da interfacce non
+configurate. In pratica, eliminato il pcap_lookup_net() per ottenere la
+maschera che non viene mai usata...
+
+
+22/3/06 - MGM
+
+- Rimesso il controllo sul numero di segmenti massimi che un flusso
+traccia, per evitare problemi con il meccanismo di collassamento che
+fallisce quando nella traccia mancano dei segmenti (i.e., drop alla sonda).
+
+
+
+
+8/3/06 - MGM
+
+- corretto baco "MAX_SEG_PERQUAD" che causava problemi con l'euristica di muscariello
+- corretto collapse_quad() per tenere conto di euristica Muscariello quando collassa il primo segmento...
+- aggiunta euristica per limitare l'impatto di avere 100% di duplicati in addseg()
+- eliminati i flussi non full-duplex da trace.c (se vede SYN e non SYN+ACK e DATI considera il flusso come half duplex e lo chiude subito)
+
+
+
+1.3.1   --      XXX
+Features (Topix):
+	* Added ttl measuremnts for udp connections.
+	* Added average ttl measurements for both UDP and TCP.
+	* Added average inter packet gap time for TCP.
+	* Added jitter computation for TCP.
+	* New log_rtp file format:
+	Type
+	Protocol
+	Source IP address
+	Source port
+	Destination IP address
+	Destination port
+	Packet number
+	Average inter packet gap
+	Average Jitter
+	Out of sequence
+	Duplicate
+	Internal source
+	Internal destination
+	TTL min
+	TTL max
+	TTL average
+	Duration 
+	Data amount
+	Bitrate [b/s]
+	SSRC (no TCP)
+	Late (no TCP)
+	Lost (no TCP)
+	server_RTT avg (no UDP)
+	server_RTT min (no UDP)
+	server_RTT max (no UDP)
+	server_RTT standard deviation (no UDP)
+	server_RTT count (no UDP)
+	client_RTT avg (no UDP)
+	client_RTT min (no UDP)
+	client_RTT max (no UDP)
+	client_RTT standard deviation (no UDP)
+	client_RTT count (no UDP)
+	Relative time when HTTP flow recognized (no UDP)
+	Relative time when RTSP flow recognized (no UDP)
+	Relative time when RTP flow recognized (no UDP)
+	Relative time when ICY flow recognized (no UDP)
+	
+Bugs:
+	* Corrected a bug in the unique bytes computation
+	
+
+1.2.0	--	Fri Oct 21 18:02:30 CEST 2005
+
+
+Features:
+	* ERF format can now be processed in two different _files con file compressi()
+	* added optimized MemCpy function 
+	* added support for DPMI (dpmi.conf)
+	* RRD: in the case where only rrd output is generated (pure_rrd_engine==TRUE) 
+	  from a trace (live_flag==FALSE),  updates will be performed at a higher rate, 
+	  i.e., every MIN_TIME_STEP (5sec) rather than MAX_TIME_STEP (5min)
+
+Bugs:
+	* fixating memory leak in rrd module
+	* using optimal parameter in Makefile.in
+	* used (udp|tcp)_flow_stat notation
+	* #ifdef INTERNAL_WIRED -> if(internal_wired)
+	* TCP flows closed by timeout will be recorded on the correct log_tcp_(no)complete
+ 	-----------------Topix-----------------------------------
+	* Corrected a small bug that you couldn't compile correctly if RRD was missing
+
+TODO:
+	* complete, test and migrate to hyper_histo 
+	* update HOWTO (correct ``val:'' keyword in rrd section) 
+	* ctrunc++ (tcptrunc, udptrunc, opttrunc)
+
+TOPIX:
+	* Added FindConType which tries to guess if the tcp connection uses HTTP, RTSP and/or RTP
+	* Added to the internal statistics a counter for tunneled RTP connections
+	* Added a 97th coloun in the log files specifying the connection type see tcptype.h for details about the meaning
+	* Modified: tcp_pair *tcp_flow_stat (struct ip *, struct tcphdr *ptcp, void *plast) -> tcp_pair *tcp_flow_stat (struct ip *, struct tcphdr *ptcp, void *plast,int *dir)
+	  to be able to export the dir variable.
