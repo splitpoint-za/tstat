@@ -75,6 +75,7 @@
 #include "msn.h"
 #include "ymsg.h"
 #include "jabber.h"
+#include "l7types.h"
 #include "struct.h"
 #include "naivebayes.h"
 /* include the histo management functions and declaration */
@@ -547,53 +548,6 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #define UDP_TYPE        1
 #define ICMP_TYPE       2
 #define IP_TYPE         3
-
-
-/* define the FLOW number for the histo hit */
-#define L4_FLOW_TCP             0
-#define L4_FLOW_UDP             1
-#define L4_FLOW_TOT             2
-
-#define L7_FLOW_HTTP            0
-#define L7_FLOW_RTP             1
-#define L7_FLOW_RTCP            2
-#define L7_FLOW_ICY             3
-#define L7_FLOW_RTSP            4
-
-#define L7_FLOW_SKYPE_E2E       5
-#define L7_FLOW_SKYPE_E2O       6
-#define L7_FLOW_SKYPE_TCP       7
-
-#define L7_FLOW_MSN             8
-#define L7_FLOW_XMPP            9
-#define L7_FLOW_YMSG            10
-
-#define L7_FLOW_EDK             11
-#define L7_FLOW_KAD             12
-#define L7_FLOW_KADU            13
-#define L7_FLOW_GNU             14
-#define L7_FLOW_BIT             15
-#define L7_FLOW_KAZAA           16
-#define L7_FLOW_DC              17
-#define L7_FLOW_APPLE           18
-#define L7_FLOW_SOUL            19
-#define L7_FLOW_WINMX           20
-#define L7_FLOW_ARES            21
-#define L7_FLOW_MUTE            22
-#define L7_FLOW_WASTE           23
-#define L7_FLOW_XDCC            24
-
-#define L7_FLOW_SMTP		25
-#define L7_FLOW_POP3		26
-#define L7_FLOW_IMAP		27
-
-#define L7_FLOW_UNKNOWN         28
-
-#define L7_FLOW_JOOST           29 
-#define L7_FLOW_PPLIVE          30
-#define L7_FLOW_SOPCAST         31
-#define L7_FLOW_TVANTS          32
-#define L7_FLOW_TOT             33
 
 /* LM start- possible classification of out of order and retransmission */
 #define IN_SEQUENCE			0
