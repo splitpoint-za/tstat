@@ -588,12 +588,12 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #define L7_FLOW_IMAP		27
 
 #define L7_FLOW_UNKNOWN         28
-#define L7_FLOW_TOT             29
 
-#define L7_FLOW_JOOST           30
-#define L7_FLOW_PPLIVE          31
-#define L7_FLOW_SOPCAST         32
-#define L7_FLOW_TVANTS          33
+#define L7_FLOW_JOOST           29 
+#define L7_FLOW_PPLIVE          30
+#define L7_FLOW_SOPCAST         31
+#define L7_FLOW_TVANTS          32
+#define L7_FLOW_TOT             33
 
 /* LM start- possible classification of out of order and retransmission */
 #define IN_SEQUENCE			0
