@@ -41,8 +41,8 @@ Installation
 
         Assuming that you want version "2.x.y":
 
-                 wget http://tstat.polito.it/download/tstat-2.x.y.tgz
-                 tar -xzvf tstat-2.x.y.tgz
+                 wget http://tstat.polito.it/download/tstat-2.x.y.tar.gz
+                 tar -xzvf tstat-2.x.y.tar.gz
                  cd tstat-2.x.y
                  ./configure
                  make

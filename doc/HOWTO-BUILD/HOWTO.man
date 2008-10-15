@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "TSTAT-HOWTO-HOWTO 1"
-.TH TSTAT-HOWTO-HOWTO 1 "2008-10-06" "1.x" "Tstat Documentation"
+.TH TSTAT-HOWTO-HOWTO 1 "2008-10-15" "1.x" "Tstat Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -175,8 +175,8 @@ installation of RRDtool (available from <http://oss.oetiker.ch/rrdtool/>).
 Assuming that you want version \f(CW\*(C`2.x.y\*(C'\fR:
 .PP
 .Vb 6
-\&         wget http://tstat.polito.it/download/tstat\-2.x.y.tgz
-\&         tar \-xzvf tstat\-2.x.y.tgz
+\&         wget http://tstat.polito.it/download/tstat\-2.x.y.tar.gz
+\&         tar \-xzvf tstat\-2.x.y.tar.gz
 \&         cd tstat\-2.x.y
 \&         ./configure
 \&         make

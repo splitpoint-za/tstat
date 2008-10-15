@@ -26,6 +26,7 @@
 #include "msn.h"
 #include "ymsg.h"
 #include "jabber.h"
+#include "p2p.h"
 
 int map_flow_type(tcp_pair *thisflow);
 

@@ -86,7 +86,7 @@ Mfopen (char *fname, char *mode)
 
   if (strcmp (mode, "w") != 0)
     {
-      fprintf (stderr, "Sorry, Mfopen works only for mode \"w\"\n");
+      fprintf (fp_stderr, "Sorry, Mfopen works only for mode \"w\"\n");
       exit (-1);
     }
 
@@ -122,7 +122,7 @@ Mfpipe (int pipes[])
       M_closeold ();
     }
 
-  fprintf (stderr, "mfpipe - internal error, couldn't get pipes?\n");
+  fprintf (fp_stderr, "mfpipe - internal error, couldn't get pipes?\n");
   exit (-1);
 }
 
@@ -200,7 +200,7 @@ Mfclose (MFILE * pmf)
   int ret;
 
   if (debug > 1)
-    fprintf (stderr, "Mfclose: called for file '%s'\n", pmf->fname);
+    fprintf (fp_stderr, "Mfclose: called for file '%s'\n", pmf->fname);
 
   Mcheck (pmf);
   ret = fclose (pmf->stream);
@@ -276,7 +276,7 @@ M_closeold (void)
   Mf_totail (closehim, &mfc_tail);
 
   if (debug > 1)
-    fprintf (stderr, "Mfiles: too many files open, closed file '%s'\n",
+    fprintf (fp_stderr, "Mfiles: too many files open, closed file '%s'\n",
 	     closehim->fname);
 }
 
@@ -289,7 +289,7 @@ Mcheck (MFILE * pmf)
   if (pmf->stream == NULL)
     {
       if (debug > 1)
-	fprintf (stderr, "Mcheck: re-opening file '%s'\n", pmf->fname);
+	fprintf (fp_stderr, "Mcheck: re-opening file '%s'\n", pmf->fname);
       Mfopen_internal (pmf, "r+");
     }
 
@@ -309,12 +309,12 @@ M_printlru (void)
   MFILE *pmf;
 
   for (pmf = &mf_head; pmf; pmf = pmf->next)
-    fprintf (stderr, "%s ==> ", pmf->fname);
-  fprintf (stderr, "NULL \n");
+    fprintf (fp_stderr, "%s ==> ", pmf->fname);
+  fprintf (fp_stderr, "NULL \n");
 
   for (pmf = &mfc_head; pmf; pmf = pmf->next)
-    fprintf (stderr, "%s ==> ", pmf->fname);
-  fprintf (stderr, "NULL \n");
+    fprintf (fp_stderr, "%s ==> ", pmf->fname);
+  fprintf (fp_stderr, "NULL \n");
 }
 #endif /* OLD */
 

@@ -38,7 +38,7 @@ int UDP_p2p_to_L7type (ucb *thisflow);
 
 int ED2K_is_C2C(int type, int subtype)
 {
-  // printf("%02x %02x\n",type,subtype);
+  // fprintf(fp_stdout, "%02x %02x\n",type,subtype);
   switch (type)
    {
    case 0xe3:
@@ -125,7 +125,7 @@ int ED2K_is_C2C(int type, int subtype)
 
 int ED2K_is_C2S(int type, int subtype)
 {
-  // printf("%02x %02x\n",type,subtype);
+  // fprintf(fp_stdout, "%02x %02x\n",type,subtype);
   switch (type)
    {
    case 0xe3:
@@ -186,7 +186,7 @@ int ED2K_is_data(int type, int subtype)
        (type == 0xD4 && subtype == 0x40) ||
        (type == 0xC5 && subtype == 0x40))
    {
-    // printf ("++Data found %02x-%02x\n",type,subtype); 
+    // fprintf (fp_stdout, "++Data found %02x-%02x\n",type,subtype); 
     return 1;
    }
   else
@@ -201,7 +201,7 @@ int ED2K_is_msg(int type, int subtype)
      switch (subtype)
       {
         case  0x4E:
-//  printf ("++Message found %02x-%02x\n",type,subtype); 
+//  fprintf (fp_stdout, "++Message found %02x-%02x\n",type,subtype); 
 	   return 1;
         default:
 	   return 0;	
@@ -360,14 +360,16 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               if (ptp->p2p_type != 0
 		  && (ptp->p2p_type / 100) != (return_code / 100))
 		{
-		  printf
-		    ("Warning: multiple P2P type matching: Old %d - New %d\n",
-		     ptp->p2p_type, return_code);
+		  fprintf(fp_stdout, 
+		    "Warning: multiple P2P type matching: Old %d - New %d\n",
+		    ptp->p2p_type, return_code);
 		}
 	      else if (ptp->p2p_type != 0 && ptp->p2p_type != return_code)
 		{
 		        ptp->p2p_type = return_code; /* return the last code */
- 		  //    printf("Warning: multiple P2P commands matching: Old %d - New %d\n",ptp->p2p_type,return_code);
+ 		  //    fprintf(fp_stdout, 
+          //        "Warning: multiple P2P commands matching: Old %d - New %d\n",
+          //        ptp->p2p_type,return_code);
 		}
 	      else
 		ptp->p2p_type = return_code;

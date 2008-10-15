@@ -61,7 +61,7 @@ CCOPT = -Wall @V_CCOPT@
 # Probably want full optimization
 # FreeBSD needs	-Ae
 # HP needs	-Ae
-AM_CFLAGS = $(CCOPT) $(DEFINES) 
+AM_CFLAGS = $(CCOPT) $(DEFINES) -g -ggdb
 
 # Standard LIBS
 LDLIBS = @LIBS@ ${PCAP_LDLIBS} ${DPMI_LDLIBS}

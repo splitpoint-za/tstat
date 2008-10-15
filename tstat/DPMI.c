@@ -77,7 +77,7 @@ pread_DPMI (struct timeval *ptime,
 	  (ntohs (ether->ether_type) != ETHERTYPE_IPV6))
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_tcpdump: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_tcpdump: not an IP packet\n");
 	  continue;
 	}
 
@@ -117,17 +117,17 @@ is_DPMI (char *filename)
       (&dpmi.myStream, filename, dpmi.streamType, dpmi.nic, dpmi.portNumber))
     {
       if (debug > 1)
-	fprintf (stderr, "This is not a DPMI trace\n");
+	fprintf (fp_stderr, "This is not a DPMI trace\n");
       rewind (stdin);
       return (NULL);
     }
   if (debug > 1)
     {
-      printf
-	("DPMI trace\n:Comment size: %d, ver: %d.%d id: %s \n comments: %s\n",
-	 dpmi.myStream.FH.comment_size, dpmi.myStream.FH.version.major,
-	 dpmi.myStream.FH.version.minor, dpmi.myStream.FH.mpid,
-	 dpmi.myStream.comment);
+      fprintf (fp_stdout, 
+        "DPMI trace\n:Comment size: %d, ver: %d.%d id: %s \n comments: %s\n",
+	    dpmi.myStream.FH.comment_size, dpmi.myStream.FH.version.major,
+	    dpmi.myStream.FH.version.minor, dpmi.myStream.FH.mpid,
+	    dpmi.myStream.comment);
     }
   if (!net_conf)
     internal_wired = TRUE;
@@ -142,7 +142,7 @@ int
 dpmi_parse_config (const char *fname)
 {
   int i;
-  fprintf (stderr, "Parsing %s ...", fname);
+  fprintf (fp_stderr, "Parsing %s ...", fname);
 
   /*
    *  setting default dpmi configuration
@@ -163,7 +163,7 @@ dpmi_parse_config (const char *fname)
    */
   dpmi.argv = ArgsFromFile(fname, &dpmi.argc);
   if (debug)
-    fprintf (stderr, "dmpi_ArgsFromFile[%s] returned %d arguments\n", fname,
+    fprintf (fp_stderr, "dmpi_ArgsFromFile[%s] returned %d arguments\n", fname,
 	     dpmi.argc);
 
 
@@ -173,8 +173,8 @@ dpmi_parse_config (const char *fname)
       char *tok = strtok (arg, ":");
       if (debug)
 	{
-	  fprintf (stderr, "dmpi_conf[%d]=%s\n", i, arg);
-	  fprintf (stderr, "\t%s\n", tok);
+	  fprintf (fp_stderr, "dmpi_conf[%d]=%s\n", i, arg);
+	  fprintf (fp_stderr, "\t%s\n", tok);
 	}
 
       if (strcmp (tok, "tstat"))
@@ -188,7 +188,7 @@ dpmi_parse_config (const char *fname)
 	{
 	  dpmi.streamType = 0;
 	  if (debug)
-	    fprintf (stderr, "\tusing trace file\n");
+	    fprintf (fp_stderr, "\tusing trace file\n");
 
 	}
       else
@@ -198,7 +198,7 @@ dpmi_parse_config (const char *fname)
 	      dpmi.streamType = 3;
 	      dpmi.portNumber = atoi (strtok (NULL, ":"));
 	      if (debug)
-		fprintf (stderr, "\tusing TCP socket (port %d)\n",
+		fprintf (fp_stderr, "\tusing TCP socket (port %d)\n",
 			 dpmi.portNumber);
 
 	    }
@@ -207,7 +207,7 @@ dpmi_parse_config (const char *fname)
 	      dpmi.streamType = 2;
 	      dpmi.portNumber = atoi (strtok (NULL, ":"));
 	      if (debug)
-		fprintf (stderr, "\tusing UDP socket (port %d)\n",
+		fprintf (fp_stderr, "\tusing UDP socket (port %d)\n",
 			 dpmi.portNumber);
 
 	    }
@@ -216,7 +216,7 @@ dpmi_parse_config (const char *fname)
 	      dpmi.streamType = 1;
 	      dpmi.portNumber = atoi (strtok (NULL, ":"));
 	      if (debug)
-		fprintf (stderr, "\tusing ETH medium (port %d)\n",
+		fprintf (fp_stderr, "\tusing ETH medium (port %d)\n",
 			 dpmi.portNumber);
 
 	    }
@@ -226,7 +226,7 @@ dpmi_parse_config (const char *fname)
 	      dpmi.inCI = strdup (strtok (NULL, ":"));
 	      dpmi.first = FALSE;
 	      if (debug)
-		fprintf (stderr, "\tinternal_wired (%s:%s)\n", dpmi.inMP,
+		fprintf (fp_stderr, "\tinternal_wired (%s:%s)\n", dpmi.inMP,
 			 dpmi.inCI);
 	    }
 	}
@@ -235,21 +235,21 @@ dpmi_parse_config (const char *fname)
   if ((dpmi.inMP == NULL) && (dpmi.inCI == NULL))
     {
       if (debug)
-	fprintf (stderr,
+	fprintf (fp_stderr,
 		 "\tarbitrary assuming first packet's MP:CI as internal\n");
     }
 
-  fprintf (stderr, " done (messages below are from DPMI libraries)\n");
+  fprintf (fp_stderr, " done (messages below are from DPMI libraries)\n");
 
   if (debug)
-    fprintf (stderr, "Creating DPMI filter\n");
+    fprintf (fp_stderr, "Creating DPMI filter\n");
   dpmi.myFilter = createfilter (dpmi.argc, dpmi.argv);
 
-  fprintf (stderr, "Created DPMI filter... control back to tstat !\n\n");
+  fprintf (fp_stderr, "Created DPMI filter... control back to tstat !\n\n");
 
 
 //         case 'i':
-//      printf("Ethernet Argument %s\n", optarg);
+//      fprintf(fp_stdout, "Ethernet Argument %s\n", optarg);
 //      l=strlen(optarg);
 //      nic=(char*)malloc(l+1);
 //      strcpy(nic,optarg);

@@ -144,7 +144,7 @@ print_adx ()
   /* check directory */
   if (stat (curr_data_dir, &fbuf) == -1)
     {
-      printf ("Creating output dir %s\n", curr_data_dir);
+      fprintf (fp_stdout, "Creating output dir %s\n", curr_data_dir);
       mkdir (curr_data_dir, 0775);
 
     }
@@ -156,7 +156,7 @@ print_adx ()
 
   if (fp == NULL)
     {
-      printf ("Could not open file %s\n", filename);
+      fprintf (fp_stdout, "Could not open file %s\n", filename);
       return 0;
     }
 

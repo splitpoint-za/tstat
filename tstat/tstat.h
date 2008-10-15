@@ -87,6 +87,7 @@
 #include "plugin.h"
 #include "protocol.h"
 #include "dump.h"
+#include "inireader.h"
 #include "../include/libtstat.h"
 
 #include "ipp2p_tstat.h"
@@ -138,6 +139,7 @@ typedef unsigned char tt_uint8;
 
 /* declaration of global variables */
 char global_data_dir[256];
+extern char runtime_conf_fname[];
 extern int num_udp_pairs;	/* how many pairs are in use */
 extern udp_pair **utp;		/* array of pointers to allocated pairs */
 
@@ -185,6 +187,7 @@ char *ts2ascii_date (timeval *);
 char *ServiceName (portnum);
 char *HostName (ipaddr);
 char *HostAddr (ipaddr);
+char * Timestamp (void);
 int rexmit (tcb * ptcb, seqnum seq, seglen len, Bool * pout_order,
 	    u_short this_ip_id);
 enum t_ack ack_in (tcb *, seqnum, unsigned tcp_data_length);
@@ -587,11 +590,18 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 
 /* LM stop */
 
-
 char *get_basename (char *filename);
 char curr_data_dir[512];
+extern char runtime_conf_fname[];
 timeval last_time_step;
 timeval last_cleaned;
+
+extern Bool runtime_engine;
+extern Bool rrd_engine;
+extern Bool con_cat;
+extern FILE *fp_stdout;
+extern FILE *fp_stderr;
+extern Bool redirect_output; 
 
 unsigned long tot_conn_TCP;
 unsigned long tot_conn_UDP;
@@ -687,5 +697,7 @@ void tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	       int dir, void *hdr, void *plast);
 void make_tcpL7_conn_stats (void * thisdir, int tproto);
 void make_tcpL7_rate_stats (tcp_pair *thisflow, int len);
+void make_udpL7_rate_stats (ucb * thisflow, int len);
 
 tstat_report * get_stats_report(tstat_report *report);
+void log_parse_ini_arg(char *param_name, int param_value);

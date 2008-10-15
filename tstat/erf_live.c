@@ -102,16 +102,16 @@ void
 print_erf_record (erf_record_t * r)
 {
 #ifdef HAVE_LONG_LONG
-  fprintf (stderr, "ts = %lld\n", r->ts);
+  fprintf (fp_stderr, "ts = %lld\n", r->ts);
 #else
-  fprintf (stderr, "ts = %ld\t", r->ts[0]);
-  fprintf (stderr, "ts = %ld\n", r->ts[1]);
+  fprintf (fp_stderr, "ts = %ld\t", r->ts[0]);
+  fprintf (fp_stderr, "ts = %ld\n", r->ts[1]);
 #endif
-  fprintf (stderr, "type = %d\n", r->type);
-  fprintf (stderr, "flags = %d\n", r->erf_flags_t);
-  fprintf (stderr, "rlen = %d\n", ntohs (r->rlen));
-  fprintf (stderr, "lctr = %d\n", r->lctr);
-  fprintf (stderr, "wlen = %d\n", ntohs (r->wlen));
+  fprintf (fp_stderr, "type = %d\n", r->type);
+  fprintf (fp_stderr, "flags = %d\n", r->erf_flags_t);
+  fprintf (fp_stderr, "rlen = %d\n", ntohs (r->rlen));
+  fprintf (fp_stderr, "lctr = %d\n", r->lctr);
+  fprintf (fp_stderr, "wlen = %d\n", ntohs (r->wlen));
 }
 
 #define ERF_HEADER_LEN            16
@@ -212,7 +212,7 @@ pread_erf_live (struct timeval *ptime,
 	  len = ntohs (curr_erf->rlen);
 	  /* User processing here */
 	  if (debug > 1)
-	    fprintf (stderr, "Got a new packet from the buffer (len = %d)\n",
+	    fprintf (fp_stderr, "Got a new packet from the buffer (len = %d)\n",
 		     len);
 	  if (debug > 2)
 	    print_erf_record (curr_erf);
@@ -282,7 +282,7 @@ pread_erf_live (struct timeval *ptime,
 	      *pplast = ((char *) *ppip) + *ptlen - 4 - 1;
 	      break;
 	    default:
-	      fprintf (stderr, "Unsupported ERF type: %d\n", curr_erf->type);
+	      fprintf (fp_stderr, "Unsupported ERF type: %d\n", curr_erf->type);
 	    }
 	  *pphystype = PHYS_ETHER;
 
@@ -290,7 +290,7 @@ pread_erf_live (struct timeval *ptime,
 	  if (ether_type != ETHERTYPE_IP && ether_type != ETHERTYPE_IPV6)
 	    {
 	      if (debug > 2)
-		fprintf (stderr, "pread_erf: not an IP packet\n");
+		fprintf (fp_stderr, "pread_erf: not an IP packet\n");
 	      erftype_ok = FALSE;
 	    }
 
@@ -302,7 +302,7 @@ pread_erf_live (struct timeval *ptime,
 	{			/* rec == NULL */
 	  if (errno != EAGAIN)
 	    {
-	      printf ("dag_get_next_record: %s\n", strerror (errno));
+	      fprintf (fp_stderr, "dag_get_next_record: %s\n", strerror (errno));
 	      exit (1);
 	    }
 	}
@@ -354,7 +354,7 @@ pread_multi_erf_live (struct timeval *ptime,
 		    dag_offset (erfbuf_ptr[i].dagfd, &erfbuf_ptr[i].old,
 				CAPTURE_DAG_UNLOCKED);
 		  if (debug > 1 && (new > old))
-		    fprintf (stderr,
+		    fprintf (fp_stderr,
 			     "Getting a new buffer from the dag card %d with size %d\n",
 			     i, new - old);
 		}
@@ -375,7 +375,7 @@ pread_multi_erf_live (struct timeval *ptime,
 	    {
 	      curr_erf[i] = GET_ERF (i);
 	      if (debug > 1)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "Checking new packet from the buffer %d \n", i);
 	      if (debug > 2)
 		print_erf_record (curr_erf[i]);
@@ -420,7 +420,7 @@ pread_multi_erf_live (struct timeval *ptime,
       tmp_erf = curr_erf[pos_mints];
       inc = ntohs (tmp_erf->rlen);
       if (debug > 1)
-	fprintf (stderr, "Got a new packet from the buffer %d (inc = %d)\n",
+	fprintf (fp_stderr, "Got a new packet from the buffer %d (inc = %d)\n",
 		 pos_mints, inc);
 
       /* old point to the next packet */
@@ -428,7 +428,7 @@ pread_multi_erf_live (struct timeval *ptime,
 	  || erfbuf_ptr[pos_mints].old + inc > erfbuf_ptr[pos_mints].new)
 	{
 	  if (debug > 0)
-	    fprintf (stderr, "Possible loss of packets: inc = %d, %d, %d\n",
+	    fprintf (fp_stderr, "Possible loss of packets: inc = %d, %d, %d\n",
 		     inc,
 		     erfbuf_ptr[pos_mints].old, erfbuf_ptr[pos_mints].new);
 	  erfbuf_ptr[pos_mints].old = erfbuf_ptr[pos_mints].new;
@@ -482,7 +482,7 @@ pread_multi_erf_live (struct timeval *ptime,
 	  *pplast = ((char *) *ppip) + *ptlen - 4 - 1;
 	  break;
 	default:
-	  fprintf (stderr, "Unsupported ERF type: %d\n", tmp_erf->type);
+	  fprintf (fp_stderr, "Unsupported ERF type: %d\n", tmp_erf->type);
 	}
 
       *pphystype = PHYS_ETHER;
@@ -491,7 +491,7 @@ pread_multi_erf_live (struct timeval *ptime,
       if (ether_type != ETHERTYPE_IP && ether_type != ETHERTYPE_IPV6)
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_erf: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_erf: not an IP packet\n");
 	  erftype_ok = FALSE;
 	}
 
@@ -521,28 +521,31 @@ init_erf_live (char *device_list)
     {
       if ((dagfd = dag_open (dagname)) == -1)
 	{
-	  printf
-	    ("Error: unable to open device \"%s\" in erf_live.c\n", dagname);
+	  fprintf (fp_stderr, 
+        "Error: unable to open device \"%s\" in erf_live.c\n", dagname);
 	  exit (1);
 	}
       if (dag_configure (dagfd, "slen=90 nic rxonly") < 0)
 	{
-	  printf ("Error: dag_configure %s: %s failed in erf_live.c\n:",
-		  dagname, strerror (errno));
+	  fprintf (fp_stderr, 
+        "Error: dag_configure %s: %s failed in erf_live.c\n:",
+		dagname, strerror (errno));
 	  exit (1);
 	}
 
       if (dag_attach_stream (dagfd, 0, 0, 4 * 1024 * 1024) < 0)
 	{
-	  printf ("Error: dag_attach %s: %s failed in erf_live.c\n", dagname,
-		  strerror (errno));
+	  fprintf (fp_stderr, 
+        "Error: dag_attach %s: %s failed in erf_live.c\n", dagname,
+		strerror (errno));
 	  exit (1);
 	}
 
       if (dag_start_stream (dagfd, 0) < 0)
 	{
-	  printf ("Error: dag_start %s: %s in erf_live.c\n", dagname,
-		  strerror (errno));
+	  fprintf (fp_stderr, 
+        "Error: dag_start %s: %s in erf_live.c\n", dagname,
+		strerror (errno));
 	  exit (1);
 	}
 
@@ -561,7 +564,7 @@ init_erf_live (char *device_list)
       erfbuf_ptr[ndag].old = 0;
 
       ndag++;
-      printf ("Opened capture channel on '%s'\n", dagname);
+      fprintf (fp_stdout, "Opened capture channel on '%s'\n", dagname);
       dagname = strtok (NULL, " ");
     }
 

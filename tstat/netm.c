@@ -108,7 +108,7 @@ pread_netm (struct timeval *ptime,
       if ((rlen = fread (&hdr, 1, hlen, SYS_STDIN)) != hlen)
 	{
 	  if (rlen != 0)
-	    fprintf (stderr, "Bad netm header\n");
+	    fprintf (fp_stderr, "Bad netm header\n");
 	  return (0);
 	}
 
@@ -120,7 +120,7 @@ pread_netm (struct timeval *ptime,
       rlen = fread (pep, 1, sizeof (struct ether_header), SYS_STDIN);
       if (rlen != sizeof (struct ether_header))
 	{
-	  fprintf (stderr, "Couldn't read ether header\n");
+	  fprintf (fp_stderr, "Couldn't read ether header\n");
 	  return (0);
 	}
 
@@ -129,7 +129,7 @@ pread_netm (struct timeval *ptime,
       if (len >= IP_MAXPACKET)
 	{
 	  /* sanity check */
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "pread_netm: invalid next packet, IP len is %d, return EOF\n",
 		   len);
 	  return (0);
@@ -138,7 +138,7 @@ pread_netm (struct timeval *ptime,
 	{
 	  if (rlen != 0)
 	    if (debug)
-	      fprintf (stderr,
+	      fprintf (fp_stderr,
 		       "Couldn't read %d more bytes, skipping last packet\n",
 		       len);
 	  return (0);
@@ -177,7 +177,7 @@ pread_netm (struct timeval *ptime,
 	  (ntohs (pep->ether_type) != ETHERTYPE_IPV6))
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_netm: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_netm: not an IP packet\n");
 	  continue;
 	}
 
@@ -228,12 +228,12 @@ is_netm (char *filename)
     netm_oldversion = 0;
   else
     {
-      fprintf (stderr, "Bad NETM file header version: %d\n", nhdr.version);
+      fprintf (fp_stderr, "Bad NETM file header version: %d\n", nhdr.version);
       return (NULL);
     }
 
   if (debug)
-    printf ("NETM file version: %d\n", nhdr.version);
+    fprintf (fp_stdout, "NETM file version: %d\n", nhdr.version);
 
   /* ignore the header at the top */
   if (fseek (SYS_STDIN, NETM_DUMP_OFFSET, SEEK_SET) == -1)

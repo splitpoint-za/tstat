@@ -388,7 +388,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 
   if (tproto == PROTOCOL_TCP)
     {
-      fprintf (stderr, "Aaargh !? RTP over TCP !!!\n");
+      fprintf (fp_stderr, "Aaargh !? RTP over TCP !!!\n");
       exit (1);
     }
 
@@ -535,7 +535,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 	    f_rtcp->rtcp_header_error |= E_TRUNCATED;
 	     if(warn_printtrunc)
 	    {
-	      fprintf (stderr, "Warning: RTCP packet is truncated!\n");
+	      fprintf (fp_stderr, "Warning: RTCP packet is truncated!\n");
 	      break;
 	    }
           }
@@ -553,7 +553,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 	    {
 	      f_rtcp->rtcp_header_error |= E_TOOMANYRR;
 	      if (debug > 1)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "Warning: Tstat is able to manage RTCP with only 1 Receiver Report!\n");
 	      break;
 	    }
@@ -563,7 +563,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 	    if(warn_printtrunc)
 	    {
 	      if (debug > 1)
-		fprintf (stderr, "Warning: RTCP packet is truncated!\n");
+		fprintf (fp_stderr, "Warning: RTCP packet is truncated!\n");
 	      break;
 	    }
 	  }
@@ -1157,7 +1157,7 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 	f_rtcp->rtcp_header_error |= E_TRUNCATED;
 	if(warn_printtrunc)
 	{
-	  fprintf (stderr, "Warning: RTCP packet is truncated!\n");
+	  fprintf (fp_stderr, "Warning: RTCP packet is truncated!\n");
 	  break;
 	}
       }
@@ -1223,7 +1223,7 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 	{
 	  f_rtcp->rtcp_header_error |= E_TOOMANYRR;
 	  if (debug > 1)
-	    fprintf (stderr,
+	    fprintf (fp_stderr,
 		     "Warning: Tstat is able to manage RTCP with only 1 Receiver Report!\n");
 	  break;
 	}
@@ -1233,7 +1233,7 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 	if(warn_printtrunc)
 	{
 	  if (debug > 1)
-	    fprintf (stderr, "Warning: RTCP packet is truncated!\n");
+	    fprintf (fp_stderr, "Warning: RTCP packet is truncated!\n");
 	  break;
 	}
       }

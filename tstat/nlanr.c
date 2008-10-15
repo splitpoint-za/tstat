@@ -104,7 +104,7 @@ pread_nlanr (struct timeval *ptime,
   if ((rlen = fread (&hdr, 1, hlen, stdin)) != hlen)
     {
       if (debug && (rlen != 0))
-	fprintf (stderr, "Bad tsh packet header (len:%d)\n", rlen);
+	fprintf (fp_stderr, "Bad tsh packet header (len:%d)\n", rlen);
       return (0);
     }
 
@@ -157,11 +157,11 @@ is_nlanr (void)
 
   if (debug)
     {
-      printf ("nlanr tsh ts_secs:   %d\n", tf.tph.ts_secs);
-      printf ("nlanr tsh ts_usecs:  %d\n", tf.tph.ts_usecs);
-      printf ("nlanr tsh interface: %d\n", tf.tph.interface_id);
-      printf ("nlanr sizeof(tf):    %d\n", sizeof (tf));
-      printf ("nlanr sizeof(tph):   %d\n", sizeof (tf.tph));
+      fprintf (fp_stdout, "nlanr tsh ts_secs:   %d\n", tf.tph.ts_secs);
+      fprintf (fp_stdout, "nlanr tsh ts_usecs:  %d\n", tf.tph.ts_usecs);
+      fprintf (fp_stdout, "nlanr tsh interface: %d\n", tf.tph.interface_id);
+      fprintf (fp_stdout, "nlanr sizeof(tf):    %d\n", sizeof (tf));
+      fprintf (fp_stdout, "nlanr sizeof(tph):   %d\n", sizeof (tf.tph));
     }
 
   /* quick heuristics */
@@ -179,7 +179,7 @@ is_nlanr (void)
   pep->ether_type = htons (ETHERTYPE_IP);
 
   if (debug)
-    fprintf (stderr, "TSH format, interface ID %d\n", tf.tph.interface_id);
+    fprintf (fp_stderr, "TSH format, interface ID %d\n", tf.tph.interface_id);
 
 
   return (pread_nlanr);

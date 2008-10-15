@@ -537,8 +537,7 @@ udp_search_sopcast (unsigned char *haystack,
 		            int payload_len)
 {
     unsigned int byte1, byte9, byte10; 
-    unsigned int byte21, byte22;
-    //printf("payload_len:%d packet_len:%d\n", payload_len, packet_len);
+    //unsigned int byte21, byte22;
 
     //byte1     (8):        0x00
     //byte3     (10):       0x01
@@ -596,7 +595,7 @@ udp_search_tvants (unsigned char *haystack,
                    const int packet_len,
 		           int payload_len)
 {
-    unsigned int byte9, byte5, byte6;
+    //unsigned int byte9, byte5, byte6;
     //byte1     (8)     : 0x04
     //byte2     (9)     : 0x00
     //byte3     (10)    : 0x07, 0x05
@@ -638,7 +637,6 @@ udp_search_tvants (unsigned char *haystack,
         return 0;
     else if (byte9 == 0x44)
     {
-        //printf("packet_len:%d byte5:%d byte6:%d\n", packet_len, byte5, byte6);
         if ((packet_len - 8) % byte5 != 0 || byte6 != 0)
          return 0;
     }

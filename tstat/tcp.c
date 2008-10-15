@@ -277,7 +277,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
     {
       steps++;
       /* look for the next one */
-//         printf("%d %d\n", num_tcp_pairs, old_new_tcp_pairs);
+//         fprintf (fp_stdout, "%d %d\n", num_tcp_pairs, old_new_tcp_pairs);
       num_tcp_pairs++;
       num_tcp_pairs = num_tcp_pairs % MAX_TCP_PAIRS;
     }
@@ -285,11 +285,10 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
     {
       if (warn_MAX_)
 	{
-	  printf
-	    ("\nooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n");
-	  printf
-	    ("you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n");
-	  printf ("or possibly with a larger MAX_TCP_PAIRS defined!\n");
+	  fprintf (fp_stdout, "\n" 
+	    "ooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n"
+	    "you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n"
+	    "or possibly with a larger MAX_TCP_PAIRS defined!\n");
 	}
       warn_MAX_ = FALSE;
       return (NULL);
@@ -338,14 +337,14 @@ void *
 time_out_flow_closing ()
 {
   if (debug > 0)
-    printf ("Created thread time_out_flow_closing()\n");
+    fprintf (fp_stdout, "Created thread time_out_flow_closing()\n");
   pthread_mutex_lock (&flow_close_started_mutex);
   pthread_mutex_lock (&flow_close_cond_mutex);
   while (1)
     {
       pthread_cond_wait (&flow_close_cond, &flow_close_cond_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nSvegliato thread FLOW CLOSE\n");
+      fprintf (fp_stdout, "\n\nSvegliato thread FLOW CLOSE\n");
 #endif
       pthread_mutex_unlock (&flow_close_started_mutex);
 
@@ -354,7 +353,7 @@ time_out_flow_closing ()
 
       pthread_mutex_lock (&flow_close_started_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nTerminato thread FLOW CLOSE\n");
+      fprintf (fp_stdout, "\n\nTerminato thread FLOW CLOSE\n");
 #endif
     }
   pthread_exit (NULL);
@@ -434,8 +433,8 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
       /* the new connection must begin with a SYN */
       if (debug > 1)
 	{
-	  printf
-	    ("** trash TCP packet: it does not belong to any known flows\n");
+	  fprintf (fp_stdout, 
+        "** trash TCP packet: it does not belong to any known flows\n");
 	}
       not_id_p++;
       return (NULL);
@@ -443,7 +442,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
 
   if (debug > 1)
     {
-      printf ("tracing a new TCP flow\n");
+      fprintf (fp_stdout, "tracing a new TCP flow\n");
     }
 
   // we fire it at DOUBLE rate, but actually clean only those > TCP_IDLE_TIME
@@ -454,7 +453,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
 	  pthread_mutex_unlock (&ttp_lock_mutex);
 	  pthread_mutex_lock (&flow_close_cond_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("TCP_IDLE_TIME fired: Signaling thread FLOW CLOSE\n");
+	  fprintf (fp_stdout, "TCP_IDLE_TIME fired: Signaling thread FLOW CLOSE\n");
 #endif
 	  pthread_cond_signal (&flow_close_cond);
 	  pthread_mutex_unlock (&flow_close_cond_mutex);
@@ -462,7 +461,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
 	  pthread_mutex_lock (&flow_close_started_mutex);
 	  pthread_mutex_unlock (&flow_close_started_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nlocked thread FLOW CLOSE\n");
+	  fprintf (fp_stdout, "\n\nlocked thread FLOW CLOSE\n");
 #endif
 	  pthread_mutex_lock (&ttp_lock_mutex);
 	}
@@ -480,11 +479,11 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
   if (threaded)
     {
 #ifdef DEBUG_THREAD
-      printf ("\n\nTry to lock thread TTP\n");
+      fprintf (fp_stdout, "\n\nTry to lock thread TTP\n");
 #endif
       pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nGot lock thread TTP\n");
+      fprintf (fp_stdout, "\n\nGot lock thread TTP\n");
 #endif
     }
 
@@ -494,8 +493,8 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
       /* the new connection must begin with a SYN */
       if (debug > 0)
 	{
-	  printf
-	    ("** out of memory when creating flows - considering a not_id_p\n");
+	  fprintf (fp_stdout, 
+        "** out of memory when creating flows - considering a not_id_p\n");
 	}
       not_id_p++;
       return (NULL);
@@ -519,7 +518,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
     {
       pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nUnlocked thread TTP\n");
+      fprintf (fp_stdout, "\n\nUnlocked thread TTP\n");
 #endif
     }
 
@@ -564,7 +563,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       (unsigned long) plast)
     {
       if (warn_printtrunc)
-	fprintf (stderr,
+	fprintf (fp_stderr,
 		 "TCP packet %lu truncated too short (%ld) to trace, ignored\n",
 		 pnum,
 		 (unsigned long) ptcp + sizeof (struct tcphdr) -
@@ -667,7 +666,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 #ifndef LOG_HALFDUPLEX
   if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
     {
-      //fprintf (stdout, "  Closing a half duplex flow\n");
+      //fprintf (fp_stdout, "  Closing a half duplex flow\n");
       tot_conn_TCP--;
       make_conn_stats (ptp_save,
 		       (ptp_save->s2c.syn_count > 0
@@ -678,11 +677,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (threaded)
 	{
 #ifdef DEBUG_THREAD
-	  printf ("\n\nRichiesto blocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
 #endif
 	  pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nOttenuto blocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
 #endif
 	}
       free_tp (ptp_save);
@@ -695,11 +694,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (threaded)
 	{
 #ifdef DEBUG_THREAD
-	  printf ("\n\nRichiesto sblocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
 #endif
 	  pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nOttenuto sblocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
 #endif
 	}
 
@@ -781,7 +780,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	{
 	  /* it changed, that shouldn't happen! */
 	  if (warn_printbad_syn_fin_seq)
-	    fprintf (stderr,
+	    fprintf (fp_stderr,
 		     "rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
 		     thisdir->syn, start,
 		     (int) (elapsed (ptp_save->first_time, current_time) /
@@ -802,7 +801,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	{
 	  /* it changed, that shouldn't happen! */
 	  if (warn_printbad_syn_fin_seq)
-	    fprintf (stderr,
+	    fprintf (fp_stderr,
 		     "rexmitted FIN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
 		     thisdir->fin, fin,
 		     (int) (elapsed (ptp_save->first_time, current_time) /
@@ -999,7 +998,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       if (ConnReset (ptp_save))
 	{
-	  //fprintf (stdout, "  (new reset)\n");
+	  //fprintf (fp_stdout, "  (new reset)\n");
 	  tot_conn_TCP--;
 	  make_conn_stats (ptp_save,
 			   (ptp_save->s2c.syn_count > 0
@@ -1010,11 +1009,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	  if (threaded)
 	    {
 #ifdef DEBUG_THREAD
-	      printf ("\n\nRichiesto blocco thread TTP\n");
+	      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
 #endif
 	      pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	      printf ("\n\nOttenuto blocco thread TTP\n");
+	      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
 #endif
 	    }
 	  free_tp (ptp_save);
@@ -1027,11 +1026,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	  if (threaded)
 	    {
 #ifdef DEBUG_THREAD
-	      printf ("\n\nRichiesto sblocco thread TTP\n");
+	      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
 #endif
 	      pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	      printf ("\n\nOttenuto sblocco thread TTP\n");
+	      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
 #endif
 	    }
 	}
@@ -1144,7 +1143,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   if (ConnComplete (ptp_save))
     {
-      //fprintf (stdout, "  (new complete)\n");
+      //fprintf (fp_stdout, "  (new complete)\n");
 
       tot_conn_TCP--;
       make_conn_stats (ptp_save, TRUE);
@@ -1154,11 +1153,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (threaded)
 	{
 #ifdef DEBUG_THREAD
-	  printf ("\n\nRichiesto blocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
 #endif
 	  pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nOttenuto blocco thread TTP\n");
+	  fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
 #endif
 	}
       free_tp (ptp_save);
@@ -1175,11 +1174,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (threaded)
 	{
 #ifdef DEBUG_THREAD
-	  printf ("\n\ngoing to Unlock of the TTP thread\n");
+	  fprintf (fp_stdout, "\n\ngoing to Unlock of the TTP thread\n");
 #endif
 	  pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nthread TTP unlocked\n");
+	  fprintf (fp_stdout, "\n\nthread TTP unlocked\n");
 #endif
 	}
     }
@@ -1193,11 +1192,11 @@ print_ttp ()
 
   for (p = 0; p < MAX_TCP_PAIRS; p++)
     {
-      printf ("[%2d]", p);
+      fprintf (fp_stdout, "[%2d]", p);
       if (ttp[p] != NULL)
-	printf ("->[ptp]\n");
+	fprintf (fp_stdout, "->[ptp]\n");
       else
-	printf ("->[NULL]\n");
+	fprintf (fp_stdout, "->[NULL]\n");
     }
 }
 
@@ -1273,7 +1272,7 @@ trace_done_periodic ()
 
   /* complete the "idle time" calculations using NOW */
   if (printticks && debug > 1)
-    fprintf (stderr, "\nStart cleaning TCP flows\n");
+    fprintf (fp_stderr, "\nStart cleaning TCP flows\n");
   for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
     {
       ptp = ttp[ix];
@@ -1288,11 +1287,11 @@ trace_done_periodic ()
 	  if (threaded)
 	    {
 #ifdef DEBUG_THREAD
-	      printf ("\n\nTrace_done_periodic trying lock thread TTP\n");
+	      fprintf (fp_stdout, "\n\nTrace_done_periodic trying lock thread TTP\n");
 #endif
 	      pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	      printf ("\n\nTrace_done_periodic got lock thread TTP\n");
+	      fprintf (fp_stdout, "\n\nTrace_done_periodic got lock thread TTP\n");
 #endif
 	      if ((ptp == NULL))
 		/* someonelse already cleaned this ptp */
@@ -1370,7 +1369,7 @@ trace_done_periodic ()
 	    {
 	      pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-	      printf ("\n\nTrace_done_periodic released lock thread TTP\n");
+	      fprintf (fp_stdout, "\n\nTrace_done_periodic released lock thread TTP\n");
 #endif
 	    }
 	}
@@ -1378,7 +1377,7 @@ trace_done_periodic ()
     }
 
   if (printticks && debug > 1)
-    fprintf (stderr,
+    fprintf (fp_stderr,
 	     "\rCleaned %d/(%ld) TCP flows\n", cleaned, init_tot_conn);
 
   if (do_udp == FALSE)
@@ -1387,7 +1386,7 @@ trace_done_periodic ()
 
 
   if (printticks && debug > 1)
-    fprintf (stderr, "Start cleaning UDP flows\n");
+    fprintf (fp_stderr, "Start cleaning UDP flows\n");
 
   cleaned = 0;
   init_tot_conn = tot_conn_UDP;
@@ -1405,7 +1404,7 @@ trace_done_periodic ()
 
     }
   if (printticks && debug > 1)
-    fprintf (stderr,
+    fprintf (fp_stderr,
 	     "\rCleaned %d/(%ld) UDP flows\n", cleaned, init_tot_conn);
 }
 
@@ -1470,13 +1469,13 @@ ParseOptions (struct tcphdr *ptcp, void *plast)
     {
       if (ptcp->th_x2 != 0)
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "TCP packet %lu: 4 reserved bits are not zero (0x%01x)\n",
 		   pnum, ptcp->th_x2);
 	}
       if ((ptcp->th_flags & 0xc0) != 0)
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "TCP packet %lu: upper flag bits are not zero (0x%02x)\n",
 		   pnum, ptcp->th_flags);
 	}
@@ -1487,7 +1486,7 @@ ParseOptions (struct tcphdr *ptcp, void *plast)
       if (!warned && ((ptcp->th_x2 != 0) || ((ptcp->th_flags & 0xc0) != 0)))
 	{
 	  warned = 1;
-	  fprintf (stderr, "\
+	  fprintf (fp_stderr, "\
 TCP packet %lu: reserved bits are not all zero.  \n\
 \tFurther warnings disabled, use '-w' for more info\n", pnum);
 	}
@@ -1501,7 +1500,7 @@ TCP packet %lu: reserved bits are not all zero.  \n\
       if ((unsigned long) popt >= (unsigned long) plast)
 	{
 	  if (warn_printtrunc)
-	    fprintf (stderr, "\
+	    fprintf (fp_stderr, "\
 ParseOptions: packet %lu too short (%lu) to parse remaining options\n", pnum, (unsigned long) popt - (unsigned long) plast + 1);
 	  ++ctrunc;
 	  break;
@@ -1509,13 +1508,13 @@ ParseOptions: packet %lu too short (%lu) to parse remaining options\n", pnum, (u
 
 #define CHECK_O_LEN(opt) \
 	if (*plen == 0) { \
-	    if (warn_printtrunc) fprintf(stderr, "\
+	    if (warn_printtrunc) fprintf (fp_stderr, "\
 ParseOptions: packet %lu %s option has length 0, skipping other options\n", \
                                            pnum,opt); \
 	    popt = pdata; break;} \
 	if ((unsigned long)popt + *plen - 1 > (unsigned long)(plast)) { \
 	    if (warn_printtrunc) \
-		fprintf(stderr, "\
+		fprintf (fp_stderr, "\
 ParseOptions: packet %lu %s option truncated, skipping other options\n", \
               pnum,opt); \
 	    ++ctrunc; \
@@ -1601,7 +1600,7 @@ ParseOptions: packet %lu %s option truncated, skipping other options\n", \
 		{
 		  /* this SACK block isn't all here */
 		  if (warn_printtrunc)
-		    fprintf (stderr, "packet %lu: SACK block truncated\n",
+		    fprintf (fp_stderr, "packet %lu: SACK block truncated\n",
 			     pnum);
 		  ++ctrunc;
 		  break;
@@ -1610,7 +1609,7 @@ ParseOptions: packet %lu %s option truncated, skipping other options\n", \
 	      if (tcpo.sack_count > MAX_SACKS)
 		{
 		  /* this isn't supposed to be able to happen */
-		  fprintf (stderr,
+		  fprintf (fp_stderr,
 			   "Warning, internal error, too many sacks!!\n");
 		  tcpo.sack_count = MAX_SACKS;
 		}
@@ -1618,7 +1617,7 @@ ParseOptions: packet %lu %s option truncated, skipping other options\n", \
 	  break;
 	default:
 	  if (debug)
-	    fprintf (stderr,
+	    fprintf (fp_stderr,
 		     "Warning, ignoring unknown TCP option 0x%x\n", *popt);
 	  CHECK_O_LEN ("TCPOPT_UNKNOWN");
 
@@ -1744,7 +1743,7 @@ tcp_cksum (struct ip *pip, struct tcphdr *ptcp, void *plast)
   /* verify version */
   if (!PIP_ISV4 (pip) && !PIP_ISV6 (pip))
     {
-      fprintf (stderr, "Internal error, tcp_cksum: neither IPv4 nor IPv6\n");
+      fprintf (fp_stderr, "Internal error, tcp_cksum: neither IPv4 nor IPv6\n");
       exit (-1);
     }
 
@@ -1788,7 +1787,7 @@ tcp_cksum (struct ip *pip, struct tcphdr *ptcp, void *plast)
 
       if (!warned)
 	{
-	  fprintf (stderr, "\nWarning: IPv6 TCP checksums not verified\n\n");
+	  fprintf (fp_stderr, "\nWarning: IPv6 TCP checksums not verified\n\n");
 	  warned = TRUE;
 	}
       return (0);		/* pretend it's valid */
@@ -1826,7 +1825,7 @@ udp_cksum (struct ip *pip, struct udphdr *pudp, void *plast)
   /* verify version */
   if (!PIP_ISV4 (pip) && !PIP_ISV6 (pip))
     {
-      fprintf (stderr, "Internal error, udp_cksum: neither IPv4 nor IPv6\n");
+      fprintf (fp_stderr, "Internal error, udp_cksum: neither IPv4 nor IPv6\n");
       exit (-1);
     }
 
@@ -1861,7 +1860,7 @@ udp_cksum (struct ip *pip, struct udphdr *pudp, void *plast)
 
       if (!warned)
 	{
-	  fprintf (stderr, "\nWarning: IPv6 UDP checksums not verified\n\n");
+	  fprintf (fp_stderr, "\nWarning: IPv6 UDP checksums not verified\n\n");
 	  warned = TRUE;
 	}
       return (0);		/* pretend it's valid */
@@ -1973,10 +1972,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     {
       if (warn_IN_OUT)
 	{
-	  printf
-	    ("\nWARN: This flow is neither incoming nor outgoing: src - %s;",
+	  fprintf (fp_stdout, 
+        "\nWARN: This flow is neither incoming nor outgoing: src - %s;",
 	     HostName (ptp_save->addr_pair.a_address));
-	  printf (" dst - %s!\n", HostName (ptp_save->addr_pair.b_address));
+	  fprintf (fp_stdout, " dst - %s!\n", HostName (ptp_save->addr_pair.b_address));
 	  warn_IN_OUT = FALSE;
 	}
 #ifndef LOG_UNKNOWN
@@ -2451,10 +2450,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	{
 	  if (warn_IN_OUT)
 	    {
-	      printf
-		("\nWARN: This stream is neither incoming nor outgoing: src - %s;",
-		 HostName (ptp_save->addr_pair.a_address));
-	      printf (" dst - %s!\n",
+	      fprintf (fp_stdout, 
+            "\nWARN: This stream is neither incoming nor outgoing: src - %s;",
+		    HostName (ptp_save->addr_pair.a_address));
+	      fprintf (fp_stdout, " dst - %s!\n",
 		      HostName (ptp_save->addr_pair.b_address));
 	      warn_IN_OUT = FALSE;
 	    }

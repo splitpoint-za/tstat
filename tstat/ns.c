@@ -81,7 +81,7 @@ pread_ns (struct timeval *ptime,
       /* if we can't match all 14 fields, we give up on the file */
       if (rlen != 14 && rlen != 18)
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "Bad NS packet header in line %u only [%d] arguments can be matched expected 14 or 18 \n",
 		   linenum, rlen);
 	  return (0);
@@ -188,7 +188,7 @@ pread_ns (struct timeval *ptime,
       *pphystype = PHYS_ETHER;
 
 /*
-  printf("timestamp %g, type %s, plen %d, seq %d, id %d\n",
+  fprintf(fp_stdout, "timestamp %g, type %s, plen %d, seq %d, id %d\n",
   timestamp, type, *plen, seq, ipb->ip_id);
 */
       return (1);
@@ -244,11 +244,11 @@ pread_ns_fulltcp (struct timeval *ptime,
       /* if we can't match all 18 fields, we give up on the file */
       if (rlen != 18)
 	{
-	  fprintf (stderr, "\"%s\"\n", myline);
-	  fprintf (stderr,
+	  fprintf (fp_stderr, "\"%s\"\n", myline);
+	  fprintf (fp_stderr,
 		   "Bad NS packet header in line %u only [%d] arguments can be matched expected 14 or 18 \n",
 		   linenum, rlen);
-	  fprintf (stderr, "Is this a Full Tcp Header?\n");
+	  fprintf (fp_stderr, "Is this a Full Tcp Header?\n");
 	  return (0);
 	}
 
@@ -319,7 +319,7 @@ pread_ns_fulltcp (struct timeval *ptime,
       *pphystype = PHYS_ETHER;
 
 
-      /* printf("timestamp %g, type %s, plen %d, seq %d, id %d, ack %d, 0x%x %d \n",
+      /* fprintf(fp_stdout, "timestamp %g, type %s, plen %d, seq %d, id %d, ack %d, 0x%x %d \n",
          timestamp, type, *plen, seqno, ipb->ip_id,ackno,pflags,hdrlen); */
 
 
@@ -399,7 +399,7 @@ is_ns (char *filename)
   /* Lets check if it is FullTCP or not */
   if (hdrlen || pflags)
     {				/*it is FullTCP */
-/*		printf("Full TCP \n"); */
+/*		fprintf(fp_stdout, "Full TCP \n"); */
       rewind (SYS_STDIN);
       return (pread_ns_fulltcp);
     }

@@ -31,8 +31,12 @@ static char const copyright[] =
 #include "version.h"
 #include <time.h>
 #include "tcpL7.h"
+#include "inireader.h"
 #include <sys/wait.h>
 #include <getopt.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 /* version information */
 char *tstat_version = VERSION;
@@ -65,6 +69,7 @@ static int ip_header_stat (int phystype, struct ip *pip, u_long * fpnum,
 			   long int location, int tlen, void *plast);
 
 void stat_dumping_old_style ();
+static void flush_histo_engine(void);
 
 /* thread mutex and conditional variables  */
 
@@ -85,6 +90,7 @@ char *dev;
 static Bool basedirspecified = FALSE;
 static char *basenamedir;
 static char basename[100];
+static char log_tstat_fname[200];
 Bool internal_src = FALSE;
 Bool internal_dst = FALSE;
 
@@ -148,7 +154,6 @@ struct L7_bitrates L7_udp_bitrate;
 static u_long pcount = 0;   //global packet counter
 static u_long fpnum = 0;    //per file packet counter
 static int file_count = 0;
-static int update_num = 0;
 
 #ifdef HAVE_RRDTOOL
 /*-----------------------------------------------------------*/
@@ -159,12 +164,15 @@ Bool rrdset_conf = FALSE;	/* configuration file flag */
 /*-----------------------------------------------------------*/
 #endif
 
-Bool histo_engine = TRUE;	/* -S */
-Bool adx_engine = FALSE;	/* to allow disabling via -H */
-Bool global_histo = FALSE;	/* -g */
+Bool histo_engine = TRUE;	    /* -S */
+Bool adx_engine = FALSE;	    /* to allow disabling via -H */
+Bool global_histo = FALSE;	    /* -g */
 
-Bool log_engine = TRUE;		/* -L */
-Bool bayes_engine = FALSE;	/* -B */
+Bool log_engine = TRUE;		    /* -L */
+Bool bayes_engine = FALSE;	    /* -B */
+Bool runtime_engine = FALSE;    /* -T */
+Bool rrd_engine = FALSE;
+Bool histo_engine_log = TRUE;
 
 int log_version = 2;            /* -1 */
 
@@ -182,6 +190,11 @@ static char *cur_filename;
 static char *progname;
 static unsigned int step = 0;	/* counter to track the dir storing the
 				   periodic dumping of histograms. */
+static Bool first_packet_readed = FALSE; 
+
+static time_t last_mtime;           //last time runtime config file is changed
+static time_t last_mtime_check;
+static int mtime_stable_counter;    //when this counter is 0, read again runtime config    
 
 //XXX
 typedef enum
@@ -206,6 +219,8 @@ timeval last_skypeprint_time = { 0, 0 };
 
 /* .a.c. */
 Bool is_stdin;
+FILE *fp_stdout = NULL;
+FILE *fp_stderr = NULL;
 FILE *fp_logc = NULL;
 FILE *fp_lognc = NULL;
 FILE *fp_rtp_logc = NULL;
@@ -237,7 +252,8 @@ extern long int tot_adx_hash_count, tot_adx_list_count, adx_search_hash_count,
   adx_search_list_count;
 
 extern char dump_conf_fname[];
-Bool dump_engine = FALSE;
+char runtime_conf_fname[200];
+//static timeval last_runtime_check = {-1,-1};
 
 #ifdef SIG_CHILD_HANDLER
 /* SIG_CHILD handler (to avoid zombie processes)*/
@@ -249,7 +265,7 @@ sigchld_h (int signum)
   while ((pid = waitpid (-1, &status, WNOHANG)) > 0)
     {
       if (debug > 1)
-	fprintf (stdout, "Child (pid %d) terminated with status %d\n.", pid,
+	fprintf (fp_stdout, "Child (pid %d) terminated with status %d\n.", pid,
 		 status);
     }
   /* some OS reset the signal handler to SIG_DFL */
@@ -263,132 +279,117 @@ sigchld_h (int signum)
 static void
 Help (void)
 {
-  fprintf (stderr,
-	   "Usage:\n\ttstat  [-htuvwpg] [-d[-d]] [-N file] [-s dir]\n");
-  fprintf (stderr, "              [-B bayes.conf] [-T dump.conf] [-S] [-L]\n"
-	   "              [-H ?|file ]\n"
+  fprintf (fp_stderr,
+    "Usage:\n"
+    "\ttstat [-htuvwpgSL] [-d[-d]]\n"
+    "\t      [-s dir]\n"
+    "\t      [-N file]\n"
+    "\t      [-B bayes.conf]\n"
+    "\t      [-T runtime.conf]\n"
+    "\t      [-z file]\n"
+    "\t      [-H ?|file ]\n"
 #ifdef SUPPORT_IPV6
-	   "              [-y] [-6 file]\n"
+    "\t      [-y] [-6 file]\n"
 #endif
 #ifdef HAVE_RRDTOOL
-	   "              [-r RRD_out_dir] [-R rrd_conf] [-S]\n"
+    "\t      [-r RRD_out_dir] [-R rrd_conf]\n"
 #endif
 #ifdef GROK_LIVE_TCPDUMP
-	   "              [-l] [-i interface]\n"
+    "\t      [-l] [-i interface]\n"
 #endif
 #ifdef GROK_ERF_LIVE
-	   "              [--dag device_name device_name ...]\n"
+    "\t      [--dag device_name device_name ...]\n"
 #endif
-	   "              [-f filterfile] <file1 file2>\n\n");
-
-  fprintf (stderr, "Options:\n");
-  fprintf (stderr, "\t-h: print this help and exit\n");
-  fprintf (stderr, "\t-t: print ticks showing the trace analysis progress\n");
-  fprintf (stderr, "\t-u: do not trace UDP packets\n");
-  fprintf (stderr, "\t-v: print version and exit\n");
-  fprintf (stderr, "\t-w: print [lots] of warning\n");
-  fprintf (stderr,
-	   "\t-c: concatenate the finput files\n\t    (input files should already be in the correct order)\n");
-  fprintf (stderr,
-	   "\t-p: enable multi-threaded engine (useful for live capture)\n\n");
-  fprintf (stderr,
-	   "\t-d: increase debug level (repeat to increase debug level)\n");
-  fprintf (stderr, "\t-N file: specify the file name which contains the\n");
-  fprintf (stderr, "\t         description of the internal networks.\n");
-  fprintf (stderr,
-	   "\t         This file must contain the subnets that will be\n");
-  fprintf (stderr,
-	   "\t         considered as 'internal' during the analysis\n");
-  fprintf (stderr,
-	   "\t         Each subnet must be specified using network IP address\n");
-  fprintf (stderr,
-	   "\t         on the first line and NETMASK on the next line:\n");
-  fprintf (stderr, "\t         130.192.0.0\n");
-  fprintf (stderr, "\t         255.255.0.0\n");
-  fprintf (stderr, "\t         193.204.134.0\n");
-  fprintf (stderr, "\t         255.255.255.0\n\n");
-
-  fprintf (stderr,
-	   "\t-sdir: puts the trace analysis results into directory\n");
-  fprintf (stderr, "\t       tree dir (otherwise will be <file>.out)\n");
-
-  fprintf (stderr,
-	   "\t-H ?: print internal histograms names and definitions\n");
-  fprintf (stderr, "\t-H file: Read histogram configuration from file\n");
-  fprintf (stderr,
-	   "\t         file describes which histograms tstat should collect\n");
-  fprintf (stderr,
-	   "\t         'include histo_name' includes a single histogram\n");
-  fprintf (stderr,
-	   "\t         'include_matching string' includes all histograms\n");
-  fprintf (stderr, "\t         whose name includes the string\n");
-  fprintf (stderr, "\t         special names are:\n");
-  fprintf (stderr, "\t         'ALL' to include all histograms\n");
-  fprintf (stderr, "\t         'ADX' to include address hits histogram\n");
-  fprintf (stderr, "\t         for example, to include all TCP related\n");
-  fprintf (stderr,
-	   "\t         and the address hits histograms, file should be:\n");
-  fprintf (stderr, "\t         include ADX\n");
-  fprintf (stderr, "\t         include_matching tcp\n\n");
-
-  fprintf (stderr, "\t-H file: Read histogram configuration from file\n");
-  fprintf (stderr, "\t-g: Enable global histo engine\n");
-  fprintf (stderr,
-	   "\t-S: No histo engine: do not create histograms files \n");
-  fprintf (stderr, "\t-L: No log engine: do not create log_* files \n");
-  fprintf (stderr, "\t-1: Use old (v1) log_mm format\n");
-  fprintf (stderr,
-	   "\t-B Bayes_Dir: enable Bayesian traffic classification\n");
-  fprintf (stderr, "\t              configuration files from Bayes_Dir\n");
-  fprintf (stderr, 
-       "\t-T dump.conf: configurazion file for the dump engine\n");
+    "\t      [-f filterfile]\n"
+    "\t      <file1 file2>\n"
+    "\n"
+    "Options:\n"
+    "\t-h: print this help and exit\n"
+    "\t-t: print ticks showing the trace analysis progress\n"
+    "\t-u: do not trace UDP packets\n"
+    "\t-v: print version and exit\n"
+    "\t-w: print [lots] of warning\n"
+    "\t-c: concatenate the finput files\n"
+    "\t    (input files should already be in the correct order)\n"
+    "\t-p: enable multi-threaded engine (useful for live capture)\n"
+    "\t-d: increase debug level (repeat to increase debug level)\n"
+    "\n"
+    "\t-s dir: puts the trace analysis results into directory\n"
+    "\t        tree dir (otherwise will be <file>.out)\n"
+    "\t-N file: specify the file name which contains the\n"
+    "\t         description of the internal networks.\n"
+    "\t         This file must contain the subnets that will be\n"
+    "\t         considered as 'internal' during the analysis\n"
+    "\t         Each subnet must be specified using network IP address\n"
+    "\t         on the first line and NETMASK on the next line:\n"
+    "\t         130.192.0.0\n"
+    "\t         255.255.0.0\n"
+    "\t         193.204.134.0\n"
+    "\t         255.255.255.0\n"
+    "\n"
+	"\t-H ?: print internal histograms names and definitions\n"
+    "\t-H file: Read histogram configuration from file\n"
+	"\t         file describes which histograms tstat should collect\n"
+	"\t         'include histo_name' includes a single histogram\n"
+	"\t         'include_matching string' includes all histograms\n"
+    "\t         whose name includes the string\n"
+    "\t         special names are:\n"
+    "\t         'ALL' to include all histograms\n"
+    "\t         'ADX' to include address hits histogram\n"
+    "\t         for example, to include all TCP related\n"
+	"\t         and the address hits histograms, file should be:\n"
+    "\t         include ADX\n"
+    "\t         include_matching tcp\n"
+    "\n"
+    "\t-g: Enable global histo engine\n"
+    "\t-S: No histo engine: do not create histograms files \n"
+    "\t-L: No log engine: do not create log_* files \n"
+    "\t-1: Use old (v1) log_mm format\n"
+	"\t-B Bayes_Dir: enable Bayesian traffic classification\n"
+    "\t              configuration files from Bayes_Dir\n"
+    "\t-T runtime.conf: configuration file to enable/disable dumping\n"
+    "\t                 of traces and logs at runtime\n" 
+    "\t-z file: redirect all the stdout/stderr messages to the file specified\n"
 #ifdef SUPPORT_IPV6
-  fprintf (stderr,
-	   "\t-y: to activate the security controls on 6to4 tunnels \n");
-  fprintf (stderr, "\t-6file: specify the file name which contains the\n");
-  fprintf (stderr, "\t        description of the internal IPv6 network.\n");
+	"\t-y: to activate the security controls on 6to4 tunnels \n"
+    "\t-6 file: specify the file name which contains the\n"
+    "\t         description of the internal IPv6 network.\n"
 #endif
 #ifdef HAVE_RRDTOOL
 /*----------------------------------------------------------- 
    RRDtools 				                     
    these flags test for both the -r and -R options to be 
    specified when using RR database integration */
-  fprintf (stderr,
-	   "\t-Rconf: specify the configuration file for integration with"
-	   "\n\t      RRDtool. See README.RRDtool for further information"
-	   "\n\t-rpath: path to use to create/update the RRDtool database\n");
+    "\t-R conf: specify the configuration file for integration with\n"
+    "\t         RRDtool. See README.RRDtool for further information\n"
+    "\t-r path: path to use to create/update the RRDtool database\n"
 /*-----------------------------------------------------------*/
 #endif
 #ifdef GROK_DPMI
-  fprintf (stderr, "\t-Dconf: DPMI configuration file\n");
+    "\t-D conf: DPMI configuration file\n"
 #endif /* GROK_DPMI */
 #ifdef GROK_LIVE_TCPDUMP
-  fprintf (stderr, "\t-l: enable live capture using libpcap\n");
-  fprintf (stderr,
-	   "\t-iinterface: specifies the interface to be used to capture traffic\n");
+    "\t-l: enable live capture using libpcap\n"
+    "\t-i interface: specifies the interface to be used to capture traffic\n"
 #endif /* GROK_LIVE_TCPDUMP */
 
 #ifdef GROK_ERF_LIVE
-  fprintf (stderr,
-	   "\t--dag: enable live capture using Endace DAG cards. The"
-	   "\n\t     list of device_name can contain at most four names\n");
+    "\t--dag: enable live capture using Endace DAG cards. The\n"
+	"\t       list of device_name can contain at most four names\n"
 #endif /* GROK_ERF_LIVE */
 
-  fprintf (stderr,
-	   "\t-ffilterfile: specifies the libpcap filter file. Syntax as in tcpdump\n\n");
-  fprintf (stderr, "\tfile: trace file to be analyzed\n");
-  fprintf (stderr, "\t      Use 'stdin' to read from standard input.\n");
-
-  fprintf (stderr, "\n");
-  fprintf (stderr, "Note:\n");
-  fprintf (stderr,
-	   "\tWhen tstat is called with no arguments (on the command line),\n");
-  fprintf (stderr,
-	   "\tit will first check if a file <tstat.conf> is provided in the\n");
-  fprintf (stderr, "\tsame directory where the execution started.\n");
-  fprintf (stderr,
-	   "\tIn the latter case, arguments will be read from <tstat.conf>\n");
-  fprintf (stderr, "\trather than from the command line\n\n");
+    "\t-f filterfile: specifies the libpcap filter file. Syntax as in tcpdump\n"
+    "\n"
+    "\tfile: trace file to be analyzed\n"
+    "\t      Use 'stdin' to read from standard input.\n"
+    "\n"
+    "Note:\n"
+	"\tWhen tstat is called with no arguments (on the command line),\n"
+	"\tit will first check if a file <tstat.conf> is provided in the\n"
+    "\tsame directory where the execution started.\n"
+	"\tIn the latter case, arguments will be read from <tstat.conf>\n"
+    "\trather than from the command line\n"
+    "\n");
   Formats ();
   Version ();
 }
@@ -402,15 +403,15 @@ BadArg (char *argsource, char *format, ...)
 
   Help ();
 
-  fprintf (stderr, "\nArgument error");
+  fprintf (fp_stderr, "\nArgument error");
   if (argsource)
-    fprintf (stderr, " (from %s)", argsource);
-  fprintf (stderr, ": ");
+    fprintf (fp_stderr, " (from %s)", argsource);
+  fprintf (fp_stderr, ": ");
 
   va_start (ap, format);
-  vfprintf (stderr, format, ap);
+  vfprintf (fp_stderr, format, ap);
   va_end (ap);
-  fprintf (stderr, "\n");
+  fprintf (fp_stderr, "\n");
   exit (EXIT_FAILURE);
 
 }
@@ -429,8 +430,8 @@ Usage (void)
 static void
 Version (void)
 {
-  fprintf (stderr, "\nVersion: %s\n", tstat_version);
-  fprintf (stderr, "Compiled by <%s>, the <%s> on machine <%s>\n\n",
+  fprintf (fp_stderr, "\nVersion: %s\n", tstat_version);
+  fprintf (fp_stderr, "Compiled by <%s>, the <%s> on machine <%s>\n\n",
 	   built_bywhom, built_when, built_where);
 }
 
@@ -440,9 +441,9 @@ Formats (void)
 {
   int i;
 
-  fprintf (stderr, "Supported Input File Formats:\n");
+  fprintf (fp_stderr, "Supported Input File Formats:\n");
   for (i = 0; i < (int) NUM_FILE_FORMATS; ++i)
-    fprintf (stderr, "\t%-15s  %s\n",
+    fprintf (fp_stderr, "\t%-15s  %s\n",
 	     file_formats[i].format_name, file_formats[i].format_descr);
 }
 
@@ -482,6 +483,7 @@ main (int argc, char *argv[]) {
 
   /* parse the flags */
   CheckArguments (&argc, argv);
+  
 
   /* optional UDP */
   if (do_udp)
@@ -497,7 +499,7 @@ main (int argc, char *argv[]) {
   if (dump_all_histo_definition == TRUE)
     {
       print_all_histo_definition ();
-      printf ("\n");
+      fprintf(fp_stdout, "\n");
       exit (0);
     }
 
@@ -506,12 +508,12 @@ main (int argc, char *argv[]) {
   if (live_flag == FALSE)
     { //no remaing arg is live capture
       num_files = argc;
-      printf ("%d arg%s remaining, starting with '%s'\n",
+      fprintf (fp_stdout, "%d arg%s remaining, starting with '%s'\n",
 	      num_files, num_files > 1 ? "s" : "", filenames[0]);
     }
 
   // knock, knock...
-  printf ("%s\n\n", VERSION);
+  fprintf (fp_stdout, "%s\n\n", VERSION);
 #endif
 
 
@@ -520,13 +522,20 @@ main (int argc, char *argv[]) {
   /* RRDtools                                                   */
   /*   now that all the histo have been creaed, we may          */
   /*   parse rrdtool configuration file                         */
-  if (rrdset_path && rrdset_conf)
+  if (rrdset_path && rrdset_conf) {
+    rrd_engine = TRUE;
     rrdtool_init ();
+  }
   /*-----------------------------------------------------------*/
 #endif
 
   /* register the protocol analyzer over TCP/UDP */
   proto_init ();
+
+  if (runtime_engine) {
+    ini_read(runtime_conf_fname);
+  }
+
 
 /* inititializing adx_index_current */
   alloc_adx ();
@@ -564,6 +573,7 @@ main (int argc, char *argv[]) {
   /* initialize bitrate struct */
   memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
   memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+
   
 #ifndef TSTAT_RUNASLIB
   /* read each file in turn */
@@ -577,10 +587,10 @@ main (int argc, char *argv[]) {
 	      if ((debug > 0) || (numfiles > 1))
 		{
 		  if (argc > 1)
-		    printf ("Running file '%s' (%d of %d)\n",
+		    fprintf (fp_stdout, "\nRunning file '%s' (%d of %d)\n",
 			    filenames[i + j], i + j + 1, numfiles);
 		  else
-		    printf ("Running file '%s'\n", filenames[i]);
+		    fprintf (fp_stdout, "Running file '%s'\n", filenames[i]);
 		}
 	    }
 
@@ -604,27 +614,27 @@ main (int argc, char *argv[]) {
 
   /* clean up output */
   if (printticks)
-    printf ("\n");
+    fprintf (fp_stdout, "\n");
 
   /* get ending wallclock time */
-  gettimeofday (&wallclock_finished, NULL);
+  gettimeofday(&wallclock_finished, NULL);
 
   /* general output */
-  fprintf (stdout, "%lu packets seen, %lu TCP packets traced",
+  fprintf(fp_stdout, "%lu packets seen, %lu TCP packets traced",
 	   pnum, tcp_trace_count_outgoing + tcp_trace_count_incoming
 	   + tcp_trace_count_local);
   if (do_udp)
-    fprintf (stdout, ", %lu UDP packets traced", udp_trace_count);
-  fprintf (stdout, "\n");
+    fprintf(fp_stdout, ", %lu UDP packets traced", udp_trace_count);
+  fprintf(fp_stdout, "\n");
 
   /* actual tracefile times */
   etime = elapsed (first_packet, last_packet);
-  fprintf (stdout, "trace %s elapsed time: %s\n",
+  fprintf(fp_stdout, "trace %s elapsed time: %s\n",
 	   (num_files == 1) ? "file" : "files", elapsed2str (etime));
   if (debug > 0)
     {
-      fprintf (stdout, "\tfirst packet:  %s\n", ts2ascii (&first_packet));
-      fprintf (stdout, "\tlast packet:   %s\n", ts2ascii (&last_packet));
+      fprintf(fp_stdout, "\tfirst packet:  %s\n", ts2ascii (&first_packet));
+      fprintf(fp_stdout, "\tlast packet:   %s\n", ts2ascii (&last_packet));
     }
   exit(EXIT_SUCCESS);
 #else
@@ -682,7 +692,7 @@ create_new_outfiles (char *filename)
   if ((!histo_engine) && (!log_engine))
     return;
 
-  if (log_engine)
+  if (runtime_engine || log_engine)
     {
       /* Open the files for complete and uncomplete connection logging */
 
@@ -692,7 +702,7 @@ create_new_outfiles (char *filename)
       fp_logc = fopen (logfile, "w");
       if (fp_logc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
 
       sprintf (logfile, "%s/%s", basename, "log_tcp_nocomplete");
@@ -701,7 +711,7 @@ create_new_outfiles (char *filename)
       fp_lognc = fopen (logfile, "w");
       if (fp_lognc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
 #ifdef RTP_CLASSIFIER
       /* RTP log */
@@ -712,7 +722,7 @@ create_new_outfiles (char *filename)
       fp_rtp_logc = fopen (logfile, "w");
       if (fp_rtp_logc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
 #endif
 
@@ -725,7 +735,7 @@ create_new_outfiles (char *filename)
       fp_skype_logc = fopen (logfile, "w");
       if (fp_skype_logc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
 #endif
 
@@ -739,7 +749,7 @@ create_new_outfiles (char *filename)
       fp_udp_logc = fopen (logfile, "w");
       if (fp_udp_logc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
 #endif 
 
@@ -751,7 +761,7 @@ create_new_outfiles (char *filename)
       fp_chat_logc = fopen (logfile, "w");
       if (fp_chat_logc == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
       sprintf (logfile, "%s/%s", basename, "log_chat_messages");
       if (fp_chat_log_msg != NULL)
@@ -759,7 +769,7 @@ create_new_outfiles (char *filename)
       fp_chat_log_msg = fopen (logfile, "w");
       if (fp_chat_log_msg == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
   #ifdef MSN_OTHER_COMMANDS
       sprintf (logfile, "%s/%s", basename, "log_msn_OtherCommands");
@@ -768,13 +778,11 @@ create_new_outfiles (char *filename)
       fp_msn_log_othercomm = fopen (logfile, "w");
       if (fp_msn_log_othercomm == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
   #endif
 
-    //XXX FINAMORE
-  dump_create_outdir(basename);
-
+    dump_create_outdir(basename);
 #endif
 
 #ifdef LOG_OOO
@@ -787,7 +795,7 @@ create_new_outfiles (char *filename)
       fp_dup_ooo_log = fopen (logfile, "w");
       if (fp_dup_ooo_log == NULL)
 	{
-	  printf ("Could not open file %s\n", logfile);
+	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
       /* MGM stop */
 #endif
@@ -816,7 +824,7 @@ ip_header_stat (int phystype,
       ++not_ether;
       if (not_ether < 5)
 	{
-	  fprintf (stderr,
+	  fprintf(fp_stderr,
 		   "Skipping packet %lu, not an ethernet packet\n", pnum);
 	}			/* else, just shut up */
       return 0;
@@ -826,7 +834,7 @@ ip_header_stat (int phystype,
   if (PIP_ISV6 (pip))
     {
 
-      //fprintf(stderr,"IPv6 packet \n");
+      //fprintf(fp_stderr,"IPv6 packet \n");
       //It does all the statistics about IPv6 packets
 
       /*IPv6 SUPPORT */
@@ -910,10 +918,10 @@ ip_header_stat (int phystype,
 	  /* out of order */
 	  if ((file_count > 1) && ((*fpnum) == 1))
 	    {
-	      fprintf (stderr, "\
-Warning, first packet in file %s comes BEFORE the last packet\n\
-in the previous file.  That will likely confuse the program, please\n\
-order the files in time if you have trouble\n", filename);
+	      fprintf (fp_stderr, 
+            "Warning, first packet in file %s comes BEFORE the last packet\n"
+            "in the previous file.  That will likely confuse the program, please\n"
+            "order the files in time if you have trouble\n", filename);
 	    }
 	  else
 	    {
@@ -921,15 +929,17 @@ order the files in time if you have trouble\n", filename);
 
 	      if (warn_ooo)
 		{
-		  fprintf (stderr, "\
-Warning, packet %ld in file %s comes BEFORE the previous packet\n\
-That will likely confuse the program, so be careful!\n", (*fpnum), filename);
+		  fprintf (fp_stderr, 
+            "Warning, packet %ld in file %s comes BEFORE the previous packet\n"
+            "That will likely confuse the program, so be careful!\n", 
+            (*fpnum), filename);
 		}
 	      else if (!warned)
 		{
-		  fprintf (stderr, "\
-Packets in file %s are out of order.\n\
-That will likely confuse the program, so be careful!\n", filename);
+		  fprintf (fp_stderr, 
+            "Packets in file %s are out of order.\n"
+            "That will likely confuse the program, so be careful!\n", 
+            filename);
 		}
 	      warned = 1;
 	    }
@@ -961,38 +971,38 @@ That will likely confuse the program, so be careful!\n", filename);
 	  unsigned frac;
 
 	  if (debug)
-	    fprintf (stderr, "%s: ", cur_filename);
-	  fprintf (stderr, "Tp= %lu Tf=%lu ", (*fpnum), fcount);
+	    fprintf(fp_stderr, "%s: ", cur_filename);
+	  fprintf(fp_stderr, "Tp= %lu Tf=%lu ", (*fpnum), fcount);
 	  if (CompIsCompressed ())
 	    {
 	      frac = location / filesize * 100;
 	      if (frac <= 100)
-		fprintf (stderr, "~%u%% (compressed)", frac);
+		fprintf(fp_stderr, "~%u%% (compressed)", frac);
 	      else
-		fprintf (stderr, "~100%% + %u%% (compressed)", frac - 100);
+		fprintf(fp_stderr, "~100%% + %u%% (compressed)", frac - 100);
 	    }
 	  else if (!is_stdin)
 	    {
 	      location = ftell (stdin);
 	      frac = location / filesize * 100;
-	      fprintf (stderr, "%u%%", frac);
+	      fprintf(fp_stderr, "%u%%", frac);
 	    }
 	  /* print elapsed time */
 	  {
 	    double etime = elapsed (first_packet, last_packet);
-	    fprintf (stderr, " (%s)", elapsed2str (etime));
+	    fprintf(fp_stderr, " (%s)", elapsed2str (etime));
 	  }
 	  /* print number of opened flow */
 	  {
-	    fprintf (stderr, " Nf(TCP)=%lu Nf(UDP)=%lu", tot_conn_TCP,
+	    fprintf(fp_stderr, " Nf(TCP)=%lu Nf(UDP)=%lu", tot_conn_TCP,
 		     tot_conn_UDP);
-	    fprintf (stderr, " Ntrash=%lu", not_id_p);
+	    fprintf(fp_stderr, " Ntrash=%lu", not_id_p);
 	  }
 
 	  /* carriage return (but not newline) */
-	  fprintf (stderr, "\r");
+	  fprintf(fp_stderr, "\r");
 	}
-      fflush (stderr);
+      fflush(fp_stderr);
     }
 #endif //TSTAT_RUNASLIB
 
@@ -1049,13 +1059,16 @@ static int ProcessPacket(struct timeval *pckt_time,
     struct udphdr *pudp;
     udp_pair *pup = NULL;
     int dir;
+    struct stat finfo;
+    int stat_error;
+    static int stat_err_counter = 3;
 
     current_time = *pckt_time;
-
+    
     //------------------ skip very close pkts 
     //  if (elapsed (last_packet, current_time) <= 0)
     //    continue;
-    //  fprintf(stderr,"%f \n", elapsed (last_packet, current_time));
+    //  fprintf(fp_stderr,"%f \n", elapsed (last_packet, current_time));
 
 
     /* quick sanity check, better be an IPv4/v6 packet */
@@ -1065,17 +1078,17 @@ static int ProcessPacket(struct timeval *pckt_time,
 
         if (!warned)
         {
-            fprintf (stderr, "Warning: saw at least one non-ip packet\n");
+            fprintf(fp_stderr, "Warning: saw at least one non-ip packet\n");
             warned = TRUE;
         }
 
         if (debug > 1)
 #ifdef SUPPORT_IPV6
-            fprintf (stderr,
+            fprintf(fp_stderr,
                     "Skipping packet %lu, not an IPv4/v6 packet (version:%d)\n",
                     pnum, pip->ip_v);
 #else
-        fprintf (stderr,
+        fprintf (fp_stderr,
                 "Skipping packet %lu, not an IPv4 packet (version:%d)\n",
                 pnum, pip->ip_v);
 #endif
@@ -1090,6 +1103,7 @@ static int ProcessPacket(struct timeval *pckt_time,
              tlen, plast) == 0)
         return 0;
 
+/*
     if (elapsed (last_time_step, current_time) > MAX_TIME_STEP)
     {
         update_num++;
@@ -1097,7 +1111,7 @@ static int ProcessPacket(struct timeval *pckt_time,
         if (threaded)
         {
 #ifdef DEBUG_THREAD
-            printf ("Signaling thread stat dump\n");
+            fprintf (fp_stdout, "Signaling thread stat dump\n");
 #endif
             pthread_mutex_lock (&stat_dump_cond_mutex);
             pthread_cond_signal (&stat_dump_cond);
@@ -1110,11 +1124,11 @@ static int ProcessPacket(struct timeval *pckt_time,
             stat_dumping_old_style ();
         }
         last_time_step = current_time;
-        /* reset bitrate stats */
+        // reset bitrate stats 
         memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
         memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
     }
-
+*/
 
     /* Statistics from LAYER 4 (TCP/UDP) HEADER */
     /* Statistics from upper-layers are called as:
@@ -1146,6 +1160,61 @@ static int ProcessPacket(struct timeval *pckt_time,
     else
     {
         return 0;
+    }
+
+    //********************************************
+    //* check if the runtime config file is changed
+    //********************************************
+    if (runtime_engine && 
+        //elapsed(last_runtime_check, current_time) >= RUNTIME_CONFIG_IDLE)
+        difftime(time(NULL), last_mtime_check) >= 1) 
+    {
+        last_mtime_check = time(NULL);
+
+        // for sanity check we use a counter to check the max number
+        // of stat fails. A fail may be related to the editor in case
+        // of direct editing of the runtime config file
+        // (Vim for example use a temporary file and replace this
+        // with the original file when a change is made)
+        stat_error = stat(runtime_conf_fname, &finfo);
+        if (!stat_error) {
+            stat_err_counter = 2;
+            if (difftime(finfo.st_mtime, last_mtime)) {
+                mtime_stable_counter = RUNTIME_MTIME_COUNTER;
+                last_mtime = finfo.st_mtime;
+                if (debug) 
+                    fprintf(fp_stdout, "Runtime configuration is changed\n");
+            }
+            // postpone reload runtime configuration untill
+            // the timestamp isn't changed for RUNTIME_MTIME_COUNTER times
+            else if (mtime_stable_counter >= 0) {
+                mtime_stable_counter--;
+                // reload runtime configuration
+                if (mtime_stable_counter == 0) {
+                    if (debug)
+                        fprintf(fp_stdout, "Reload runtime configuration...\n");
+                    dump_flush(FALSE);
+                    dump_init();
+                    ini_read(runtime_conf_fname);
+                    dump_create_outdir(basename);
+                }
+            }
+        }
+        else if (stat_err_counter) {
+            stat_err_counter--;
+            printf("%d %s", stat_err_counter, ctime(&current_time.tv_sec));
+        }
+        else {
+            fprintf(fp_stderr, "error executing stat() on %s\n", runtime_conf_fname);
+            exit(1);
+        }
+    }
+
+    //check if is need to flush histograms
+    if (histo_engine && elapsed (last_time_step, current_time) > MAX_TIME_STEP)
+    //if (histo_engine && elapsed (last_time_step, current_time) > 1000000)
+    {
+        flush_histo_engine();
     }
 
     /*
@@ -1187,27 +1256,7 @@ void ProcessFileCompleted(Bool last) {
 
     if (con_cat == TRUE && last == FALSE)
     {
-        update_num++;
-
-        if (threaded)
-        {
-#ifdef DEBUG_THREAD
-            printf ("Signaling thread stat dump\n");
-#endif
-            pthread_mutex_lock (&stat_dump_cond_mutex);
-            pthread_cond_signal (&stat_dump_cond);
-            pthread_mutex_unlock (&stat_dump_cond_mutex);
-            pthread_mutex_lock (&stat_dump_mutex);
-            pthread_mutex_unlock (&stat_dump_mutex);
-        }
-        else
-            stat_dumping_old_style ();
-
-        last_time_step = current_time;
-        /* reset bitrate stats */
-        memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
-        memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
-
+        flush_histo_engine();
     }
     else
     {
@@ -1218,7 +1267,7 @@ void ProcessFileCompleted(Bool last) {
         {
             sprintf (curr_data_dir, "%s/LAST", basename);
             if (debug > 1)
-                printf ("DEB: writing stats for uncomplete traces... ");
+                fprintf (fp_stdout, "DEB: writing stats for uncomplete traces... ");
             trace_done ();
             if (do_udp)
                 udptrace_done ();
@@ -1227,13 +1276,13 @@ void ProcessFileCompleted(Bool last) {
                else 
                if (((elapsed (last_skypeprint_time, last_packet) )/1000.0/1000.0) >= 5.0 )
                {
-               printf ("\nSono dentro !");
+               fprintf (fp_stdout, "\nSono dentro !");
                last_skypeprint_time = last_packet;
                udptrace_part ();
                }
                */
             if (debug > 1)
-                printf ("DEB: writing addresses... ");
+                fprintf (fp_stdout, "DEB: writing addresses... ");
 
 
             /* update average histos */
@@ -1249,6 +1298,12 @@ void ProcessFileCompleted(Bool last) {
             print_adx ();
 
             clear_all_histo ();
+            step = 0;
+
+
+            /* dump engine */
+            if (runtime_engine)
+                dump_flush(TRUE);
         }
     }
 
@@ -1257,7 +1312,7 @@ void ProcessFileCompleted(Bool last) {
     CompCloseFile(cur_filename);
     get_stats_report(&report);
     //dump_internal_stats(&report, stdout);
-    tstat_print_report(&report, stdout);
+    tstat_print_report(&report, fp_stdout);
 #endif
 }
 
@@ -1305,6 +1360,7 @@ tstat_report * tstat_close(tstat_report *report) {
 }
 
 
+
 #ifndef TSTAT_RUNASLIB
 static void
 ProcessFile (char *filename, Bool last)
@@ -1330,11 +1386,10 @@ ProcessFile (char *filename, Bool last)
   /* share the current file name */
   cur_filename = filename;
   fpnum = 0;
+  first_packet_readed = FALSE;
 
   if (con_cat == FALSE)
     pcount = 0;
-
-
 
 
 /*--------------------------------------------------- */
@@ -1383,7 +1438,7 @@ ProcessFile (char *filename, Bool last)
 	case ETH:
 	  ppread = (*file_formats[ETH_LIVE].test_func) (filename);
 	  if (debug > 0)
-	    fprintf (stderr, "Capturing using '%s' (%s)\n",
+	    fprintf(fp_stderr, "Capturing using '%s' (%s)\n",
 		     file_formats[ETH_LIVE].format_name,
 		     file_formats[ETH_LIVE].format_descr);
 	  break;
@@ -1394,7 +1449,7 @@ ProcessFile (char *filename, Bool last)
 	  ppread = (*file_formats[ERF_LIVE].test_func) (dag_dev_list);
 	  free (dag_dev_list);
 	  if (debug > 0)
-	    fprintf (stderr, "Capturing using '%s' (%s)\n",
+	    fprintf(fp_stderr, "Capturing using '%s' (%s)\n",
 		     file_formats[ERF_LIVE].format_name,
 		     file_formats[ERF_LIVE].format_descr);
 	  break;
@@ -1407,11 +1462,11 @@ ProcessFile (char *filename, Bool last)
       /* determine which input file format it is... */
       ppread = NULL;
       if (debug > 1)
-	printf ("NUM_FILE_FORMATS: %d\n", (int) NUM_FILE_FORMATS);
+	fprintf (fp_stdout, "NUM_FILE_FORMATS: %d\n", (int) NUM_FILE_FORMATS);
       for (fix = 0; fix < (int) NUM_FILE_FORMATS - NUM_LIVE_FORMATS; ++fix)
 	{
 	  if (debug > 0)
-	    fprintf (stderr, "Checking for file format '%s' (%s)\n",
+	    fprintf(fp_stderr, "Checking for file format '%s' (%s)\n",
 		     file_formats[fix].format_name,
 		     file_formats[fix].format_descr);
 #ifndef __WIN32
@@ -1422,14 +1477,14 @@ ProcessFile (char *filename, Bool last)
 	  if (ppread)
 	    {
 	      if (debug > 0)
-		fprintf (stderr, "File format is '%s' (%s)\n",
+		fprintf(fp_stderr, "File format is '%s' (%s)\n",
 			 file_formats[fix].format_name,
 			 file_formats[fix].format_descr);
 	      break;
 	    }
 	  else if (debug > 0)
 	    {
-	      fprintf (stderr, "File format is NOT '%s'\n",
+	      fprintf(fp_stderr, "File format is NOT '%s'\n",
 		       file_formats[fix].format_name);
 	    }
 	}
@@ -1439,7 +1494,7 @@ ProcessFile (char *filename, Bool last)
 	{
 	  int count = 0;
 
-	  fprintf (stderr, "Unknown input file format\n");
+	  fprintf(fp_stderr, "Unknown input file format\n");
 	  Formats ();
 
 	  /* check for ASCII, a common problem */
@@ -1454,7 +1509,7 @@ ProcessFile (char *filename, Bool last)
 	      if (++count >= 20)
 		{
 		  /* first 20 are all ASCII */
-		  fprintf (stderr,
+		  fprintf(fp_stderr,
 			   "\nThis looks like an ASCII input file to me.\n");
 		  exit (EXIT_FAILURE);
 		}
@@ -1474,7 +1529,7 @@ ProcessFile (char *filename, Bool last)
       if (debug > 0)
 	{
 	  /* print file size */
-	  printf ("Trace file size: %lu bytes\n", filesize);
+	  fprintf (fp_stdout, "Trace file size: %lu bytes\n", filesize);
 	}
       location = 0;
 
@@ -1500,12 +1555,13 @@ ProcessFile (char *filename, Bool last)
 
   if (ret == -1)
     {
-      fprintf (stderr,
+      fprintf(fp_stderr,
 	       "Not even a single packet read (check tcpdump filter)! Aborting...\n");
       exit (1);
     }
 
     InitAfterFirstPacketReaded(filename, file_count);
+    first_packet_readed = TRUE;
 /*
   if ((con_cat == FALSE) || (file_count == 1))
     create_new_outfiles (filename);
@@ -1537,217 +1593,13 @@ ProcessFile (char *filename, Bool last)
     {
         ProcessPacket(&current_time, pip, plast, tlen, phystype, &fpnum, &pcount, 
                       file_count, cur_filename, location);
-//      //------------------ skip very close pkts 
-//      //  if (elapsed (last_packet, current_time) <= 0)
-//      //    continue;
-//      //  fprintf(stderr,"%f \n", elapsed (last_packet, current_time));
-//
-//
-//      /* quick sanity check, better be an IPv4/v6 packet */
-//      if (!PIP_ISV4 (pip) && !PIP_ISV6 (pip))
-//	{
-//	  static Bool warned = FALSE;
-//
-//	  if (!warned)
-//	    {
-//	      fprintf (stderr, "Warning: saw at least one non-ip packet\n");
-//	      warned = TRUE;
-//	    }
-//
-//	  if (debug > 1)
-//#ifdef SUPPORT_IPV6
-//	    fprintf (stderr,
-//		     "Skipping packet %lu, not an IPv4/v6 packet (version:%d)\n",
-//		     pnum, pip->ip_v);
-//#else
-//	    fprintf (stderr,
-//		     "Skipping packet %lu, not an IPv4 packet (version:%d)\n",
-//		     pnum, pip->ip_v);
-//#endif
-//	  continue;
-//	}
-//
-//
-//
-///* Statistics from IP HEADER */
-//      if (ip_header_stat
-//	  (phystype, pip, &fpnum, &pcount, file_count, filename, location,
-//	   tlen, plast) == 0)
-//	continue;
-//
-//
-//
-//      if (elapsed (last_time_step, current_time) > MAX_TIME_STEP)
-//	{
-//	  update_num++;
-//
-//	  if (threaded)
-//	    {
-//#ifdef DEBUG_THREAD
-//	      printf ("Signaling thread stat dump\n");
-//#endif
-//	      pthread_mutex_lock (&stat_dump_cond_mutex);
-//	      pthread_cond_signal (&stat_dump_cond);
-//	      pthread_mutex_unlock (&stat_dump_cond_mutex);
-//	      pthread_mutex_lock (&stat_dump_mutex);
-//	      pthread_mutex_unlock (&stat_dump_mutex);
-//	    }
-//	  else
-//	    {
-//	      stat_dumping_old_style ();
-//	    }
-//	  last_time_step = current_time;
-//          /* reset bitrate stats */
-//          memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
-//          memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
-//	}
-//
-//
-///* Statistics from LAYER 4 (TCP/UDP) HEADER */
-///* Statistics from upper-layers are called as:
-// *     	proto_analyzer(pip, pproto, PROTOCOL_type, thisdir, dir, plast);
-// * from tcp_flow_stat and udp_flow_stat
-// */
-//      if ((ptcp = tcp_header_stat (ptcp, pip, plast)) != NULL)
-//	{
-//	  ptp = tcp_flow_stat (pip, ptcp, plast, &dir);
-//	  if (ptp == NULL)
-//	    continue;
-//	  /* Topix: try to guess the upper level protocol */
-//	  /* FindConType: returns the type of connection, 0 if unknown */
-//	  // FindConType (ptp, pip, ptcp, plast, len, dir);
-//
-//	  /* if it wasn't "interesting", we return NULL here */
-//
-//	}
-//      else if (do_udp)
-//	{
-//	  udp_pair *pup;
-//	  struct udphdr *pudp;
-//
-//	  /* look for a UDP header */
-//	  pudp = getudp (pip, &plast);
-//	  if (pudp != NULL)
-//	    pup = udp_flow_stat (pip, pudp, plast);
-//	  else {
-//	    continue;
-//      }
-//	}
-//      else
-//	{
-//	  continue;
-//	}
-//
-//      /*
-//         however, if we do not have
-//         many packets, we'd wait forever
-//         // for efficiency, only allow a signal every 1000 packets       
-//         // (otherwise the system call overhead will kill us)            
-//         if (pnum % 1000 == 0)
-//         {
-//         sigset_t mask;
-//
-//         sigemptyset (&mask);
-//         sigaddset (&mask, SIGINT);
-//
-//         sigprocmask (SIG_UNBLOCK, &mask, NULL);
-//         // signal can happen EXACTLY HERE, when data structures are consistant 
-//         sigprocmask (SIG_BLOCK, &mask, NULL);
-//         }
-//       */
+
     }
   while ((ret =
 	  (*ppread) (&current_time, &len, &tlen, &phys, &phystype, &pip,
 		     &plast)));
 
   ProcessFileCompleted(last);
-//  /* end while == fine file */
-//
-//  /* set ^C back to the default */
-//  /* (so we can kill the output if needed) */
-//  {
-//    sigset_t mask;
-//
-//    sigemptyset (&mask);
-//    sigaddset (&mask, SIGINT);
-//
-//    sigprocmask (SIG_UNBLOCK, &mask, NULL);
-//    signal (SIGINT, SIG_DFL);
-//  }
-//  
-///* statistics dumping modified for -c option*/
-//	stat_dumping_old_style ();
-//
-//  if (con_cat == TRUE && last == FALSE)
-//    {
-//      update_num++;
-//
-//      if (threaded)
-//	{
-//#ifdef DEBUG_THREAD
-//	  printf ("Signaling thread stat dump\n");
-//#endif
-//	  pthread_mutex_lock (&stat_dump_cond_mutex);
-//	  pthread_cond_signal (&stat_dump_cond);
-//	  pthread_mutex_unlock (&stat_dump_cond_mutex);
-//	  pthread_mutex_lock (&stat_dump_mutex);
-//	  pthread_mutex_unlock (&stat_dump_mutex);
-//	}
-//      else
-//	stat_dumping_old_style ();
-//
-//      last_time_step = current_time;
-//      /* reset bitrate stats */
-//      memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
-//      memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
-//
-//    }
-//  else
-//    {
-///* wait for the stat_dump thread to be idle */
-//      if (threaded)
-//	pthread_mutex_lock (&stat_dump_cond_mutex);
-//      else
-//	{
-//	  sprintf (curr_data_dir, "%s/LAST", basename);
-//	  if (debug > 1)
-//	    printf ("DEB: writing stats for uncomplete traces... ");
-//	  trace_done ();
-//	  if (do_udp)
-//	    udptrace_done ();
-//	   /*DB*/
-//	    /*
-//	       else 
-//	       if (((elapsed (last_skypeprint_time, last_packet) )/1000.0/1000.0) >= 5.0 )
-//	       {
-//	       printf ("\nSono dentro !");
-//	       last_skypeprint_time = last_packet;
-//	       udptrace_part ();
-//	       }
-//	     */
-//	    if (debug > 1)
-//	    printf ("DEB: writing addresses... ");
-//
-//
-//	  /* update average histos */
-//
-//
-//	  /* swap since the frozen ones are printed out */
-//	  swap_adx ();
-//	  swap_histo ();
-//	  if (global_histo)
-//	    print_all_histo (HISTO_PRINT_GLOBAL);
-//
-//	  print_all_histo (HISTO_PRINT_CURRENT);
-//	  print_adx ();
-//
-//	  clear_all_histo ();
-//	}
-//    }
-//  /* close the input file */
-//  CompCloseFile (filename);
-//  get_stats_report(&report);
-//  dump_internal_stats (&report, stdout);
 }
 #endif //TSTAT_RUNASLIB
 
@@ -1756,9 +1608,9 @@ QuitSig (int signum)
 {
     tstat_report report;
 
-  printf ("%c\n\n", 7);		/* BELL */
-  printf ("Terminating processing early on signal %d\n", signum);
-  printf ("Partial result after processing %lu packets:\n\n\n", pnum);
+  fprintf (fp_stdout, "%c\n\n", 7); /* BELL */
+  fprintf (fp_stdout, "Terminating processing early on signal %d\n", signum);
+  fprintf (fp_stdout, "Partial result after processing %lu packets:\n\n\n", pnum);
 
   if (threaded)
     pthread_mutex_lock (&stat_dump_cond_mutex);
@@ -1766,16 +1618,16 @@ QuitSig (int signum)
   sprintf (curr_data_dir, "%s/LAST", basename);
 
   if (debug > 1)
-    printf ("DEB: writing addresses... ");
+    fprintf (fp_stdout, "DEB: writing addresses... ");
 
   if (debug > 1)
-    printf ("DEB: writing stats for uncomplete traces... ");
+    fprintf (fp_stdout, "DEB: writing stats for uncomplete traces... ");
   trace_done ();
   if (do_udp)
     udptrace_done ();
 
   if (debug > 1)
-    printf ("DEB: writing stats for complete traces... ");
+    fprintf (fp_stdout, "DEB: writing stats for complete traces... ");
 
 /* update average histos */
   update_fake_histos ();
@@ -1790,7 +1642,7 @@ QuitSig (int signum)
 
     get_stats_report(&report);
   //dump_internal_stats (&report, stderr);
-  tstat_print_report(&report, stderr);
+  tstat_print_report(&report, fp_stderr);
   if (threaded)
     pthread_mutex_unlock (&stat_dump_cond_mutex);
   exit (EXIT_FAILURE);
@@ -1805,11 +1657,11 @@ Usr1Sig (int signum)
 {
     tstat_report report;
 
-  printf ("%c\n\n", 7);		/* BELL */
-  printf ("Got a signal USR1\n");
+  fprintf (fp_stdout, "%c\n\n", 7);	/* BELL */
+  fprintf (fp_stdout, "Got a signal USR1\n");
   get_stats_report(&report);
   //dump_internal_stats(&report, stderr);
-  tstat_print_report(&report, stderr);
+  tstat_print_report(&report, fp_stderr);
 #ifdef MEMDEBUG
   memory_debug ();
 #endif
@@ -1850,43 +1702,38 @@ tstat_report * get_stats_report(tstat_report *report) {
 
 void
 tstat_print_report (tstat_report *rep, FILE *wheref)
-//dump_internal_stats (tstat_report *rep, FILE *wheref)
 {
-    /*
-    double etime;
-    gettimeofday (&wallclock_temp, NULL);
-    etime = elapsed (wallclock_start, wallclock_temp);
-    FILE *wheref = err ? stderr : stdout;
-    */
-
-    fprintf (wheref, "\n\nDumping internal status variables:\n");
-    fprintf (wheref, "total packet analized : %ld\n", rep->pnum);
-    fprintf (wheref, "total flows analized : %lu\n", rep->fcount);
-    fprintf (wheref, "total TCP flows analized : %lu\n", rep->f_TCP_count);
-    fprintf (wheref, "total UDP flows analized : %lu\n", rep->f_UDP_count);
-    fprintf (wheref, "total RTP flows analized : %lu\n", rep->f_RTP_count);
-    fprintf (wheref, "total RTCP flows analized : %lu\n", rep->f_RTCP_count);
-    fprintf (wheref, "total tunneled RTP flows analized : %lu\n", 
+    fprintf(wheref, 
+        "\n---\n"
+        "Dumping internal status variables:\n"
+        "---\n");
+    fprintf(wheref, "total packet analized : %ld\n", rep->pnum);
+    fprintf(wheref, "total flows analized : %lu\n", rep->fcount);
+    fprintf(wheref, "total TCP flows analized : %lu\n", rep->f_TCP_count);
+    fprintf(wheref, "total UDP flows analized : %lu\n", rep->f_UDP_count);
+    fprintf(wheref, "total RTP flows analized : %lu\n", rep->f_RTP_count);
+    fprintf(wheref, "total RTCP flows analized : %lu\n", rep->f_RTCP_count);
+    fprintf(wheref, "total tunneled RTP flows analized : %lu\n", 
             rep->f_RTP_tunneled_TCP_count); /*topix */
-    fprintf (wheref, "total iteration spent in the hash search routine : %d\n",
+    fprintf(wheref, "total iteration spent in the hash search routine : %d\n",
             rep->search_count);
-    fprintf (wheref, "total analyzed TCP packet: %ld \n", rep->tcp_packet_count);
-    fprintf (wheref, "total analyzed UDP packet: %ld \n", rep->udp_trace_count);
+    fprintf(wheref, "total analyzed TCP packet: %ld \n", rep->tcp_packet_count);
+    fprintf(wheref, "total analyzed UDP packet: %ld \n", rep->udp_trace_count);
 
-    fprintf (wheref, "total trash TCP packet: %ld \n", rep->not_id_p);
+    fprintf(wheref, "total trash TCP packet: %ld \n", rep->not_id_p);
     if (tcp_packet_count != 0)
-        fprintf (wheref, "average TCP search length: %f\n", rep->avg_search);
-    fprintf (wheref, "Current opened flows: TCP = %ld UDP = %ld\n",
+        fprintf(wheref, "average TCP search length: %f\n", rep->avg_search);
+    fprintf(wheref, "Current opened flows: TCP = %ld UDP = %ld\n",
             rep->tot_conn_TCP, rep->tot_conn_UDP);
-    fprintf (wheref, "Current flow vector index: %d (%d)\n", 
+    fprintf(wheref, "Current flow vector index: %d (%d)\n", 
             rep->num_tcp_pairs, MAX_TCP_PAIRS);
-    fprintf (wheref, "Total adx used in hash: %ld \n", rep->tot_adx_hash_count);
-    fprintf (wheref, "Total adx used in list: %ld \n", rep->tot_adx_list_count);
-    fprintf (wheref, "Total adx hash search: %ld\n", rep->adx_search_hash_count);
-    fprintf (wheref, "Total adx list search: %ld\n", rep->adx_search_list_count);
-    fprintf (wheref, "elapsed wallclock time: %s\n", elapsed2str(rep->wallclock));
-    fprintf (wheref, "%d pkts/sec analyzed\n", rep->pcktspersec);
-    fprintf (wheref, "%d flows/sec analyzed\n", rep->flowspersec);
+    fprintf(wheref, "Total adx used in hash: %ld \n", rep->tot_adx_hash_count);
+    fprintf(wheref, "Total adx used in list: %ld \n", rep->tot_adx_list_count);
+    fprintf(wheref, "Total adx hash search: %ld\n", rep->adx_search_hash_count);
+    fprintf(wheref, "Total adx list search: %ld\n", rep->adx_search_list_count);
+    fprintf(wheref, "elapsed wallclock time: %s\n", elapsed2str(rep->wallclock));
+    fprintf(wheref, "%d pkts/sec analyzed\n", rep->pcktspersec);
+    fprintf(wheref, "%d flows/sec analyzed\n", rep->flowspersec);
 
 #ifdef GROK_LIVE_TCPDUMP
     if (live_flag == TRUE && livecap_type == ETH)
@@ -1904,14 +1751,15 @@ MallocZ (int nbytes)
   if (ptr == NULL)
     {
       perror ("Malloc failed, fatal\n");
-      fprintf (stderr, "\
-when memory allocation fails, it's either because:\n\
-1) You're out of swap space, talk to your local sysadmin about making more\n\
-   (look for system commands 'swap' or 'swapon' for quick fixes)\n\
-2) The amount of memory that your OS gives each process is too little\n\
-   That's a system configuration issue that you'll need to discuss\n\
-   with the system administrator\n\
-");
+      fprintf(fp_stderr, 
+        "when memory allocation fails, it's either because:\n"
+        "1) You're out of swap space, talk to your local "
+        "sysadmin about making more\n"
+        "(look for system commands 'swap' or 'swapon' for quick fixes)\n"
+        "2) The amount of memory that your OS gives each process "
+        "is too little\n"
+        "That's a system configuration issue that you'll need to discuss\n"
+        "with the system administrator\n");
       exit (EXIT_FAILURE);
     }
 
@@ -1928,10 +1776,9 @@ ReallocZ (void *oldptr, int obytes, int nbytes)
   ptr = realloc (oldptr, nbytes);
   if (ptr == NULL)
     {
-      fprintf (stderr,
-	       "Realloc failed (%d bytes --> %d bytes), fatal\n",
+      fprintf (fp_stderr, "Realloc failed (%d bytes --> %d bytes), fatal\n",
 	       obytes, nbytes);
-      perror ("realloc");
+      //perror ("realloc");
       exit (EXIT_FAILURE);
     }
   if (obytes < nbytes)
@@ -1943,131 +1790,63 @@ ReallocZ (void *oldptr, int obytes, int nbytes)
 }
 
 
-/* convert a buffer to an argc,argv[] pair */
+/* convert a buffer to an argc,argv[] pair 
 void
 StringToArgv (char *buf, int *pargc, char ***pargv)
 {
   char **argv;
   int nargs = 0;
 
-  /* discard the original string, use a copy */
+  // discard the original string, use a copy 
   buf = strdup (buf);
 
-  /* (very pessimistically) make the argv array */
+  // (very pessimistically) make the argv array 
   argv = malloc (sizeof (char *) * ((strlen (buf) / 2) + 1));
 
-  /* skip leading blanks */
+  // skip leading blanks 
   while ((*buf != '\00') && (isspace ((int) *buf)))
     {
       if (debug > 10)
-	printf ("skipping isspace('%c')\n", *buf);
+	fprintf (fp_stdout, "skipping isspace('%c')\n", *buf);
       ++buf;
     }
 
-  /* break into args */
+  // break into args 
   for (nargs = 1; *buf != '\00'; ++nargs)
     {
       char *stringend;
       argv[nargs] = buf;
 
-      /* search for separator */
+      // search for separator 
       while ((*buf != '\00') && (!isspace ((int) *buf)))
 	{
 	  if (debug > 10)
-	    printf ("'%c' (%d) is NOT a space\n", *buf, (int) *buf);
+	    fprintf (fp_stdout, "'%c' (%d) is NOT a space\n", *buf, (int) *buf);
 	  ++buf;
 	}
       stringend = buf;
 
-      /* skip spaces */
+      // skip spaces 
       while ((*buf != '\00') && (isspace ((int) *buf)))
 	{
 	  if (debug > 10)
-	    printf ("'%c' (%d) IS a space\n", *buf, (int) *buf);
+	    fprintf (fp_stdout, "'%c' (%d) IS a space\n", *buf, (int) *buf);
 	  ++buf;
 	}
 
-      *stringend = '\00';	/* terminate the previous string */
+    // terminate the previous string 
+      *stringend = '\00';	
 
       if (debug)
-	printf ("  argv[%d] = '%s'\n", nargs, argv[nargs]);
+	fprintf (fp_stdout, "  argv[%d] = '%s'\n", nargs, argv[nargs]);
     }
 
   *pargc = nargs;
   *pargv = argv;
 }
-
-
-
-//===================================================================================
-//  skip comment lines and take args from 1st file-line as from cmdline 
-//-----------------------------------------------------------------------------------
-/*
-void
-ArgsFromFile (const char *fname, int *_argc, char *_argv[])
-{
-  char ch, filestr[1024], tmpstr[1024];
-  char *str, *str_end;
-  int i = 0;
-  FILE *f;
-
-  f = fopen (fname, "r");
-  if (f == NULL)
-    {
-      fprintf (stderr, "Cannot parse file <%s>\n", fname);
-      exit (1);
-    }
-  while (!feof (f))
-    {
-      if ((ch = getc (f)) == EOL)
-	continue;
-
-      if (ch == '#')
-	{
-	  while ((ch = getc (f)) != EOL);
-	  continue;
-
-	}
-      else
-	{
-	  if (feof (f))
-	    break;
-	  ungetc (ch, f);
-	}
-
-      if (fgets (tmpstr, 1024, f))
-	break;
-    }
-  fclose (f);
-  sprintf (filestr, "tstat %s", tmpstr);
-  if (!strncmp (filestr + strlen (filestr) - 1, "\n", 1))
-    filestr[strlen (filestr) - 1] = '\0';
-  //fprintf(stderr,"%s\n",filestr);
-
-  str = filestr;
-  while (*str)
-    {
-      while (*str == ' ')
-	*(str++) = '\0';
-      if (*str)
-	{
-	  str_end = str;
-	  while (*str_end && (*str_end != ' '))
-	    str_end++;
-
-	  snprintf (tmpstr, str_end - str + 1, "%s", str);
-	  if (debug > 2)
-	    fprintf (stderr, "ArgsFromFile[%d]=%s\n", i, tmpstr);
-
-	  _argv[i] = strdup (tmpstr);
-	  i++;
-
-	  str = str_end;
-	}
-    }
-  *_argc = i;
-}
 */
+
+
 
 char **
 ArgsFromFile(char *fname, int *pargc) {
@@ -2184,6 +1963,9 @@ CheckArguments (int *pargc, char *argv[])
         BadArg (NULL,
                 "You MUST specify both the configuration file (-R) AND the database path (-r))\n");
 #endif
+
+    
+
 }
 
 #ifdef GROK_DPMI
@@ -2222,6 +2004,7 @@ ParseArgs (int *pargc, char *argv[])
   char bayes_dir[128];
   sprintf (bayes_dir, "skype");
   histo_set_conf (NULL);
+  struct stat finfo;
 
 #ifdef GROK_ERF_LIVE
   int num_dev;
@@ -2229,7 +2012,8 @@ ParseArgs (int *pargc, char *argv[])
   char *ptr_help;
 #endif
 
-    dump_conf_fname[0] = '\0';
+  fp_stdout = stdout;
+  fp_stderr = stderr;
   /* parse the args */
   while (1)
     {
@@ -2246,7 +2030,7 @@ ParseArgs (int *pargc, char *argv[])
 	getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT
-		     "B:N:H:s:T:gpdhtucSLvw21", long_options, &option_index);
+		     "B:N:H:s:T:z:gpdhtucSLvw21", long_options, &option_index);
 
       if (c == -1)
 	break;
@@ -2261,8 +2045,9 @@ ParseArgs (int *pargc, char *argv[])
 	  internal_net_file = strdup (optarg);
 	  if (!LoadInternalNets (internal_net_file))
 	    {
-	      fprintf (stderr, "Error while loading configuration\n");
-	      fprintf (stderr, "Could not open %s\n", internal_net_file);
+	      fprintf (fp_stderr, 
+            "Error while loading configuration\n"
+	        "Could not open %s\n", internal_net_file);
 	      exit (1);
 	    }
 	  net_conf = TRUE;
@@ -2304,6 +2089,7 @@ ParseArgs (int *pargc, char *argv[])
 	    {
 	      histo_set_conf (optarg);
 	    }
+        histo_engine_log = TRUE;
 	  break;
 #ifdef GROK_DPMI
 	case 'D':
@@ -2395,7 +2181,7 @@ ParseArgs (int *pargc, char *argv[])
 	      }
 	    else
 	      {
-		fprintf (stderr, "Could not open %s\n", rrdconf);
+		fprintf (stderr, "err: Could not open %s\n", rrdconf);
 		exit (1);
 	      }
 	    rrdset_conf = 1;
@@ -2409,8 +2195,29 @@ ParseArgs (int *pargc, char *argv[])
 	  break;
 
     case 'T':
-      sprintf(dump_conf_fname, "%s", optarg);
-      dump_engine = TRUE;
+      sprintf(runtime_conf_fname, "%s", optarg);
+      if (stat(runtime_conf_fname, &finfo)) {
+          fprintf(stderr, "err: Could not open %s\n", runtime_conf_fname);
+          exit(1);
+      }
+      else if (S_ISDIR(finfo.st_mode)) {
+          fprintf(stderr, "err: %s is a directory\n", runtime_conf_fname);
+          exit(1);
+      }
+      runtime_engine = TRUE;
+      last_mtime = finfo.st_mtime;
+      last_mtime_check = time(NULL);
+      mtime_stable_counter = -1;
+      break;
+
+    //redirect stdout/stderr
+    case 'z':
+      fp_stdout = fopen(optarg, "w");
+      if (!fp_stdout) {
+          fprintf(stderr, "Error creating %s\n", log_tstat_fname);
+          exit(1);
+      }
+      fp_stderr = fp_stdout;
       break;
 
 	case 'S':
@@ -2541,14 +2348,14 @@ LoadInternalNets (char *file)
 	}
       else
 	{
-	  printf ("Cannot parse mask for net %d\n", (i + 1));
+	  fprintf (fp_stderr, "Cannot parse mask for net %d\n", (i + 1));
 	  return 0;
 	}
       if (debug)
 	{
-	  printf ("Adding: %s as internal net ",
+	  fprintf (fp_stdout, "Adding: %s as internal net ",
 		  inet_ntoa (internal_net_list[i]));
-	  printf ("with mask %s (%d)\n", inet_ntoa (internal_net_mask2[i]),
+	  fprintf (fp_stdout, "with mask %s (%d)\n", inet_ntoa (internal_net_mask2[i]),
 		  internal_net_mask[i]);
 	}
       i++;
@@ -2645,17 +2452,17 @@ internal_ip (struct in_addr adx)
 {
   int i;
 
-  //printf("Checking %s \n",inet_ntoa(adx));
+  //fprintf(fp_stdout, "Checking %s \n",inet_ntoa(adx));
   for (i = 0; i < tot_internal_nets; i++)
     {
-      //printf(" Against: %s \n",inet_ntoa(internal_net_list[i]));
+      //fprintf(fp_stdout, " Against: %s \n",inet_ntoa(internal_net_list[i]));
       if ((adx.s_addr & internal_net_mask[i]) == internal_net_list[i].s_addr)
 	{
-	  //printf("Internal: %s\n",inet_ntoa(adx));
+	  //fprintf(fp_stdout, "Internal: %s\n",inet_ntoa(adx));
 	  return 1;
 	}
     }
-  //printf("External: %s\n",inet_ntoa(adx));
+  //fprintf(fp_stdout, "External: %s\n",inet_ntoa(adx));
   return 0;
 }
 
@@ -2686,14 +2493,14 @@ stats_dumping ()
 {
 
   if (debug > 0)
-    printf ("Created thread stat_dumping()\n");
+    fprintf (fp_stdout, "Created thread stat_dumping()\n");
   pthread_mutex_lock (&stat_dump_mutex);
   pthread_mutex_lock (&stat_dump_cond_mutex);
   while (1)
     {
       pthread_cond_wait (&stat_dump_cond, &stat_dump_cond_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nSvegliato thread stats DUMP.\n");
+      fprintf (fp_stdout, "\n\nSvegliato thread stats DUMP.\n");
 #endif
       swap_adx ();
       /* update average histos */
@@ -2758,4 +2565,73 @@ stat_dumping_old_style ()
       create_new_outfiles (NULL);
       step = 0;
     }
+}
+
+void log_parse_ini_arg(char *param_name, int enabled) {
+    if (enabled != 0 && enabled != 1) {
+        fprintf(fp_stderr, "ini reader: expected 0|1 value near '%s'\n", param_name);
+        exit(1);
+    }
+
+    //histogram engine
+    if (strcmp(param_name, "histo_engine") == 0) {
+        //need to flush histo engine
+        if (((histo_engine && !enabled) || (!histo_engine && enabled)) &&
+            first_packet_readed) {
+            flush_histo_engine();
+        }
+        //stdout messages
+        if (!histo_engine_log && enabled)
+            fprintf(fp_stdout, "(%s) Enabling histo engine logs\n", Timestamp());
+        else if (histo_engine_log && !enabled)
+            fprintf(fp_stdout, "(%s) Disabling histo engine logs\n", Timestamp());
+        histo_engine_log = enabled;
+    }
+    
+    //rrd engine
+    else if (strcmp(param_name, "rrd_engine") == 0) {
+        //stdout messages
+        if (!rrd_engine && enabled)
+            fprintf(fp_stdout, "(%s) Enabling rrd engine logs\n", Timestamp());
+        else if (rrd_engine && !enabled)
+            fprintf(fp_stdout, "(%s) Disabling rrd engine logs\n", Timestamp());
+        rrd_engine = enabled;
+    }
+
+    //general log
+    else if (strcmp(param_name, "log_engine") == 0) {
+        //stdout messages
+        if (!log_engine && enabled)
+            fprintf(fp_stdout, "(%s) Enabling l4/l7 logs\n", Timestamp());
+        else if (log_engine && !enabled)
+            fprintf(fp_stdout, "(%s) Disabling l4/l7 logs\n", Timestamp());
+        log_engine = enabled;
+    }
+
+    else {
+        fprintf(fp_stderr, "ini reader: '%s' - unknown keyword\n", param_name);
+        exit(1);
+    }
+}
+
+void flush_histo_engine(void) {
+    if (threaded)
+    {
+#ifdef DEBUG_THREAD
+        fprintf (fp_stdout, "Signaling thread stat dump\n");
+#endif
+        pthread_mutex_lock (&stat_dump_cond_mutex);
+        pthread_cond_signal (&stat_dump_cond);
+        pthread_mutex_unlock (&stat_dump_cond_mutex);
+        pthread_mutex_lock (&stat_dump_mutex);
+        pthread_mutex_unlock (&stat_dump_mutex);
+    }
+    else
+    {
+        stat_dumping_old_style ();
+    }
+    last_time_step = current_time;
+    // reset bitrate stats 
+    memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
+    memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
 }

@@ -189,7 +189,7 @@ pread_erf (struct timeval *ptime,
       record1 = record;
       if (record2 == NULL && (record2 = malloc (MAX_RECORD_LEN)) == NULL)
 	{
-	  fprintf (stderr, "No memory for ERF record buffer\n");
+	  fprintf (fp_stderr, "No memory for ERF record buffer\n");
 	  exit (1);
 	}
 
@@ -206,14 +206,14 @@ pread_erf (struct timeval *ptime,
 	  if ((cmd = CompGetCommand (filenames[1])) != NULL)
 	    {
 	      if (debug > 1)
-		fprintf (stderr, "ERF: second_file = popen('%s','r')\n", cmd);
+		fprintf (fp_stderr, "ERF: second_file = popen('%s','r')\n", cmd);
 
 	      second_file = popen (cmd, "r");
 	    }
 	  else
 	    {
 	      if (debug > 1)
-		fprintf (stderr, "ERF: second_file = fopen('%s','r')\n",
+		fprintf (fp_stderr, "ERF: second_file = fopen('%s','r')\n",
 			 filenames[1]);
 
 	      second_file = fopen (filenames[1], "r");
@@ -227,7 +227,7 @@ pread_erf (struct timeval *ptime,
 	   fread (record1, 1, ERF_HEADER_LEN, input_file)) != ERF_HEADER_LEN)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet header (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet header (len:%d)\n", rlen);
 	  return (0);
 	}
       psize = ntohs (record1->rlen) - ERF_HEADER_LEN;
@@ -236,7 +236,7 @@ pread_erf (struct timeval *ptime,
 		  input_file)) != psize)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet payload (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet payload (len:%d)\n", rlen);
 	  return (0);
 	}
 
@@ -245,7 +245,7 @@ pread_erf (struct timeval *ptime,
 	   fread (record2, 1, ERF_HEADER_LEN, input_file)) != ERF_HEADER_LEN)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet header (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet header (len:%d)\n", rlen);
 	  return (0);
 	}
       psize = ntohs (record2->rlen) - ERF_HEADER_LEN;
@@ -254,7 +254,7 @@ pread_erf (struct timeval *ptime,
 		  input_file)) != psize)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet payload (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet payload (len:%d)\n", rlen);
 	  return (0);
 	}
     }
@@ -354,7 +354,7 @@ pread_erf (struct timeval *ptime,
 	      break;
 	    default:
 	      ;
-	      //fprintf (stderr, "Unsupported ethernet type %d\n", ether_type);
+	      //fprintf (fp_stderr, "Unsupported ethernet type %d\n", ether_type);
 	    }
 	  *ppip = (struct ip *) (&record->rec.eth.pload[0] + offset);
 	  *pplast =
@@ -382,7 +382,7 @@ pread_erf (struct timeval *ptime,
 	  *pplast = ((char *) *ppip) + *ptlen - 4 - 1;
 	  break;
 	default:
-	  fprintf (stderr, "Unsupported ERF record type %d\n", record->type);
+	  fprintf (fp_stderr, "Unsupported ERF record type %d\n", record->type);
 	  return (0);
 	}
 
@@ -395,7 +395,7 @@ pread_erf (struct timeval *ptime,
 	   fread (record, 1, ERF_HEADER_LEN, input_file)) != ERF_HEADER_LEN)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet header (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet header (len:%d)\n", rlen);
 	  return (0);
 	}
 
@@ -405,7 +405,7 @@ pread_erf (struct timeval *ptime,
 		  input_file)) != psize)
 	{
 	  if (debug && (rlen != 0))
-	    fprintf (stderr, "Bad ERF packet payload (len:%d)\n", rlen);
+	    fprintf (fp_stderr, "Bad ERF packet payload (len:%d)\n", rlen);
 	  return (0);
 	}
 
@@ -414,7 +414,7 @@ pread_erf (struct timeval *ptime,
 	  && ether_type != ETHERTYPE_8021Q)
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_erf: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_erf: not an IP packet\n");
 	  continue;
 	}
 
@@ -469,7 +469,7 @@ is_erf (char *filename)
 
   if (record == NULL && (record = malloc (MAX_RECORD_LEN)) == NULL)
     {
-      fprintf (stderr, "No memory for ERF record buffer\n");
+      fprintf (fp_stderr, "No memory for ERF record buffer\n");
       exit (1);
     }
 
@@ -535,7 +535,7 @@ is_erf (char *filename)
   eth_header.ether_type = htons (ETHERTYPE_IP);
 
   if (debug)
-    fprintf (stderr, "ERF format\n");
+    fprintf (fp_stderr, "ERF format\n");
 
   return (pread_erf);
 }

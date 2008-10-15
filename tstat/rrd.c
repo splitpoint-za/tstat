@@ -131,11 +131,11 @@ rrdtool_parse_config (void)
   FILE *conf;
 
   if (RRD_DEBUG)
-    fprintf (stderr, "rrdtool: delayed-parsing of config file <%s>\n",
+    fprintf (fp_stderr, "rrdtool: delayed-parsing of config file <%s>\n",
 	     rrd.conf.file);
   if (!(conf = fopen (rrd.conf.file, "r")))
     {
-      fprintf (stderr, "%s: file open error.\n", rrd.conf.file);
+      fprintf (fp_stderr, "%s: file open error.\n", rrd.conf.file);
       perror (NULL);
       exit (1);
     }
@@ -148,14 +148,14 @@ rrdtool_parse_config (void)
 	rrdtool_parse_line (rrd.buf);
 
       /* if(index(rrd.buf,"#") != NULL) {
-         if(RRD_DEBUG) fprintf(stderr, "\rignoring line %d (%s)", rrd.conf.line, rrd.buf);
+         if(RRD_DEBUG) fprintf (fp_stderr, "\rignoring line %d (%s)", rrd.conf.line, rrd.buf);
          } else {
-         if(RRD_DEBUG) fprintf(stderr, "\rparsing line %d (%s)", rrd.conf.line, rrd.buf);            
+         if(RRD_DEBUG) fprintf (fp_stderr, "\rparsing line %d (%s)", rrd.conf.line, rrd.buf);            
          rrdtool_parse_line(rrd.buf);
          } */
     }
   if (RRD_DEBUG)
-    fprintf (stderr, "\rrrdtool: config file succesfully parsed (%d lines)\n",
+    fprintf (fp_stderr, "\rrrdtool: config file succesfully parsed (%d lines)\n",
 	     rrd.conf.line);
 }
 
@@ -177,20 +177,20 @@ rrdtool_parse_line (char *line)
   char prcStr[1024] = "";
 
   if (RRD_DEBUG)
-    fprintf (stderr, "Parsing line %3d: ", rrd.conf.line);
+    fprintf (fp_stderr, "Parsing line %3d: ", rrd.conf.line);
   pstr = strtok (line, " ");
   sscanf (pstr, "%s", name);
   histo = find_histo (name);
   if (histo == NULL)
     {
-      fprintf (stderr,
+      fprintf (fp_stderr,
 	       "rrdtool: variable <%s> unknown while processing <%s>\n", name,
 	       rrd.conf.file);
       exit (1);
     }
   else if (RRD_DEBUG)
     {
-      fprintf (stderr, "%s\t", name);
+      fprintf (fp_stderr, "%s\t", name);
     }
 
 
@@ -215,42 +215,42 @@ rrdtool_parse_line (char *line)
 	{
 	  histo->conf.hit = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "hit,");
+	    fprintf (fp_stderr, "hit,");
 
 	}
       else if (strcmp (str, "avg") == 0)
 	{
 	  histo->conf.avg = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "avg,");
+	    fprintf (fp_stderr, "avg,");
 
 	}
       else if (strcmp (str, "min") == 0)
 	{
 	  histo->conf.min = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "min,");
+	    fprintf (fp_stderr, "min,");
 
 	}
       else if (strcmp (str, "max") == 0)
 	{
 	  histo->conf.max = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "max,");
+	    fprintf (fp_stderr, "max,");
 
 	}
       else if (strcmp (str, "var") == 0)
 	{
 	  histo->conf.var = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "var,");
+	    fprintf (fp_stderr, "var,");
 
 	}
       else if (strcmp (str, "stdev") == 0)
 	{
 	  histo->conf.stdev = TRUE;
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "stdev,");
+	    fprintf (fp_stderr, "stdev,");
 
 	}
       else if (strstr (str, "idx:"))
@@ -263,7 +263,7 @@ rrdtool_parse_line (char *line)
 	}
       else
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "rrdtool: unknown token <%s> unknown while processing <%s> line %d\n",
 		   str, rrd.conf.file, rrd.conf.line);
 	  exit (1);
@@ -290,15 +290,15 @@ rrdtool_parse_line (char *line)
       histo->conf.idxno = iidx;
       histo->conf.idx = (int *) malloc (sizeof (int) * histo->conf.idxno);
       if (RRD_DEBUG)
-	fprintf (stderr, "idx:");
+	fprintf (fp_stderr, "idx:");
       for (iidx = 0; iidx < histo->conf.idxno; iidx++)
 	{
 	  histo->conf.idx[iidx] = ivec[iidx];
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "%d:", ivec[iidx]);
+	    fprintf (fp_stderr, "%d:", ivec[iidx]);
 	}
       if (debug && histo->conf.idxoth)
-	fprintf (stderr, "other ");
+	fprintf (fp_stderr, "other ");
 
     }
 
@@ -316,17 +316,17 @@ rrdtool_parse_line (char *line)
       histo->conf.prc =
 	(double *) malloc (sizeof (double) * histo->conf.prcno);
       if (RRD_DEBUG)
-	fprintf (stderr, "prc:");
+	fprintf (fp_stderr, "prc:");
       for (fidx = 0; fidx < histo->conf.prcno; fidx++)
 	{
 	  histo->conf.prc[fidx] = fvec[fidx];
 	  if (RRD_DEBUG)
-	    fprintf (stderr, "%f:", fvec[fidx]);
+	    fprintf (fp_stderr, "%f:", fvec[fidx]);
 	}
     }
 
   if (RRD_DEBUG)
-    fprintf (stderr, "\n");
+    fprintf (fp_stderr, "\n");
 
 }
 
@@ -532,7 +532,7 @@ rrdtool_str2argv (char *str)
 
   if ((rrd.argc = i) > MAX_RRD_ARGV)
     {
-      fprintf (stderr,
+      fprintf (fp_stderr,
 	       "rrdtool: MAX_RRD_ARGV=%d exceeded (%d) in rrdtool_str2argv(%s)\n",
 	       MAX_RRD_ARGV, rrd.argc, str_orig);
       exit (1);
@@ -540,7 +540,7 @@ rrdtool_str2argv (char *str)
 
   //if(RRD_DEBUG)
   //for(i=0;  i<rrd.argc; i++) 
-  //      printf("\t%d: \%s\n",i, rrd_argv[i]);
+  //      fprintf(fp_stdout, "\t%d: \%s\n",i, rrd_argv[i]);
 }
 
 // doens't deallocate!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -560,7 +560,7 @@ rrdtool_str2argv (char *str)
 //   while ((*buf != '\00') && (isspace ((int) *buf)))
 //     {
 //       if (debug > 10)
-//      printf ("skipping isspace('%c')\n", *buf);
+//      fprintf (fp_stdout, "skipping isspace('%c')\n", *buf);
 //       ++buf;
 //     }
 // 
@@ -575,7 +575,7 @@ rrdtool_str2argv (char *str)
 //       while ((*buf != '\00') && (!isspace ((int) *buf)))
 //      {
 //        if (debug > 10)
-//          printf ("'%c' (%d) is NOT a space\n", *buf, (int) *buf);
+//          fprintf (fp_stdout, "'%c' (%d) is NOT a space\n", *buf, (int) *buf);
 //        ++buf;
 //      }
 //       stringend = buf;
@@ -584,14 +584,14 @@ rrdtool_str2argv (char *str)
 //       while ((*buf != '\00') && (isspace ((int) *buf)))
 //      {
 //        if (debug > 10)
-//          printf ("'%c' (%d) IS a space\n", *buf, (int) *buf);
+//          fprintf (fp_stdout, "'%c' (%d) IS a space\n", *buf, (int) *buf);
 //        ++buf;
 //      }
 // 
 //       *stringend = '\00';    /* terminate the previous string */
 // 
 //       if (debug > 10)
-//      printf ("  argv[%d] = '%s'\n", nargs, argv[nargs]);
+//      fprintf (fp_stdout, "  argv[%d] = '%s'\n", nargs, argv[nargs]);
 //     }
 // 
 //   *pargc = nargs;
@@ -610,7 +610,7 @@ rrdtool_create_command (const char *name, const char *what)
   rrd_struct temp_rrd = rrd;
 
   if (RRD_DEBUG)
-    fprintf (stderr, "rrdtool: create(%s,%s)\n", name, what);
+    fprintf (fp_stderr, "rrdtool: create(%s,%s)\n", name, what);
 #ifdef RRD_TREE
   sprintf (temp_rrd.file, "%s/%s", rrd.conf.path, name, what);
   struct stat fbuf;
@@ -618,7 +618,7 @@ rrdtool_create_command (const char *name, const char *what)
     {
       mkdir (temp_rrd.file, 0775);
       if (debug > 1)
-	fprintf (stderr, "RRDtool database path <%s> created\n",
+	fprintf (fp_stderr, "RRDtool database path <%s> created\n",
 		 temp_rrd.file);
     }
   sprintf (temp_rrd.file, "%s/%s/%s.rrd", rrd.conf.path, name, what);
@@ -631,7 +631,7 @@ rrdtool_create_command (const char *name, const char *what)
   if (stat (temp_rrd.file, &temp_rrd.fbuf) == 0)
     {
       if (debug > 1)
-	fprintf (stderr, "rrdtool: skip create <%s> ... already existent\n",
+	fprintf (fp_stderr, "rrdtool: skip create <%s> ... already existent\n",
 		 temp_rrd.file);
       return;			/* already called ? */
     }
@@ -644,7 +644,7 @@ rrdtool_create_command (const char *name, const char *what)
         (long) rrd.time_update - 10, name, (unsigned long) (MAX_TIME_STEP / 500000),
 	   RRA_DAILY, RRA_WEEKLY, RRA_MONTHLY, RRA_YEARLY);
   if (debug > 1)
-    fprintf (stderr, "rrdtool: rrd_create('%s')\n", temp_rrd.cmd);
+    fprintf (fp_stderr, "rrdtool: rrd_create('%s')\n", temp_rrd.cmd);
 
   optind = 0;
   opterr = 0;
@@ -653,8 +653,8 @@ rrdtool_create_command (const char *name, const char *what)
 
   if (rrd_test_error ())
     {
-      fprintf (stderr, "rrdtool: create command:\n%s\n", temp_rrd.cmd);
-      fprintf (stderr, "rrdtool: create error!\n%s\n", rrd_get_error ());
+      fprintf (fp_stderr, "rrdtool: create command:\n%s\n", temp_rrd.cmd);
+      fprintf (fp_stderr, "rrdtool: create error!\n%s\n", rrd_get_error ());
       if (temp_rrd.fatal)
 	exit (1);
       rrd_clear_error ();
@@ -668,7 +668,7 @@ void
 rrdtool_update_command (const char *name, const char *what, double val)
 {
   if (RRD_DEBUG)
-    fprintf (stderr, "rrdtool: update(%s,%s,%f)\n", name, what, val);
+    fprintf (fp_stderr, "rrdtool: update(%s,%s,%f)\n", name, what, val);
 #ifdef RRD_TREE
   sprintf (rrd.file, "%s/%s/%s.rrd", rrd.conf.path, name, what);
 #else
@@ -685,7 +685,7 @@ rrdtool_update_command (const char *name, const char *what, double val)
 
   sprintf (rrd.cmd, "update %s %ld:%f", rrd.file, rrd.time_update, val);
   if (RRD_DEBUG)
-    fprintf (stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
+    fprintf (fp_stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
 
   optind = 0;
   opterr = 0;
@@ -694,8 +694,8 @@ rrdtool_update_command (const char *name, const char *what, double val)
 
   if (rrd_test_error ())
     {
-      fprintf (stderr, "rrdtool: update command:\n%s\n", rrd.cmd);
-      fprintf (stderr, "rrdtool: update error!\n%s\n", rrd_get_error ());
+      fprintf (fp_stderr, "rrdtool: update command:\n%s\n", rrd.cmd);
+      fprintf (fp_stderr, "rrdtool: update error!\n%s\n", rrd_get_error ());
       if (rrd.fatal)
 	exit (1);
       rrd_clear_error ();

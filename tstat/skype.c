@@ -183,16 +183,16 @@ print_skype (struct ip *pip, void *pproto, void *plast)
   unsigned char *theheader = ((unsigned char *) pproto + 8);
   int i;
 
-  printf ("%s\t", inet_ntoa (pip->ip_src));
-  printf ("%s\t", inet_ntoa (pip->ip_dst));
-  printf ("%3d ", (ntohs ((pip)->ip_len) - 28));
+  fprintf (fp_stdout, "%s\t", inet_ntoa (pip->ip_src));
+  fprintf (fp_stdout, "%s\t", inet_ntoa (pip->ip_dst));
+  fprintf (fp_stdout, "%3d ", (ntohs ((pip)->ip_len) - 28));
   for (i = 0; i < 11; i++, theheader++)
     {
       /* we have headers of this packet */
       if (theheader <= (unsigned char *) plast)
-	printf ("%2X ", *theheader);
+	fprintf (fp_stdout, "%2X ", *theheader);
       else
-	printf ("xx ");
+	fprintf (fp_stdout, "xx ");
     }
 
   theheader = ((unsigned char *) pproto + 8);
@@ -200,11 +200,11 @@ print_skype (struct ip *pip, void *pproto, void *plast)
     {
       /* we have headers of this packet */
       if (theheader <= (unsigned char *) plast)
-	printf ("%3d ", *theheader);
+	fprintf (fp_stdout, "%3d ", *theheader);
       else
-	printf ("xxx ");
+	fprintf (fp_stdout, "xxx ");
     }
-  printf ("\n");
+  fprintf (fp_stdout, "\n");
 }
 
 
@@ -239,7 +239,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	if ((((ucb *) pdir)->packets - ((ucb *) pdir)->lastnumpkt) > 10)
 	  //if ((&((ucb *) pdir)->skype)->pkt_type_num[TOTAL_SKYPE_KNOWN_TYPE] > 10)
 	  {
-	    //  printf (" %.2f ", etime_s);
+	    //  fprintf (fp_stdout, " %.2f ", etime_s);
 	    ((ucb *) pdir)->skype.LastSkypePrint_time = current_time;
 	    //((ucb *) pdir)->lastnumpkt = ((ucb *) pdir)->packets;
 	    skype_conn_stats (&(((ucb *) pdir)->pup->c2s), C2S, PROTOCOL_UDP);
@@ -310,14 +310,14 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      sk->win.start = current_time;
 	      is_1st_packet = TRUE;
 	    }
-//       printf(" %d ",(4*ptcp->th_off));
+//       fprintf (fp_stdout, " %d ",(4*ptcp->th_off));
 	  break;
 	default:
 	  perror ("skype_flow_stat: fatal - you should never stop here!!\n");
 	  exit (1);
 	}
 
-      //printf(" %d ", pktsize); 
+      //fprintf (fp_stdout, " %d ", pktsize); 
 
 
 
@@ -371,33 +371,33 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   switch (type)
     {
     case SKYPE_NAK:
-      printf ("%4llu NAK\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu NAK\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
       break;
 
     case SKYPE_FUN2:
-      printf ("%4llu FUN2\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu FUN2\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
       break;
 
     case SKYPE_FUN3:
-      printf ("%4llu FUN3\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu FUN3\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
       break;
 
     case SKYPE_E2E_DATA:
-      printf ("%4llu E2E_DATA\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu E2E_DATA\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
       break;
 
     case SKYPE_OUT_DATA:
-      printf ("%4llu OUT_DATA\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu OUT_DATA\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
 
       break;
 
     case NOT_SKYPE:
-      printf ("%4llu UNKNOWN\t", ((ucb *) pdir)->packets);
+      fprintf (fp_stdout, "%4llu UNKNOWN\t", ((ucb *) pdir)->packets);
       print_skype (pip, pproto, plast);
     default:
       ;
@@ -610,7 +610,7 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       case SKYPE_E2E:
       case SKYPE_OUT:
       case SKYPE_SIG:
-          printf ("skype.c: No idea how I get there !\n");
+          fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
           exit (1);
           break;
 
@@ -620,14 +620,12 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       case P2P_KAD:
       case P2P_KADU:
       case UDP_UNKNOWN:
-      default:
-
+      default: 
           if ((pskype->pkt_type_num[SKYPE_E2E_DATA] > MIN_SKYPE_E2E_NUM) &&
                   ((double) pskype->pkt_type_num[SKYPE_E2E_DATA] * 100.0 /
                    (double) thisUdir->packets > MIN_SKYPE_E2E_PERC))
           {
               thisUdir->type = SKYPE_E2E;
-
           }
           else if ((pskype->pkt_type_num[SKYPE_OUT_DATA] > MIN_SKYPE_OUT_NUM)
                   && ((double) pskype->pkt_type_num[SKYPE_OUT_DATA] * 100.0 /
@@ -650,7 +648,6 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
                   && (tot_skype * 100 / thisUdir->packets > MIN_SKYPE_PERC))
           {
               thisUdir->type = SKYPE_SIG;
-
           }
           else
           {
@@ -673,7 +670,6 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
               print_skype_conn_stats_TCP (thisTdir, dir);	/* thisTdir */
           }
           break;
-
   }
 }
 

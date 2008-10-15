@@ -147,8 +147,8 @@ installation of RRDtool (available from <a href="http://oss.oetiker.ch/rrdtool/"
 <h2><a name="quick_install">Quick Install</a></h2>
 <p>Assuming that you want version <code>2.x.y</code>:</p>
 <pre>
-         wget <a href="http://tstat.polito.it/download/tstat-2.x.y.tgz">http://tstat.polito.it/download/tstat-2.x.y.tgz</a>
-         tar -xzvf tstat-2.x.y.tgz
+         wget <a href="http://tstat.polito.it/download/tstat-2.x.y.tar.gz">http://tstat.polito.it/download/tstat-2.x.y.tar.gz</a>
+         tar -xzvf tstat-2.x.y.tar.gz
          cd tstat-2.x.y
          ./configure
          make
@@ -405,7 +405,7 @@ the following command sequence:</p>
 such that both data and control packets belonging to the same flow are observed;
 with the help of the figures below, we will explain the different classification
 of measurements used by Tstat.</p>
-         <center><img src="/HOWTO/tstat_output.png"></img></center><p>Tstat identifies hosts based on their IP address. Given the description
+         <center><img src="tstat_output.png"/></center><p>Tstat identifies hosts based on their IP address. Given the description
 of the internal hosts through the <code>-N</code> command line option, Tstat
 distinguishes among <em>incoming</em>, <em>outgoing</em> and <em>local</em> 
 measurements. Packets whose destination is an internal host and whose source is

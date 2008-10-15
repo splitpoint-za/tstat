@@ -41,7 +41,7 @@
 #define PROTO_DEBUG_LEVEL 2
 #define PROTO_DEBUG (PROTO_DEBUG_LEVEL>0 && debug>=PROTO_DEBUG_LEVEL)
 extern int debug;
-extern Bool dump_engine;
+extern Bool runtime_engine;
 
 /* chain of protocol analyzer */
 struct proto *proto_list_head;
@@ -60,14 +60,14 @@ int
 proto_init ()
 {
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: init() begins\n");
+    fprintf (fp_stderr, "proto: init() begins\n");
 
   /* note that the order in which you register the protocol IS RELEVANT */
   /* the registration order is LIFO, i.e., the last plugin that is */
   /* registered is the first that is then called */
 
-  if (dump_engine == TRUE) {
-      proto_register(PROTOCOL_UDP, "DUMP", "Dump file accordingly DPI",
+  if (runtime_engine == TRUE) {
+      proto_register(PROTOCOL_BOTH, "DUMP", "Dump file accordingly DPI",
         (void *) getdummy,
         (void *) dump_flow_stat,
         (void *) dump_init,
@@ -113,7 +113,7 @@ proto_init ()
    */
 
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: init() done\n");
+    fprintf (fp_stderr, "proto: init() done\n");
   return 1;
 }
 
@@ -126,7 +126,7 @@ proto_register (int tproto, char *name, char *descr, void *(*check) (),
 		void *(*analyze) (), void *(*init) (), void *(*stat) ())
 {
   if (PROTO_DEBUG)
-    fprintf (stderr,
+    fprintf (fp_stderr,
 	     "proto: registering protocol[%d] (%s,%s) over %s with function (%p,%p,%p,%p)\n",
 	     ++proto_num, name, descr, proto_description (tproto), check,
 	     analyze, init, stat);
@@ -166,7 +166,7 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 		void *plast)
 {
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: analyze() begins\n");
+    fprintf (fp_stderr, "proto: analyze() begins\n");
 
   struct proto *protocol = proto_list_head;
   void *phdr = NULL;
@@ -183,7 +183,7 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
       if ((tproto == protocol->tproto) || (protocol->tproto == PROTOCOL_BOTH))
 	{
 	  if (PROTO_DEBUG)
-	    fprintf (stderr, "%ld: testing %s frame for %sness ...",
+	    fprintf (fp_stderr, "%ld: testing %s frame for %sness ...",
 		     pnum, proto_description (tproto), protocol->name);
 
 	  /* phdr sometimes fail, so we use the ptr returned by the function */
@@ -192,14 +192,14 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	  if (ret != NULL)
 	    {
 	      if (PROTO_DEBUG)
-		fprintf (stderr, "yup!\n");
+		fprintf (fp_stderr, "yup!\n");
 	      protocol->analyze (pip, pproto, tproto, pdir, dir, ret, plast);
 	    }
 #if PROTO_DEBUG_LEVEL
 	  else
 	    {
 	      if (PROTO_DEBUG)
-		fprintf (stderr, "nope!\n");
+		fprintf (fp_stderr, "nope!\n");
 	    }
 #endif
 	}
@@ -207,7 +207,7 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
       else
 	{
 	  if (PROTO_DEBUG)
-	    fprintf (stderr, "skipping %s who expect %s while frame is %s\n",
+	    fprintf (fp_stderr, "skipping %s who expect %s while frame is %s\n",
 		     protocol->name, proto_description (protocol->tproto),
 		     proto_description (tproto));
 	}
@@ -217,14 +217,14 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
     }
 
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: analyze() ends\n");
+    fprintf (fp_stderr, "proto: analyze() ends\n");
 }
 
 void
 make_proto_stat (void *thisflow, int tproto)
 {
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: stat() begins\n");
+    fprintf (fp_stderr, "proto: stat() begins\n");
 
   struct proto *protocol = proto_list_head;
   while (protocol != NULL)
@@ -232,7 +232,7 @@ make_proto_stat (void *thisflow, int tproto)
       if ((tproto == protocol->tproto) || (protocol->tproto == PROTOCOL_BOTH))
 	{
 	  if (PROTO_DEBUG)
-	    fprintf (stderr, "making %s stat for %s ...",
+	    fprintf (fp_stderr, "making %s stat for %s ...",
 		     proto_description (tproto), protocol->name);
 
 	  /* call the real function */
@@ -243,7 +243,7 @@ make_proto_stat (void *thisflow, int tproto)
       else
 	{
 	  if (PROTO_DEBUG)
-	    fprintf (stderr, "skipping stat for %s (expeting %s, got %s)\n",
+	    fprintf (fp_stderr, "skipping stat for %s (expeting %s, got %s)\n",
 		     protocol->name, proto_description (protocol->tproto),
 		     proto_description (tproto));
 	}
@@ -252,7 +252,7 @@ make_proto_stat (void *thisflow, int tproto)
     }
 
   if (PROTO_DEBUG)
-    fprintf (stderr, "proto: stat() ends\n");
+    fprintf (fp_stderr, "proto: stat() ends\n");
 }
 
 
@@ -276,14 +276,16 @@ dummy_flow_stat (struct ip *pip, void *pproto, int tproto, ucb * pdir,
 {
   struct udphdr *pudp = pproto;
   struct tcphdr *ptcp = pproto;
-  fprintf (stderr, "tproto is %d so i use %shdr\n", tproto,
+  fprintf (fp_stderr, "tproto is %d so i use %shdr\n", tproto,
 	   tproto == PROTOCOL_TCP ? "tpc" : "udp");
   if (tproto == PROTOCOL_TCP)
     {
-      printf ("TCP: sport=%d, dport=%d\n", ptcp->th_sport, ptcp->th_dport);
+      fprintf (fp_stdout, "TCP: sport=%d, dport=%d\n", 
+        ptcp->th_sport, ptcp->th_dport);
     }
   else
     {
-      printf ("UDP: sport=%d, dport=%d\n", pudp->uh_sport, pudp->uh_dport);
+      fprintf (fp_stdout, "UDP: sport=%d, dport=%d\n", 
+        pudp->uh_sport, pudp->uh_dport);
     }
 }

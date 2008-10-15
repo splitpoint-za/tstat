@@ -76,3 +76,23 @@ HostName (ipaddr ipaddress)
   adr = HostAddr (ipaddress);
   return (adr);
 }
+
+char *
+Timestamp (void) {
+    static timeval last_time;
+    static char * last_time_string;
+
+    if (current_time.tv_sec == last_time.tv_sec && 
+        current_time.tv_usec == last_time.tv_usec && 
+        current_time.tv_sec != 0 &&
+        current_time.tv_sec != -1)
+        return last_time_string;
+    last_time = current_time;
+    if (last_time.tv_sec == 0 || last_time.tv_sec == -1)
+        last_time_string = "-";
+    else {
+        last_time_string = ctime(&current_time.tv_sec);
+        last_time_string[strlen(last_time_string) - 1] = '\0';
+    }
+    return last_time_string;
+}

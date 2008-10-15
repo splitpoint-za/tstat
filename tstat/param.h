@@ -58,6 +58,10 @@ segmentes are observed since UDP_IDLE_TIME */
 #define UDP_IDLE_TIME 200000000   /* 200 s */
 //#define UDP_IDLE_TIME 10000000 /* 10s */
 
+//5min = 5 * 60 * 1000000usec
+#define RUNTIME_CONFIG_IDLE 300000000
+#define RUNTIME_MTIME_COUNTER 3
+
 /* maximum number of concurrent TCP connection stored in the vector TTP 
 Increase this number on high speed network will help ...*/
 #define MAX_TCP_PAIRS 35001

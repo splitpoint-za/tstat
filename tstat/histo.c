@@ -26,6 +26,7 @@
 extern unsigned long int fcount;
 extern Bool printticks;
 extern Bool histo_engine;
+extern Bool histo_engine_log;
 extern Bool adx_engine;
 extern Bool global_histo;
 
@@ -96,7 +97,7 @@ histo_parse_conf ()
 
   if (!(conf = fopen (histo_conf.fname, "r")))
     {
-      fprintf (stderr, "%s: file open error.\n", histo_conf.fname);
+      fprintf (fp_stderr, "%s: file open error.\n", histo_conf.fname);
       perror (NULL);
       exit (1);
     }
@@ -142,7 +143,7 @@ histo_parse_conf ()
 	    }
 	  else
 	    {
-	      fprintf (stderr,
+	      fprintf (fp_stderr,
 		       "HISTO: cannot find histogram <%s> to include at config line <%d>\n",
 		       arg1, config_line);
 	      perror (NULL);
@@ -165,7 +166,7 @@ histo_parse_conf ()
 	}
       else
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
 	  perror (NULL);
@@ -297,31 +298,35 @@ create_histo (char *name, char *descr, long min, long max, long bin_size)
 
   if (bin_size == 0)
     {
-      printf ("Error: null 'bin_size' param when creating %s histogram \n",
-	      name);
+      fprintf (fp_stderr, 
+        "Error: null 'bin_size' param when creating %s histogram \n", name);
       exit (1);
     }
 
 // PROBLEM: at this point, I cannot know if I will make use of RRD of this histo    
 //  if(strlen(name) > RRD_NAME_MAXLEN) {
-//      printf ("Error: length of <%s> exceeds by <%d> the maximum <%d> allowed by RRDtool: find a shortest name!\n",
-//            name, strlen(name)-HISTO_NAME_MAXLEN, HISTO_NAME_MAXLEN);
+//      fprintf (fp_stderr, 
+//          "Error: length of <%s> exceeds by <%d> the maximum <%d> "
+//          "allowed by RRDtool: find a shortest name!\n",
+//          name, strlen(name)-HISTO_NAME_MAXLEN, HISTO_NAME_MAXLEN);
 //      exit(1);
 //  }
 
   if (strlen (name) > HISTO_NAME_MAXLEN)
     {
-      printf
-	("Error: length of <%s> exceeds by <%d> the maximum <%d> allowed by tstat: find a shortest name!\n",
-	 name, strlen (name) - HISTO_NAME_MAXLEN, HISTO_NAME_MAXLEN);
+      fprintf (fp_stderr, 
+        "Error: length of <%s> exceeds by <%d> the maximum <%d> "
+        "allowed by tstat: find a shortest name!\n",
+	    name, strlen (name) - HISTO_NAME_MAXLEN, HISTO_NAME_MAXLEN);
       exit (1);
     }
 
   if (strlen (descr) > HISTO_DESCR_MAXLEN)
     {
-      printf
-	("Error: length of <%s> exceeds by <%d> the maximum <%d> allowed by Tstat: find a shortest description!\n",
-	 descr, strlen (descr) - HISTO_DESCR_MAXLEN, HISTO_DESCR_MAXLEN);
+      fprintf (fp_stderr, 
+        "Error: length of <%s> exceeds by <%d> the maximum <%d> "
+        "allowed by Tstat: find a shortest description!\n",
+	    descr, strlen (descr) - HISTO_DESCR_MAXLEN, HISTO_DESCR_MAXLEN);
       exit (1);
     }
 
@@ -330,15 +335,15 @@ create_histo (char *name, char *descr, long min, long max, long bin_size)
 
   if (max != (min + (num_col * bin_size)))
     {
-      printf ("Error: wrong 'bin_size' param when creating %s histogram \n",
-	      name);
+      fprintf (fp_stderr,
+        "Error: wrong 'bin_size' param when creating %s histogram \n", name);
       exit (1);
     }
 
   if (num_col < 0)
     {
-      printf ("Error: wrong 'num_col' param when creating %s histogram \n",
-	      name);
+      fprintf (fp_stderr, 
+        "Error: wrong 'num_col' param when creating %s histogram \n", name);
       exit (1);
     }
 
@@ -365,7 +370,7 @@ create_histo (char *name, char *descr, long min, long max, long bin_size)
   hl = thisto;
 
   if (debug > 3)
-    fprintf (stderr,
+    fprintf (fp_stderr,
 	     "Created histogram %s: [%ld:%ld], %d bins, %ld bin size\n", name,
 	     min, max, num_col, bin_size);
 
@@ -396,7 +401,7 @@ swap_histo ()			/* also updates the global ststistics */
 
 	  double pdf, CDF = 0.0;
 	  if (tot > 0)
-	    printf ("%s#SAMPLES: <min=%.0f valid=%.0f >max=%.0f tot=A%0.f\n",
+	    fprintf (fp_stdout, "%s#SAMPLES: <min=%.0f valid=%.0f >max=%.0f tot=A%0.f\n",
 		    phisto->name,
 		    (double) phisto->global_data[BIN_LESS_MIN (phisto)],
 		    (double) phisto->global_data[BIN_SAMPLE_COUNT (phisto)],
@@ -413,7 +418,7 @@ swap_histo ()			/* also updates the global ststistics */
     }
 
 #ifdef DEBUG_THREAD
-  printf ("All histos swapped!\n");
+  fprintf (fp_stdout, "All histos swapped!\n");
 #endif
 
 }
@@ -464,7 +469,7 @@ print_all_histo_definition ()
 {
   struct double_histo_list *temphp;
 
-  printf ("#name\t\t|min\t|bin_size\t|max\t|description\n");
+  fprintf (fp_stdout, "#name\t\t|min\t|bin_size\t|max\t|description\n");
   temphp = hl;
   while (temphp != NULL)
     {
@@ -477,9 +482,9 @@ print_all_histo_definition ()
 void
 print_histo_definition (struct double_histo_list *phisto, char *titolo)
 {
-  printf ("#%s\t|", phisto->name);
-  printf ("%ld\t|%ld\t|%ld\t|", phisto->min, phisto->bin_size, phisto->max);
-  printf ("#%s\n", phisto->descr);
+  fprintf (fp_stdout, "#%s\t|", phisto->name);
+  fprintf (fp_stdout, "%ld\t|%ld\t|%ld\t|", phisto->min, phisto->bin_size, phisto->max);
+  fprintf (fp_stdout, "#%s\n", phisto->descr);
 }
 
 void
@@ -557,13 +562,15 @@ print_all_histo (int flag)
 #ifdef HAVE_RRDTOOL
    /*---------------------------------------------------------*/
   /* RRDtools                                                */
-  if (flag <= 2)
+  //if (flag <= 2)
+  if (rrd_engine)
     rrdtool_update_all ();
    /*---------------------------------------------------------*/
 #endif
   while (temphp != NULL)
     {
-      if ((histo_engine || global_histo) && temphp->flag == HISTO_ON)
+      if ((histo_engine || global_histo) && histo_engine_log && 
+           temphp->flag == HISTO_ON)
 	print_histo (temphp, temphp->name, flag);
       temphp = temphp->next;
     }
@@ -578,6 +585,7 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
   FILE *fp;
   char filename[200] = "";
   char *dirname;
+  char *timestamp;
   long *frozen;
 
   min = phisto->min;
@@ -589,10 +597,13 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 
   if (stat (dirname, &fbuf) == -1)
     {
-      if (printticks)
-	fprintf (stderr, "\rCreating output dir %s\n", dirname);
-      else
-	fprintf (stderr, "Creating output dir %s\n", dirname);
+        timestamp = Timestamp();
+      if (printticks) {
+        fprintf (fp_stdout, "\r(%s) Creating output dir %s\n", timestamp, dirname);
+        fflush(stdout);
+      }
+      else 
+	fprintf (fp_stderr, "(%s) Creating output dir %s\n", timestamp, dirname);
       mkdir (dirname, 0775);
     }
 
@@ -602,9 +613,9 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
   if (fp == NULL)
     {
       if (printticks)
-	fprintf (stderr, "\rCould not open file %s\n", filename);
+	fprintf (fp_stderr, "\rCould not open file %s\n", filename);
       else
-	fprintf (stderr, "Could not open file %s\n", filename);
+	fprintf (fp_stderr, "Could not open file %s\n", filename);
       return 0;
     }
 
@@ -645,7 +656,7 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
     }
   else
     {
-      printf ("histo: no idea what to print!\n");
+      fprintf (fp_stderr, "histo: no idea what to print!\n");
       exit (1);
     }
 
@@ -669,9 +680,10 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //          bin_size = phisto->bin_size;
 //          llabels = labels;
 //
-//          printf ("\nResults for [%f:%f] with %d steps (%f)\n", min, max, phisto->bin_num,
-//                  bin_size);
-//          printf ("*** %s ***\n", titolo);
+//          fprintf (fp_stdout, 
+//              "\nResults for [%f:%f] with %d steps (%f)\n", min, max, phisto->bin_num,
+//               bin_size);
+//          fprintf (fp_stdout, "*** %s ***\n", titolo);
 //
 //          /* print the frozen data */
 //          frozen = whats_frozen (phisto);
@@ -681,7 +693,7 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //              /* stampo la riga */
 //              while ((*llabels != '!') && (*llabels != '\0'))
 //                {
-//                  printf ("%c", *llabels);
+//                  fprintf (fp_stdout, "%c", *llabels);
 //                  llabels++;
 //                }
 //              if (*llabels != '\0')
@@ -690,9 +702,9 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //                }
 //              else
 //                {
-//                  printf ("Val");
+//                  fprintf (fp_stdout, "Val");
 //                }
-//              printf ("\t:%ld\n", frozen[i]);
+//              fprintf (fp_stdout, "\t:%ld\n", frozen[i]);
 //            }
 //          return 1;
 //        }
@@ -718,14 +730,15 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //
 //          num_col = ((max - min) / bin_size) + 2;
 //
-//          printf ("\nResults for [%f:%f] with %d steps (%f)\n", min, max, num_col,
-//                  bin_size);
-//          printf ("*** %s ***\n", titolo);
+//          fprintf (fp_stdout, 
+//              "\nResults for [%f:%f] with %d steps (%f)\n", min, max, num_col, 
+//               bin_size);
+//          fprintf ("*** %s ***\n", titolo);
 //          for (i = 1; i <= num_col; i++)
 //            {
 //              while ((*llabels != '!') && (*llabels != '\0'))
 //                {
-//                  printf ("%c", *llabels);
+//                  fprintf (fp_stdout, "%c", *llabels);
 //                  llabels++;
 //                }
 //              if (*llabels != '\0')
@@ -734,9 +747,9 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //                }
 //              else
 //                {
-//                  printf ("Val");
+//                  fprintf (fp_stdout, "Val");
 //                }
-//              printf (":\t%d\n", elem->val);
+//              fprintf (fp_stdout, ":\t%d\n", elem->val);
 //              elem = elem->next;
 //            }
 //          return 1;
@@ -828,7 +841,7 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 //
 //          if (max != (min + (num_col * bin_size)))
 //            {
-//              printf ("Wrong bin_size=%f values!\n", bin_size);
+//              fprintf (fp_stdout, "Wrong bin_size=%f values!\n", bin_size);
 //              return 0;
 //            }
 //

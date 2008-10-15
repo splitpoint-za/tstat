@@ -187,7 +187,7 @@ pread_dag (struct timeval *ptime,
        */
       ts = swapll (cell->ts);
 /*
-		 printf(" packet time:       %s\n", timestring(DAG2SEC(cell.ts), 0)) ;
+		 fprintf(fp_stdout, " packet time:       %s\n", timestring(DAG2SEC(cell.ts), 0)) ;
 */
       ptime->tv_sec = (cell->ts >> 32);
       ts = (ts & 0xffffffffULL) * 1000 * 1000;
@@ -226,7 +226,7 @@ pread_dag (struct timeval *ptime,
 	  *pplast = (char *) (pp->pload) + *plen;
 	  break;
 	default:
-	  printf ("internal error %s line %d\n", __FILE__, __LINE__);
+	  fprintf (fp_stderr, "internal error %s line %d\n", __FILE__, __LINE__);
 	  exit (1);
 	}
       return (1);
@@ -289,17 +289,18 @@ is_dag (char *filename)
     }
   if (debug > 1)
     {
-      printf (" Node:             %s\n", th.node);
+      fprintf (fp_stdout, " Node:             %s\n", th.node);
       sec = DAG2SEC (th.starttime);
-      printf (" Start time:       %s\n", timestring (sec, utc));
+      fprintf (fp_stdout, " Start time:       %s\n", timestring (sec, utc));
       sec = DAG2SEC (th.endtime);
-      printf (" End time:         %s\n", timestring (sec, utc));
+      fprintf (fp_stdout, " End time:         %s\n", timestring (sec, utc));
       sec = DAG2SEC (th.endtime - th.starttime);
-      printf (" Duration:         %ldh %ldm %lds\n", sec / 3600,
+      fprintf (fp_stdout, " Duration:         %ldh %ldm %lds\n", sec / 3600,
 	      (sec % 3600) / 60, sec % 60);
       if (DAG2SEC (th.endtime - th.starttime))
 	bw = 8 * th.bytes / DAG2SEC (th.endtime - th.starttime);
-      printf (" Drops:            %u (by the DAG card)\n"
+      fprintf (fp_stdout, 
+          " Drops:            %u (by the DAG card)\n"
 	      " Packets:          %u\n"
 	      "     IP Packets:   %u\n"
 	      "     IP Bytes:     %lld\n"

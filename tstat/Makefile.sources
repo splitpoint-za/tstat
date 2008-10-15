@@ -22,7 +22,10 @@ HDR_FILES = \
     $(top_srcdir)/tstat/tcpL7.h\
     $(top_srcdir)/tstat/tstat.h\
     $(top_srcdir)/tstat/version.h\
-    $(top_srcdir)/tstat/ymsg.h
+    $(top_srcdir)/tstat/ymsg.h\
+    $(top_srcdir)/tstat/inireader.h\
+    $(top_srcdir)/tstat/p2p.h\
+    $(top_srcdir)/tstat/l7types.h
 
 CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/etherpeek.c \
@@ -61,4 +64,5 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/ipp2p_tstat.c \
        $(top_srcdir)/tstat/p2p.c \
        $(top_srcdir)/tstat/tcpL7.c \
-	   $(top_srcdir)/tstat/dump.c
+	   $(top_srcdir)/tstat/dump.c\
+       $(top_srcdir)/tstat/inireader.c

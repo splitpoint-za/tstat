@@ -437,7 +437,7 @@ of measurements used by Tstat.
 =begin html
 
 
-         <center><img src="/HOWTO/tstat_output.png"></img></center>
+         <center><img src="tstat_output.png"/></center>
 
 
 =end html

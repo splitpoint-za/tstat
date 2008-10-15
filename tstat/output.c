@@ -52,7 +52,7 @@ Stdev (double sum, double sum2, int n)
   term /= (double) (n - 1);
   retval = sqrt (term);
 
-/*     printf("Stdev(%f,%f,%d) is %f\n", sum,sum2,n,retval); */
+/* fprintf(fp_stdout, "Stdev(%f,%f,%d) is %f\n", sum,sum2,n,retval); */
 
   return (retval);
 }
@@ -85,8 +85,8 @@ tv_sub (struct timeval *plhs, struct timeval rhs)
   /* sanity check, lhs MUST BE more than rhs */
   if (tv_lt (*plhs, rhs))
     {
-      fprintf (stderr, "tvsub(%s,", ts2ascii (plhs));
-      fprintf (stderr, "%s) bad timestamp order!\n", ts2ascii (&rhs));
+      fprintf (fp_stderr, "tvsub(%s,", ts2ascii (plhs));
+      fprintf (fp_stderr, "%s) bad timestamp order!\n", ts2ascii (&rhs));
 /* 	exit(-1); */
       plhs->tv_sec = plhs->tv_usec = 0;
       return;

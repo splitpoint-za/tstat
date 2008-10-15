@@ -298,7 +298,7 @@ callback (char *user, struct pcap_pkthdr *phdr, char *buf)
       callback_plast = (char *) ip_buf + iplen - 1;
       break;
     default:
-      fprintf (stderr, "Don't understand link-level format (%d)\n", type);
+      fprintf (fp_stderr, "Don't understand link-level format (%d)\n", type);
 
       exit (1);
     }
@@ -327,7 +327,7 @@ pread_tcpdump (struct timeval *ptime,
 	      error = pcap_geterr (pcap);
 
 	      if (error && *error)
-		fprintf (stderr, "PCAP error: '%s'\n", pcap_geterr (pcap));
+		fprintf (fp_stderr, "PCAP error: '%s'\n", pcap_geterr (pcap));
 	      /* else, it's just EOF */
 	      return (-1);
 	    }
@@ -349,7 +349,7 @@ pread_tcpdump (struct timeval *ptime,
 	  {
 	    if (!bogus_nanoseconds)
 	      {
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "tcpdump: attempting to adapt to bogus nanosecond timestamps\n");
 		bogus_nanoseconds = TRUE;
 	      }
@@ -373,7 +373,7 @@ pread_tcpdump (struct timeval *ptime,
 	  (ntohs (eth_header.ether_type) != ETHERTYPE_IPV6))
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_tcpdump: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_tcpdump: not an IP packet\n");
 	  continue;
 	}
 
@@ -397,7 +397,7 @@ is_tcpdump (char *filename)
     {
 #endif /* __WIN32 */
       if (debug > 2)
-	fprintf (stderr, "PCAP said: '%s'\n", errbuf);
+	fprintf (fp_stderr, "PCAP said: '%s'\n", errbuf);
       rewind (stdin);
       return (NULL);
     }
@@ -406,14 +406,14 @@ is_tcpdump (char *filename)
 
   if (debug)
     {
-      printf ("Using 'pcap' version of tcpdump\n");
+      fprintf (fp_stdout, "Using 'pcap' version of tcpdump\n");
       if (debug > 1)
 	{
-	  printf ("\tversion_major: %d\n", pcap_major_version (pcap));
-	  printf ("\tversion_minor: %d\n", pcap_minor_version (pcap));
-	  printf ("\tsnaplen: %d\n", pcap_snapshot (pcap));
-	  printf ("\tlinktype: %d\n", pcap_datalink (pcap));
-	  printf ("\tswapped: %d\n", pcap_is_swapped (pcap));
+	  fprintf (fp_stdout, "\tversion_major: %d\n", pcap_major_version (pcap));
+	  fprintf (fp_stdout, "\tversion_minor: %d\n", pcap_minor_version (pcap));
+	  fprintf (fp_stdout, "\tsnaplen: %d\n", pcap_snapshot (pcap));
+	  fprintf (fp_stdout, "\tlinktype: %d\n", pcap_datalink (pcap));
+	  fprintf (fp_stdout, "\tswapped: %d\n", pcap_is_swapped (pcap));
 	}
     }
 
@@ -476,9 +476,9 @@ is_tcpdump (char *filename)
       physname = "Cisco HDLC";
       break;
     default:
-      fprintf (stderr, "tcptrace did not understand link format (%d)!\n",
+      fprintf (fp_stderr, "tcptrace did not understand link format (%d)!\n",
 	       type);
-      fprintf (stderr,
+      fprintf (fp_stderr,
 	       "\t If you can give us a capture file with this link format\n\
 \t or even better, a patch to decipher this format, we shall add it in, \n\
 \t in a future release.\n");
@@ -487,7 +487,7 @@ is_tcpdump (char *filename)
     }
 
   if (debug)
-    fprintf (stderr, "Tcpdump format, physical type is %d (%s)\n",
+    fprintf (fp_stderr, "Tcpdump format, physical type is %d (%s)\n",
 	     type, physname);
 
   /* set up some stuff */
@@ -509,17 +509,17 @@ tcpdump_install_filter (pcap_t * pcap, bpf_u_int32 net)
     {
       filter_string = read_infile (filter_filename);
       if (debug > 1)
-	fprintf (stdout, "Compiling filter '%s'\n", filter_string);
+	fprintf (fp_stdout, "Compiling filter '%s'\n", filter_string);
 
       if (pcap_compile (pcap, &filter_comp, filter_string, 1, net) < 0)
 	{
-	  fprintf (stderr, "pcap_compile: %s\n", pcap_geterr (pcap));
+	  fprintf (fp_stderr, "pcap_compile: %s\n", pcap_geterr (pcap));
 	  exit (1);
 	}
 
       if (pcap_setfilter (pcap, &filter_comp) < 0)
 	{
-	  fprintf (stderr, "pcap_setfilter: %s\n", pcap_geterr (pcap));
+	  fprintf (fp_stderr, "pcap_setfilter: %s\n", pcap_geterr (pcap));
 	  exit (1);
 	}
     }
@@ -535,7 +535,7 @@ init_live_tcpdump (char *filename)
 
   if (dev == NULL)
     {
-      fprintf (stderr, "%s\n ", errbuf);
+      fprintf (fp_stderr, "%s\n ", errbuf);
       exit (1);
     }
 
@@ -543,25 +543,25 @@ init_live_tcpdump (char *filename)
 
   if (pcap == NULL)
     {
-      fprintf (stderr, "pcap_openlive: %s\n", errbuf);
+      fprintf (fp_stderr, "pcap_openlive: %s\n", errbuf);
       exit (1);
     }
   else if (*errbuf)
     {
-      fprintf (stderr, "pcap_openlive: %s\n", pcap_geterr (pcap));
+      fprintf (fp_stderr, "pcap_openlive: %s\n", pcap_geterr (pcap));
     }
 
 
   /* put it in a blocking mode */
   if (pcap_setnonblock (pcap, 0, errbuf) < 0)
     {
-      fprintf (stderr, "pcap_setnonblock: %s\n", pcap_geterr (pcap));
+      fprintf (fp_stderr, "pcap_setnonblock: %s\n", pcap_geterr (pcap));
       exit (1);
     }
 
   tcpdump_install_filter (pcap, 0);
 
-  printf ("Live capturing on: %s\n", dev);
+  fprintf (fp_stdout, "Live capturing on: %s\n", dev);
 
 
   memset (&eth_header, 0, EH_SIZE);
@@ -604,7 +604,7 @@ PcapSavePacket (char *filename, struct ip *pip, void *plast)
       Mfwrite ((char *) &fhdr, sizeof (fhdr), 1, f_savefile);
 
       if (debug)
-	fprintf (stderr, "Created pcap save file '%s'\n", filename);
+	fprintf (fp_stderr, "Created pcap save file '%s'\n", filename);
     }
 
   /* create the packet header */
@@ -636,7 +636,7 @@ tcpdump_cleanup (FILE * wheref)
 {
   struct pcap_stat stat;
 
-  fprintf (stderr, "\nLive pcap_stats:");
+  fprintf (fp_stderr, "\nLive pcap_stats:");
   /* Can't print the summary if reading from a savefile */
   if (pcap != NULL && pcap_file (pcap) == NULL)
     {
@@ -662,13 +662,13 @@ read_infile (char *fname)
   fd = open (fname, O_RDONLY);
   if (fd < 0)
     {
-      fprintf (stderr, "can't open %s\n", fname);
+      fprintf (fp_stderr, "can't open %s\n", fname);
       exit (1);
     }
 
   if (fstat (fd, &buf) < 0)
     {
-      fprintf (stderr, "can't stat %s\n", fname);
+      fprintf (fp_stderr, "can't stat %s\n", fname);
       exit (1);
     }
 
@@ -676,12 +676,12 @@ read_infile (char *fname)
   cc = read (fd, cp, (int) buf.st_size);
   if (cc < 0)
     {
-      fprintf (stderr, "read %s\n", fname);
+      fprintf (fp_stderr, "read %s\n", fname);
       exit (1);
     }
   if (cc != buf.st_size)
     {
-      fprintf (stderr, "short read %s (%d != %d)\n", fname, cc,
+      fprintf (fp_stderr, "short read %s (%d != %d)\n", fname, cc,
 	       (int) buf.st_size);
       exit (1);
     }
@@ -695,7 +695,7 @@ read_infile (char *fname)
 void
 PcapSavePacket (char *filename, struct ip *pip, void *plast)
 {
-  fprintf (stderr, "\
+  fprintf (fp_stderr, "\
 Sorry, packet writing only supported with the pcap library\n\
 compiled into the program (See GROK_TCPDUMP)\n");
   exit (-2);

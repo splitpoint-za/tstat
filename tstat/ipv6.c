@@ -112,20 +112,20 @@ LoadInternalNetsv6 (char *file, struct in6_addr *internal_net_listv6,
     {
 
       if ((i = inet_pton (AF_INET6, c, internal_net_listv6)) == 0)
-	printf ("Error using inet_pton: not a valid presentation format \n");
+	fprintf (fp_stderr, "Error using inet_pton: not a valid presentation format \n");
       else if (i < 0)
-	printf ("Error using inet_pton \n");
+	fprintf (fp_stderr, "Error using inet_pton \n");
     }
   else
     {
-      printf ("Error \n");
+      fprintf (fp_stderr, "Error \n");
 
       return 0;
     }
 
   if (debug)
     {
-      printf ("Adding: %s as internal net \n",
+      fprintf (fp_stderr, "Adding: %s as internal net \n",
 	      inet_ntop (AF_INET6, internal_net_listv6, c, INET6_ADDRSTRLEN));
     }
   return 1;
@@ -139,16 +139,19 @@ int
 internal_ipv6 (struct in6_addr adx, struct in6_addr internal_net_listv6)
 {
 
-  //printf ("Indir: %s \n indir comp: %s \n",inet_ntop(AF_INET6,&adx,c,INET6_ADDRSTRLEN),inet_ntop(AF_INET6,&internal_net_listv6,d,INET6_ADDRSTRLEN));
+  //fprintf (fp_stdout, 
+  //  "Indir: %s \n indir comp: %s \n",
+  //  inet_ntop(AF_INET6,&adx,c,INET6_ADDRSTRLEN),
+  //  inet_ntop(AF_INET6,&internal_net_listv6,d,INET6_ADDRSTRLEN));
 
   if (memcmp (&adx, &internal_net_listv6, 8) == 0)
     {
-      //printf("the same \n");
+      //fprintf (fp_stdout, "the same \n");
       return 1;
     }
   else
     {
-      //printf("not the same \n");
+      //fprintf (fp_stdout, "not the same \n");
       return 0;
     }
 }
@@ -226,9 +229,13 @@ IPv6_support (struct ip *pip, struct in6_addr internal_netv6, void *pplast)
       ICMPv6_support (next, internal_srcv6, internal_dstv6);
     }
 
-  //printf("IPv6 src addr: %s \n",inet_ntop(AF_INET6,(*ipv6).ip6_saddr.s6_addr,buffer_ipv6 ,INET6_ADDRSTRLEN));
+  //fprintf (fp_stdout, "IPv6 src addr: %s \n",
+  //    inet_ntop(AF_INET6,
+  //    (*ipv6).ip6_saddr.s6_addr,buffer_ipv6 ,INET6_ADDRSTRLEN));
 
-  //printf("IPv6 dst addr: %s\n",inet_ntop(AF_INET6,(*ipv6).ip6_daddr.s6_addr,buffer_ipv6 ,INET6_ADDRSTRLEN));
+  //fprintf (fp_stdout, "IPv6 dst addr: %s\n",
+  //    inet_ntop(AF_INET6,
+  //    (*ipv6).ip6_daddr.s6_addr,buffer_ipv6 ,INET6_ADDRSTRLEN));
 
   return;
 }
@@ -253,7 +260,7 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
       switch (next_header)
 	{
 	case IPPROTO_TCP:
-	  //printf("next header: %d \n",next_header);
+	  //fprintf (fp_stdout, "next header: %d \n",next_header);
 	  return (next_header6);
 	  break;
 	case IPPROTO_UDP:
@@ -271,8 +278,7 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
 	    if ((pfrag->ip6ext_fr_offset & 0xfc) != 0)
 	      {
 		if (debug > 1)
-		  printf
-		    ("findheader_ipv6: Skipping IPv6 non-initial fragment\n");
+		  fprintf (fp_stdout, "findheader_ipv6: Skipping IPv6 non-initial fragment\n");
 		return (NULL);
 	      }
 
@@ -358,7 +364,7 @@ findheader (u_int ipproto, struct ip *pip, void **pplast)
             {
                 if (debug > 1)
                 {
-                    printf ("gettcp: Skipping IPv4 non-initial fragment\n");
+                    fprintf (fp_stdout, "gettcp: Skipping IPv4 non-initial fragment\n");
                 }
                 return NULL;
             }
@@ -585,7 +591,7 @@ my_inet_ntop (int af, const char *src, char *dst, size_t size)
   /* sanity check, this isn't general, but doesn't need to be */
   if (size != INET6_ADDRSTRLEN)
     {
-      fprintf (stderr, "my_inet_ntop: invalid size argument\n");
+      fprintf (fp_stderr, "my_inet_ntop: invalid size argument\n");
       exit (-1);
     }
 
@@ -682,7 +688,7 @@ str2ipaddr (char *str)
       if (inet_pton (AF_INET, str, &pipaddr->un.ip4.s_addr) != 1)
 	{
 	  if (debug)
-	    fprintf (stderr, "Address string '%s' unparsable as IPv4\n", str);
+	    fprintf (fp_stderr, "Address string '%s' unparsable as IPv4\n", str);
 	  return (NULL);
 	}
     }
@@ -694,7 +700,7 @@ str2ipaddr (char *str)
       if (inet_pton (AF_INET6, str, &pipaddr->un.ip6.s6_addr) != 1)
 	{
 	  if (debug)
-	    fprintf (stderr, "Address string '%s' unparsable as IPv6\n", str);
+	    fprintf (fp_stderr, "Address string '%s' unparsable as IPv6\n", str);
 	  return (NULL);
 	}
     }
@@ -702,7 +708,7 @@ str2ipaddr (char *str)
   else
     {
       if (debug)
-	fprintf (stderr, "Address string '%s' unparsable\n", str);
+	fprintf (fp_stderr, "Address string '%s' unparsable\n", str);
       return (NULL);
     }
   return (pipaddr);
@@ -728,8 +734,8 @@ IPcmp (ipaddr * pipA, ipaddr * pipB)
     {
       if (debug > 1)
 	{
-	  printf ("IPcmp %s", HostAddr (*pipA));
-	  printf ("%s fails, different addr types\n", HostAddr (*pipB));
+	  fprintf (fp_stdout, "IPcmp %s", HostAddr (*pipA));
+	  fprintf (fp_stdout, "%s fails, different addr types\n", HostAddr (*pipB));
 	}
       return (-2);
     }

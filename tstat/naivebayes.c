@@ -109,7 +109,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
     debugf = stdout;
 
   if (BAYES_DBG (0))
-    fprintf (stderr, "BAYES: parsing of config file <%s>\n", config_file);
+    fprintf (fp_stderr, "BAYES: parsing of config file <%s>\n", config_file);
 
   if (prefix == NULL)
     prefix_string[0] = '\0';
@@ -139,7 +139,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 
   if (!(conf = fopen (config_file, "r")))
     {
-      fprintf (stderr, "%s: file open error.\n", config_file);
+      fprintf (fp_stderr, "%s: file open error.\n", config_file);
       perror (NULL);
       exit (1);
     }
@@ -236,7 +236,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	}
       else
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
 	  perror (NULL);
@@ -290,7 +290,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
   //-----------------------------------------------------------------------------------
   if (!(conf = fopen (config_file, "r")))
     {
-      fprintf (stderr, "%s: file open error.\n", config_file);
+      fprintf (fp_stderr, "%s: file open error.\n", config_file);
       perror (NULL);
       exit (1);
     }
@@ -316,7 +316,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
       config_line++;
 
       if (BAYES_DBG (1))
-	fprintf (stderr, "BAYES: config[%d]='%s ...'\n", config_line,
+	fprintf (fp_stderr, "BAYES: config[%d]='%s ...'\n", config_line,
 		 keyword);
 
       if (!strcmp (keyword, "WINDOW_SIZE") ||
@@ -391,17 +391,17 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	  fscanf (conf, "%s", arg1);
 	  settings->class_name[class_num] = strdup (arg1);
 	  if (BAYES_DBG (1))
-	    fprintf (stderr, "GAUSS: class_name %s\n", arg1);
+	    fprintf (fp_stderr, "GAUSS: class_name %s\n", arg1);
 
 	  fscanf (conf, "%s", arg2);
 	  settings->class_weight[class_num] = atof (arg2);
 	  if (BAYES_DBG (1))
-	    fprintf (stderr, "GAUSS: class_w %s\n", arg2);
+	    fprintf (fp_stderr, "GAUSS: class_w %s\n", arg2);
 
 	  fscanf (conf, "%s", arg2);
 	  num = atoi (arg2);
 	  if (BAYES_DBG (1))
-	    fprintf (stderr, "GAUSS: num_gauss %s %d\n", arg2, num);
+	    fprintf (fp_stderr, "GAUSS: num_gauss %s %d\n", arg2, num);
 
 	  settings->class_gpdf[class_num].n = num;
 	  settings->class_gpdf[class_num].w =
@@ -425,7 +425,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	      settings->class_gpdf[class_num].m[i] = atof (mu);
 
 	      if (BAYES_DBG (1))
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "GAUSS: g[%d/%d] = (%s %s %s) -> (%f,%f,%f)\n", i,
 			 settings->class_gpdf[class_num].n, weight, mu, sigma,
 			 settings->class_gpdf[class_num].w[i],
@@ -437,7 +437,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	}
       else
 	{
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
 	  perror (NULL);
@@ -460,7 +460,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
     }
   else if (Pcheck < 1 && (BAYES_DBG (0)))
     {
-      fprintf (stderr, "BAYES: sum P{class} = %g < 1\n", 1.0 - Pcheck);
+      fprintf (fp_stderr, "BAYES: sum P{class} = %g < 1\n", 1.0 - Pcheck);
     }
 
   //===================================================================================
@@ -618,7 +618,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
   if (BAYES_DBG (0))
     {
       bayes_check (settings, stderr);
-      fprintf (stderr,
+      fprintf (fp_stderr,
 	       "\rBAYES: config file succesfully parsed (I can't believe it!)\n");
     }
 
@@ -651,7 +651,7 @@ bayes_new (struct bayes_settings *settings)
   classifier->settings = settings;
 
   if (BAYES_DBG (2))
-    fprintf (stderr, "bc->settings[%p] = %s\n", settings, settings->name);
+    fprintf (fp_stderr, "bc->settings[%p] = %s\n", settings, settings->name);
 
   classifier->belief =
     (double *) MMmalloc (settings->class_num * sizeof (double),
@@ -698,7 +698,7 @@ bayes_file2vec (const char *fname, int *len, double min_th, Bool use_log)
   //-----------------------------------------------------------------------------------
   if (!(f = fopen (fname, "r")))
     {
-      fprintf (stderr, "%s: file open error.\n", fname);
+      fprintf (fp_stderr, "%s: file open error.\n", fname);
       perror (NULL);
       exit (1);
     }
@@ -727,7 +727,7 @@ bayes_file2vec (const char *fname, int *len, double min_th, Bool use_log)
   //  pass2: allocate and load
   //-----------------------------------------------------------------------------------
   if (BAYES_DBG (1))
-    fprintf (stderr, "BAYES: file2vec (reading %d elements)\n", size);
+    fprintf (fp_stderr, "BAYES: file2vec (reading %d elements)\n", size);
 
   vec = (double *) MMmalloc (size * sizeof (double), "file2vec");
 
@@ -769,8 +769,8 @@ bayes_file2vec (const char *fname, int *len, double min_th, Bool use_log)
     {
       if (BAYES_DBG (0))
 	{
-	  fprintf (stderr, "BAYES: warning, file(%s) is NOT a pdf!\n", fname);
-	  fprintf (stderr,
+	  fprintf (fp_stderr, "BAYES: warning, file(%s) is NOT a pdf!\n", fname);
+	  fprintf (fp_stderr,
 		   "BAYES: normalizing %d elements over their sum=%f\n", size,
 		   check);
 	}
@@ -839,7 +839,7 @@ bayes_eval_pdf (struct bayes_settings *settings, int class_num, int index)
 #ifdef BAYES_SAFE
   if (class_num > settings->class_num)
     {
-      fprintf (stderr, "%s only has %d classes (and you asked for %d)\n",
+      fprintf (fp_stderr, "%s only has %d classes (and you asked for %d)\n",
 	       settings->name, settings->class_num, class_num);
       perror (NULL);
       exit (1);
@@ -851,7 +851,7 @@ bayes_eval_pdf (struct bayes_settings *settings, int class_num, int index)
       if (index > settings->class_dlen[class_num])
 	{
 #ifdef BAYES_SAFE
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "%s: class %d only has %d indexes (and you asked for %d)\n",
 		   settings->name, settings->class_num,
 		   settings->class_dlen[class_num], index);
@@ -967,7 +967,7 @@ bayes_sample (struct bayes_classifier *classifier, int sample)
   double class_sum = 0.0;
 
   if (BAYES_DBG (0))
-    fprintf (stderr, "bc->settings[%p].%s( sample= %d ), (s:%ld w:%ld)\n",
+    fprintf (fp_stderr, "bc->settings[%p].%s( sample= %d ), (s:%ld w:%ld)\n",
 	     classifier->settings,
 	     (classifier->settings) ? classifier->settings->name : NULL,
 	     sample, classifier->sample_num, classifier->window_num);
@@ -1082,15 +1082,15 @@ bayes_sample (struct bayes_classifier *classifier, int sample)
     {
       for (class_num = 0; class_num < classifier->settings->class_num;
 	   class_num++)
-	fprintf (stdout,
+	fprintf (fp_stdout,
 		 class_num == argmax ? "[%-5.2f] " : class_num ==
 		 argmax2nd ? "(%-5.2f) " : "%-7.2f ",
 		 classifier->belief[class_num] /
 		 ((double) classifier->sample_num));
 
-      fprintf (stdout, "%f %f ", classifier->mean_max_belief,
+      fprintf (fp_stdout, "%f %f ", classifier->mean_max_belief,
 	       classifier->valid_percentage);
-      fprintf (stdout, "%d/%d\n", classifier->valid_samples,
+      fprintf (fp_stdout, "%d/%d\n", classifier->valid_samples,
 	       classifier->total_samples);
     }
 #endif // BAYES_TRACE_WINDOW

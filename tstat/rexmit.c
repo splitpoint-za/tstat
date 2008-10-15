@@ -194,7 +194,8 @@ addseg (tcb * ptcb,
 	  else
 	    {
 	      /* overlap him, split myself in 2 */
-	      //printf("split %lu %lu\n", len,  pseg_new->seq_lastbyte-pseg_new->seq_firstbyte);
+	      //fprintf(fp_stdout, "split %lu %lu\n", 
+          //    len,  pseg_new->seq_lastbyte-pseg_new->seq_firstbyte);
 	      /* adjust new piece to mate with old piece */
 	      pseg_new->seq_lastbyte = pseg->seq_firstbyte - 1;
 
@@ -307,11 +308,11 @@ create_seg (seqnum seq, seglen len, u_short this_ip_id)
   if (threaded)
     {
 #ifdef DEBUG_THREAD
-      printf ("\n\nRichiesto blocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
 #endif
       pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nOttenuto blocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
 #endif
     }
 
@@ -320,11 +321,11 @@ create_seg (seqnum seq, seglen len, u_short this_ip_id)
   if (threaded)
     {
 #ifdef DEBUG_THREAD
-      printf ("\n\nRichiesto sblocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
 #endif
       pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nOttenuto sblocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
 #endif
     }
 
@@ -346,11 +347,11 @@ create_quadrant (void)
   if (threaded)
     {
 #ifdef DEBUG_THREAD
-      printf ("\n\nRichiesto blocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
 #endif
       pthread_mutex_lock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nOttenuto blocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
 #endif
     }
 
@@ -359,11 +360,11 @@ create_quadrant (void)
   if (threaded)
     {
 #ifdef DEBUG_THREAD
-      printf ("\n\nRichiesto sblocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
 #endif
       pthread_mutex_unlock (&ttp_lock_mutex);
 #ifdef DEBUG_THREAD
-      printf ("\n\nOttenuto sblocco thread TTP\n");
+      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
 #endif
     }
   return (pquad);
@@ -542,7 +543,7 @@ rtt_ackin (tcb * ptcb, segment * pseg, Bool rexmit_prev)
 
   /* how long did it take */
   etime_rtt = elapsed (pseg->time, current_time);
-//printf ("%f\n",etime_rtt);
+//fprintf (fp_stdout, "%f\n",etime_rtt);
   if (rexmit_prev)
     {
       /* first, check for the situation in which the segment being ACKed */
@@ -571,7 +572,7 @@ rtt_ackin (tcb * ptcb, segment * pseg, Bool rexmit_prev)
       ptcb->srtt = (1.0 - ALPHA) * ptcb->srtt + BETA * etime_rtt;
 
 //  if ((&(ptcb->ptp->c2s)) != ptcb)    //(dir == C2S)
-//     printf ("%f\n",ptcb->srtt);
+//     fprintf (fp_stdout, "%f\n",ptcb->srtt);
 
       /* average over lifetime */
       ptcb->rtt_sum += etime_rtt;

@@ -153,7 +153,7 @@ pread_EP (struct timeval *ptime,
 	       fread (&hdr, 1, Real_Size_FP, SYS_STDIN)) != Real_Size_FP)
 	    {
 	      if (rlen != 0)
-		fprintf (stderr, "Bad EP header\n");
+		fprintf (fp_stderr, "Bad EP header\n");
 	      return (0);
 	    }
 	  hdr.packetlength = ntohs (hdr.packetlength);
@@ -161,9 +161,9 @@ pread_EP (struct timeval *ptime,
 
 	  if (debug > 1)
 	    {
-	      printf
-		("EP_read: next packet: original length: %d, saved length: %d\n",
-		 hdr.packetlength, hdr.slicelength);
+	      fprintf (fp_stdout, 
+            "EP_read: next packet: original length: %d, saved length: %d\n",
+		    hdr.packetlength, hdr.slicelength);
 	    }
 
 
@@ -171,7 +171,7 @@ pread_EP (struct timeval *ptime,
 	       fread (&hdr2, 1, Real_Size_FP2, SYS_STDIN)) != Real_Size_FP2)
 	    {
 	      if (rlen != 0)
-		fprintf (stderr, "Bad EP header\n");
+		fprintf (fp_stderr, "Bad EP header\n");
 	      return (0);
 	    }
 
@@ -179,7 +179,7 @@ pread_EP (struct timeval *ptime,
 	       fread (&hdr3, 1, Real_Size_FP3, SYS_STDIN)) != Real_Size_FP3)
 	    {
 	      if (rlen != 0)
-		fprintf (stderr, "Bad EP header\n");
+		fprintf (fp_stderr, "Bad EP header\n");
 	      return (0);
 	    }
 
@@ -208,7 +208,7 @@ pread_EP (struct timeval *ptime,
 	  if ((rlen = fread (&hdrv7, sizeof (hdrv7), 1, SYS_STDIN)) != 1)
 	    {
 	      if (rlen != 0)
-		fprintf (stderr, "Bad EP V7 header (rlen is %d)\n", rlen);
+		fprintf (fp_stderr, "Bad EP V7 header (rlen is %d)\n", rlen);
 	      return (0);
 	    }
 
@@ -262,12 +262,12 @@ pread_EP (struct timeval *ptime,
 
 	  if (debug > 1)
 	    {
-	      printf ("File position: %ld\n", ftell (SYS_STDIN));
-	      printf ("pread_EP (v7) next packet:\n");
-	      printf ("  packetlength: %d\n", hdrv7.packetlength);
-	      printf ("  slicelength:  %d\n", hdrv7.slicelength);
-	      printf ("  packlen:      %d\n", packlen);
-	      printf ("  time:         %s\n", ts2ascii_date (ptime));
+	      fprintf (fp_stdout, "File position: %ld\n", ftell (SYS_STDIN));
+	      fprintf (fp_stdout, "pread_EP (v7) next packet:\n");
+	      fprintf (fp_stdout, "  packetlength: %d\n", hdrv7.packetlength);
+	      fprintf (fp_stdout, "  slicelength:  %d\n", hdrv7.slicelength);
+	      fprintf (fp_stdout, "  packlen:      %d\n", packlen);
+	      fprintf (fp_stdout, "  time:         %s\n", ts2ascii_date (ptime));
 	    }
 	}
 
@@ -278,7 +278,7 @@ pread_EP (struct timeval *ptime,
       rlen = fread (pep, 1, sizeof (struct ether_header), SYS_STDIN);
       if (rlen != sizeof (struct ether_header))
 	{
-	  fprintf (stderr, "Couldn't read ether header\n");
+	  fprintf (fp_stderr, "Couldn't read ether header\n");
 	  return (0);
 	}
 
@@ -288,7 +288,7 @@ pread_EP (struct timeval *ptime,
       if (len >= IP_MAXPACKET)
 	{
 	  /* sanity check */
-	  fprintf (stderr,
+	  fprintf (fp_stderr,
 		   "pread_EP: invalid next packet, IP len is %d, return EOF\n",
 		   len);
 	  return (0);
@@ -297,7 +297,7 @@ pread_EP (struct timeval *ptime,
 	{
 	  if (rlen != 0)
 	    if (debug)
-	      fprintf (stderr,
+	      fprintf (fp_stderr,
 		       "Couldn't read %d more bytes, skipping last packet\n",
 		       len);
 	  return (0);
@@ -323,7 +323,7 @@ pread_EP (struct timeval *ptime,
 	  (ntohs (pep->ether_type) != ETHERTYPE_IPV6))
 	{
 	  if (debug > 2)
-	    fprintf (stderr, "pread_EP: not an IP packet\n");
+	    fprintf (fp_stderr, "pread_EP: not an IP packet\n");
 	  continue;
 	}
 
@@ -375,22 +375,22 @@ is_EP (char *filename)
     {
       int i;
 
-      fprintf (stderr, "IS_EP says version number %d \n",
+      fprintf (fp_stderr, "IS_EP says version number %d \n",
 	       file_header.version);
-      fprintf (stderr, "IS_EP says status number %d\n", file_header.status);
-      fprintf (stderr, "IS_EP says length number %ld\n", file_header2.length);
-      fprintf (stderr, "IS_EP says num packets number %ld \n",
+      fprintf (fp_stderr, "IS_EP says status number %d\n", file_header.status);
+      fprintf (fp_stderr, "IS_EP says length number %ld\n", file_header2.length);
+      fprintf (fp_stderr, "IS_EP says num packets number %ld \n",
 	       file_header2.numPackets);
-      fprintf (stderr, "IS_EP says time date in mac format %lu \n",
+      fprintf (fp_stderr, "IS_EP says time date in mac format %lu \n",
 	       (tt_uint32) file_header2.timeDate);
-      fprintf (stderr, "IS_EP says time start  %lu \n",
+      fprintf (fp_stderr, "IS_EP says time start  %lu \n",
 	       file_header2.timeStart);
-      fprintf (stderr, "IS_EP says time stop %lu \n", file_header2.timeStop);
-      fprintf (stderr, "future is: ");
+      fprintf (fp_stderr, "IS_EP says time stop %lu \n", file_header2.timeStop);
+      fprintf (fp_stderr, "future is: ");
       for (i = 0; i < 7; i++)
-	fprintf (stderr, " %ld ", file_header2.futureUse[i]);
-      fprintf (stderr, "\n");
-      fprintf (stderr, "RLEN is %d \n", rlen);
+	fprintf (fp_stderr, " %ld ", file_header2.futureUse[i]);
+      fprintf (fp_stderr, "\n");
+      fprintf (fp_stderr, "RLEN is %d \n", rlen);
     }
 
 
@@ -404,7 +404,7 @@ is_EP (char *filename)
        0))
     {
       if (debug)
-	fprintf (stderr, "Valid Etherpeek format file (file version: %d)\n",
+	fprintf (fp_stderr, "Valid Etherpeek format file (file version: %d)\n",
 		 file_header.version);
       thisfile_ep_version = file_header.version;
 
@@ -412,7 +412,7 @@ is_EP (char *filename)
   else
     {
       if (debug)
-	fprintf (stderr,
+	fprintf (fp_stderr,
 		 "I don't think this is version 5, 6, or 7 Ether Peek File\n");
 
       return (NULL);

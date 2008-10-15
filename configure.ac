@@ -11,9 +11,8 @@ m4_define([_version_date], ["Mon Jan 28 11:04:09 CET 2008"])
 m4_define([_version_flavor], ["Tamarindo"])
 m4_define([_libtstat_version], [1.0.0])
 
-
 AC_INIT([tstat], 
-        m4_esyscmd([echo _version_major._version_minor._version_bugfix | tr -d '\n']),
+        m4_esyscmd([echo _version_major._version_minor | tr -d '\n']),
         [<mellia@mail.tlc.polito.it> <rossi@mail.tlc.polito.it>])
 
 AC_CONFIG_AUX_DIR(config)

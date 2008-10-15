@@ -48,18 +48,18 @@ extern long tot_adx_hash_count, bayes_new_count;
 void
 memory_debug ()
 {
-  printf ("Using %ld over %ld TP\t(%ldK) (%ld MAX)\n", IN_USE_TP, TOT_TP,
-	  MAX_TCP_PAIRS, TOT_TP * sizeof (tcp_pair) >> 10);
-  printf ("Using %ld over %ld SEGMENT\t(%ldK)\n", IN_USE_SEGMENT, TOT_SEGMENT,
-	  TOT_SEGMENT * sizeof (segment) >> 10);
-  printf ("Using %ld over %ld QUADRANT\t(%ldK)\n", IN_USE_QUADRANT,
-	  TOT_QUADRANT, TOT_QUADRANT * sizeof (quadrant) >> 10);
-  printf ("Using %ld over %ld PTP_SNAP\t(%ldK)\n", IN_USE_PTP_SNAP,
-	  TOT_PTP_SNAP, TOT_PTP_SNAP * sizeof (ptp_snap) >> 10);
-  printf ("Using %ld over %ld UDP_PAIR\t(%ldK)\n", IN_USE_UDP_PAIR,
-	  TOT_UDP_PAIR, TOT_UDP_PAIR * sizeof (udp_pair) >> 10);
-  printf ("Using %ld ADX\n", tot_adx_hash_count);
-  printf ("Using %ld bayes_classifier\n", bayes_new_count);
+  fprintf (fp_stdout, "Using %ld over %ld TP\t(%ldK) (%ld MAX)\n", 
+      IN_USE_TP, TOT_TP, MAX_TCP_PAIRS, TOT_TP * sizeof (tcp_pair) >> 10);
+  fprintf (fp_stdout, "Using %ld over %ld SEGMENT\t(%ldK)\n", 
+      IN_USE_SEGMENT, TOT_SEGMENT, TOT_SEGMENT * sizeof (segment) >> 10);
+  fprintf (fp_stdout, "Using %ld over %ld QUADRANT\t(%ldK)\n", 
+      IN_USE_QUADRANT, TOT_QUADRANT, TOT_QUADRANT * sizeof (quadrant) >> 10);
+  fprintf (fp_stdout, "Using %ld over %ld PTP_SNAP\t(%ldK)\n", 
+      IN_USE_PTP_SNAP, TOT_PTP_SNAP, TOT_PTP_SNAP * sizeof (ptp_snap) >> 10);
+  fprintf (fp_stdout, "Using %ld over %ld UDP_PAIR\t(%ldK)\n", 
+      IN_USE_UDP_PAIR, TOT_UDP_PAIR, TOT_UDP_PAIR * sizeof (udp_pair) >> 10);
+  fprintf (fp_stdout, "Using %ld ADX\n", tot_adx_hash_count);
+  fprintf (fp_stdout, "Using %ld bayes_classifier\n", bayes_new_count);
 
 
 }
@@ -80,8 +80,8 @@ MMmalloc (size_t size, const char *f_name)
     {
       /* If problems arise from the memory allocation, an error message is    */
       /* printed before exiting the program execution.                        */
-      printf ("\nError:  Memory allocation error in Tstat function ");
-      printf ("%s\n", f_name);
+      fprintf (fp_stderr, 
+        "\nError:  Memory allocation error in Tstat function %s\n", f_name);
       exit (1);
     }
   memset (temp_pointer, 0, size);
@@ -108,7 +108,7 @@ tp_alloc (void)
 
   if ((last_tp_flist == NULL) || (last_tp_flist->ptp == NULL))
     {				/* The LinkList stack is empty.         */
-      /* printf ("FList empty, top == last == NULL\n"); */
+      /* fprintf (fp_stdout, "FList empty, top == last == NULL\n"); */
       ptp_temp = (tcp_pair *) MMmalloc (sizeof (tcp_pair), "tplist_alloc");
       ptp_temp->c2s.ss = (seqspace *) MallocZ (sizeof (seqspace));
       ptp_temp->s2c.ss = (seqspace *) MallocZ (sizeof (seqspace));
@@ -197,27 +197,27 @@ tp_list_list ()
   struct tp_list_elem *new_tplist_elem;
 
   new_tplist_elem = top_tp_flist;
-  printf ("\n\t[top]\n");
+  fprintf (fp_stdout, "\n\t[top]\n");
   while (new_tplist_elem != NULL)
     {
-      printf ("\t|\n");
+      fprintf (fp_stdout, "\t|\n");
       if (new_tplist_elem == last_tp_flist)
-	printf ("[last]->");
+	fprintf (fp_stdout, "[last]->");
       else
-	printf ("\t");
-      printf ("[tp_list_elem]->");
+	fprintf (fp_stdout, "\t");
+      fprintf (fp_stdout, "[tp_list_elem]->");
       if (new_tplist_elem->ptp != NULL)
 	{
-	  printf ("[ptp]");
+	  fprintf (fp_stdout, "[ptp]");
 	}
       else
 	{
-	  printf ("[NULL]");
+	  fprintf (fp_stdout, "[NULL]");
 	}
-      printf ("\n");
+      fprintf (fp_stdout, "\n");
       new_tplist_elem = new_tplist_elem->next;
     }
-  printf ("\n");
+  fprintf (fp_stdout, "\n");
 }
 
 /* garbage collector for the segment list */
@@ -271,7 +271,7 @@ segment_list_info ()
       i++;
       pseg = pseg->next;
     }
-  printf ("Segments in flist: %d\n", i);
+  fprintf (fp_stdout, "Segments in flist: %d\n", i);
 }
 
 /* garbage collector for the Quadrant */
@@ -326,7 +326,7 @@ quadrant_list_info ()
       i++;
       pquad = pquad->next;
     }
-  printf ("Quadrants in flist: %d\n", i);
+  fprintf (fp_stdout, "Quadrants in flist: %d\n", i);
 }
 
 /* garbage collector for the ptp_snap list */

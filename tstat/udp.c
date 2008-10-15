@@ -63,13 +63,14 @@ dup_udp_check (struct ip *pip, ucb * thisdir, int dir, udp_pair * pup_save)
   if (thisdir->last_ip_id == pip->ip_id &&
       delta_t < MIN_DELTA_T_UDP_DUP_PKT && thisdir->last_len == pip->ip_len)
     {
-//       printf("dup udp %d , id = %u ",tot++, pip->ip_id);
-//       printf("TTL: %d ID: %d Delta_t: %g\n",pip->ip_ttl,pip->ip_id,delta_t);
+//       fprintf (fp_stdout, "dup udp %d , id = %u ",tot++, pip->ip_id);
+//       fprintf (fp_stdout, "TTL: %d ID: %d Delta_t: %g\n", 
+//          pip->ip_ttl,pip->ip_id,delta_t);
       thisdir->last_ip_id = pip->ip_id;
       thisdir->last_len = pip->ip_len;
       return TRUE;
     }
-//    printf("NOT dup udp %d\n",tot);
+//    fprintf (fp_stdout, "NOT dup udp %d\n",tot);
   thisdir->last_ip_id = pip->ip_id;
   thisdir->last_len = pip->ip_len;
   return FALSE;
@@ -92,7 +93,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
     {
       steps++;
       /* look for the next one */
-//         printf("%d %d\n", num_udp_pairs, old_new_udp_pairs);
+//         fprintf (fp_stdout, "%d %d\n", num_udp_pairs, old_new_udp_pairs);
       num_udp_pairs++;
       num_udp_pairs = num_udp_pairs % MAX_UDP_PAIRS;
     }
@@ -100,11 +101,10 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
     {
       if (warn_MAX_)
 	{
-	  printf
-	    ("\nooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n");
-	  printf
-	    ("you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n");
-	  printf ("or possibly with a larger 'MAX_UDP_PAIRS' defined!\n");
+	  fprintf (fp_stdout, 
+        "\nooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n"
+	    "you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n"
+	    "or possibly with a larger 'MAX_UDP_PAIRS' defined!\n");
 	}
       warn_MAX_ = FALSE;
       return (NULL);
@@ -206,7 +206,7 @@ a new one */
 	  pthread_mutex_lock (&flow_close_cond_mutex);
 
 #ifdef DEBUG_THREAD
-	  printf ("Signaling thread FLOW CLOSE\n");
+	  fprintf (fp_stdout, "Signaling thread FLOW CLOSE\n");
 #endif
 	  pthread_cond_signal (&flow_close_cond);
 	  pthread_mutex_unlock (&flow_close_cond_mutex);
@@ -214,7 +214,7 @@ a new one */
 	  pthread_mutex_lock (&flow_close_started_mutex);
 	  pthread_mutex_unlock (&flow_close_started_mutex);
 #ifdef DEBUG_THREAD
-	  printf ("\n\nlocked thread FLOW CLOSE\n");
+	  fprintf (fp_stdout, "\n\nlocked thread FLOW CLOSE\n");
 #endif
 	}
       else
@@ -229,13 +229,13 @@ a new one */
   if (threaded)
     {
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nFindUTP: Try to lock thread UTP\n");
+      fprintf (fp_stdout, "\n\nFindUTP: Try to lock thread UTP\n");
 #endif
 
       pthread_mutex_lock (&utp_lock_mutex);
 
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nFindUTP: Got lock thread UTP\n");
+      fprintf (fp_stdout, "\n\nFindUTP: Got lock thread UTP\n");
 #endif
     }
   pup = NewUTP (pip, pudp);
@@ -255,7 +255,7 @@ a new one */
       pthread_mutex_unlock (&utp_lock_mutex);
 
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nFindUTP: Unlocked thread TTP\n");
+      fprintf (fp_stdout, "\n\nFindUTP: Unlocked thread TTP\n");
 #endif
     }
 
@@ -284,7 +284,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
       (unsigned long) plast)
     {
       if (warn_printtrunc)
-	fprintf (stderr,
+	fprintf (fp_stderr,
 		 "UDP packet %lu truncated too short to trace, ignored\n",
 		 pnum);
       ++ctrunc;
@@ -418,6 +418,7 @@ udptrace_done (void)
 {
   udp_pair *pup;
   int ix;
+  int dir;
 
   for (ix = 0; ix <= num_udp_pairs; ++ix)
     {
@@ -425,11 +426,15 @@ udptrace_done (void)
       if (pup == NULL)		/* already analized */
 	continue;
       /* consider this udp connection */
-      make_udp_conn_stats (pup, TRUE);
+      if (!con_cat) {
+          //flush histos and call the garbage colletor
+          //Note: close_udp_flow() calls make_udp_conn_stats()
+          close_udp_flow(pup, ix, &dir);
+      }
+      else
+        //only flush histos
+        make_udp_conn_stats (pup, TRUE);
     }
-    
-    //XXX
-    dump_flush();
 }
 
 void
@@ -474,10 +479,10 @@ make_udp_conn_stats (udp_pair * pup_save, Bool complete)
 	{
 	  if (warn_IN_OUT)
 	    {
-	      printf
-		("\nWARN: This udp flow is neither incoming nor outgoing: src - %s;",
-		 HostName (pup_save->addr_pair.a_address));
-	      printf (" dst - %s!\n",
+	      fprintf (fp_stdout, 
+            "\nWARN: This udp flow is neither incoming nor outgoing: src - %s;",
+		    HostName (pup_save->addr_pair.a_address));
+	      fprintf (fp_stdout, " dst - %s!\n",
 		      HostName (pup_save->addr_pair.b_address));
 	      warn_IN_OUT = FALSE;
 	    }
@@ -526,11 +531,11 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   if (threaded)
     {
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nTrace_done_periodic: trying lock thread UTP\n");
+      fprintf (fp_stdout, "\n\nTrace_done_periodic: trying lock thread UTP\n");
 #endif
       pthread_mutex_lock (&utp_lock_mutex);
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nTrace_done_periodic: got lock thread UTP\n");
+      fprintf (fp_stdout, "\n\nTrace_done_periodic: got lock thread UTP\n");
 #endif
       if ((pup == NULL))
 	/* someonelse already cleaned this pup */
@@ -605,7 +610,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
     {
       pthread_mutex_unlock (&utp_lock_mutex);
 #ifdef DEBUG_THREAD_UTP
-      printf ("\n\nTrace_done_periodic: released lock thread UTP\n");
+      fprintf (fp_stdout, "\n\nTrace_done_periodic: released lock thread UTP\n");
 #endif
     }
 

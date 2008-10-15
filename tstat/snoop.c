@@ -122,7 +122,7 @@ pread_snoop (struct timeval *ptime,
       if ((rlen = fread (&hdr, 1, hlen, SYS_STDIN)) != hlen)
 	{
 	  if (rlen != 0)
-	    fprintf (stderr, "Bad snoop packet header\n");
+	    fprintf (fp_stderr, "Bad snoop packet header\n");
 	  return (0);
 	}
 
@@ -146,7 +146,7 @@ pread_snoop (struct timeval *ptime,
 	  rlen = fread (pep, 1, sizeof (struct ether_header), SYS_STDIN);
 	  if (rlen != sizeof (struct ether_header))
 	    {
-	      fprintf (stderr, "Couldn't read ether header\n");
+	      fprintf (fp_stderr, "Couldn't read ether header\n");
 	      return (0);
 	    }
 
@@ -155,7 +155,7 @@ pread_snoop (struct timeval *ptime,
 	  if (len >= IP_MAXPACKET)
 	    {
 	      /* sanity check */
-	      fprintf (stderr,
+	      fprintf (fp_stderr,
 		       "pread_snoop: invalid next packet, IP len is %d, return EOF\n",
 		       len);
 
@@ -189,14 +189,15 @@ pread_snoop (struct timeval *ptime,
 		  /* (note that both fields are still in N.B.O. */
 		  pep->ether_type = vlanh.vlan_proto;
 		  if (debug > 2)
-		    printf ("Removing VLAN header (vlan:%x)\n",
-			    vlanh.vlan_num);
+		    fprintf (fp_stdout, 
+                "Removing VLAN header (vlan:%x)\n", vlanh.vlan_num);
 		}
 	      else
 		{
 		  if (debug > 2)
-		    printf ("Skipping a VLAN packet (num:%x proto:%x)\n",
-			    vlanh.vlan_num, vlanh.vlan_proto);
+		    fprintf (fp_stdout, 
+                "Skipping a VLAN packet (num:%x proto:%x)\n", 
+                vlanh.vlan_num, vlanh.vlan_proto);
 		}
 
 	    }
@@ -209,7 +210,7 @@ pread_snoop (struct timeval *ptime,
 
 
 	      if (debug > 2)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "pread_snoop: not an IP packet (ethertype 0x%x)\n",
 			 ntohs (pep->ether_type));
 	      /* discard the remainder */
@@ -225,7 +226,7 @@ pread_snoop (struct timeval *ptime,
 	  if ((rlen = fread (pip_buf, 1, len, SYS_STDIN)) != len)
 	    {
 	      if (rlen != 0 && debug)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "Couldn't read %d more bytes, skipping last packet\n",
 			 len);
 	      return (0);
@@ -247,7 +248,7 @@ pread_snoop (struct timeval *ptime,
 	  if ((rlen = fread (pip_buf, 1, len, SYS_STDIN)) != len)
 	    {
 	      if (debug && rlen != 0)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "Couldn't read %d more bytes, skipping last packet\n",
 			 len);
 	      return (0);
@@ -258,7 +259,7 @@ pread_snoop (struct timeval *ptime,
 	    {
 	      /* not found */
 	      if (debug)
-		printf ("snoop.c: couldn't find next IP within FDDI\n");
+		    fprintf (fp_stdout, "snoop.c: couldn't find next IP within FDDI\n");
 	      return (-1);
 	    }
 
@@ -289,7 +290,7 @@ pread_snoop (struct timeval *ptime,
 	    fread (&atm_header, 1, sizeof (struct atm_header), SYS_STDIN);
 	  if (rlen != sizeof (struct atm_header))
 	    {
-	      fprintf (stderr, "Couldn't read ATM header\n");
+	      fprintf (fp_stderr, "Couldn't read ATM header\n");
 	      return (0);
 	    }
 
@@ -303,7 +304,7 @@ pread_snoop (struct timeval *ptime,
 	  if (len >= IP_MAXPACKET)
 	    {
 	      /* sanity check */
-	      fprintf (stderr,
+	      fprintf (fp_stderr,
 		       "pread_snoop: invalid next packet, IP len is %d, return EOF\n",
 		       len);
 
@@ -315,7 +316,7 @@ pread_snoop (struct timeval *ptime,
 	      (ntohs (pep->ether_type) != ETHERTYPE_IPV6))
 	    {
 	      if (debug > 2)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "pread_snoop: not an IP packet (ethertype 0x%x)\n",
 			 ntohs (pep->ether_type));
 	      /* discard the remainder */
@@ -331,7 +332,7 @@ pread_snoop (struct timeval *ptime,
 	  if ((rlen = fread (pip_buf, 1, len, SYS_STDIN)) != len)
 	    {
 	      if (rlen != 0 && debug)
-		fprintf (stderr,
+		fprintf (fp_stderr,
 			 "Couldn't read %d more bytes, skipping last packet\n",
 			 len);
 	      return (0);
@@ -344,7 +345,7 @@ pread_snoop (struct timeval *ptime,
 	}
       else
 	{
-	  printf ("snoop hardware type %d not understood\n", snoop_mac_type);
+	  fprintf (fp_stdout, "snoop hardware type %d not understood\n", snoop_mac_type);
 
 	  exit (-1);
 	}
@@ -405,13 +406,13 @@ is_snoop (char *filename)
   /* sanity check on snoop version */
   if (debug)
     {
-      printf ("Snoop version: %ld\n", buf.snoop_version);
+      fprintf (fp_stdout, "Snoop version: %ld\n", buf.snoop_version);
     }
   if (buf.snoop_version != 2)
     {
-      printf ("\
-Warning! snoop file is version %ld.\n\
-Tcptrace is only known to work with version 2\n", buf.snoop_version);
+      fprintf (fp_stdout, 
+        "Warning! snoop file is version %ld.\n"
+        "Tcptrace is only known to work with version 2\n", buf.snoop_version);
     }
 
   /* sanity check on hardware type */
@@ -420,20 +421,20 @@ Tcptrace is only known to work with version 2\n", buf.snoop_version);
     {
     case SNOOP_DL_ETHER:
       if (debug)
-	printf ("Snoop hw type: %ld (Ethernet)\n", buf.mac_type);
+	fprintf (fp_stdout, "Snoop hw type: %ld (Ethernet)\n", buf.mac_type);
       break;
     case SNOOP_DL_FDDI:
       if (debug)
-	printf ("Snoop hw type: %ld (FDDI)\n", buf.mac_type);
+	fprintf (fp_stdout, "Snoop hw type: %ld (FDDI)\n", buf.mac_type);
       break;
     case SNOOP_DL_ATM:
       if (debug)
-	printf ("Snoop hw type: %ld (ATM)\n", buf.mac_type);
+	fprintf (fp_stdout, "Snoop hw type: %ld (ATM)\n", buf.mac_type);
       break;
     default:
       if (debug)
-	printf ("Snoop hw type: %ld (unknown)\n", buf.mac_type);
-      printf ("snoop hardware type %ld not understood\n", buf.mac_type);
+	    fprintf (fp_stdout, "Snoop hw type: %ld (unknown)\n", buf.mac_type);
+        fprintf (fp_stdout, "snoop hardware type %ld not understood\n", buf.mac_type);
 
       exit (-1);
     }
