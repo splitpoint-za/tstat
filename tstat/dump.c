@@ -66,8 +66,9 @@ static char outdir[100];
 static char *log_basedir;
 static FILE *fp_log;
 static timeval timestamp;
-static Bool dump_enabled = FALSE;
 static int dir_counter = 0;
+static int snap_len = 0;
+Bool dump_engine = FALSE;
 
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
     int i = 0;
@@ -137,24 +138,35 @@ void dump_reset_dump_file(struct dump_file *proto2dump, int type, char *protonam
 void dump_parse_ini_arg(char *param_name, int param_value) {
     int pos;
 
-    //syntax check
-    if (param_value != 0 && param_value != 1) {
-        fprintf(fp_log, "dump engine: '%s = %d' syntax error in config file\n", 
-            param_name, param_value);
-        exit(1);
-    }
 
     //check protocol name 
     pos = search_dump_file(param_name, proto2dump);
-    if (pos == -1) {
+    if (pos != -1) {
+        //syntax check
+        if (param_value != 0 && param_value != 1) {
+            fprintf(fp_stderr, "dump engine: '%s = %d' syntax error in config file\n", 
+                param_name, param_value);
+            exit(1);
+        }
+
+        if (debug)
+            fprintf(fp_stderr, "dump engine: enabling dump for %s\n", 
+                proto2dump[pos].protoname);
+        proto2dump[pos].enabled = (param_value == 0) ? FALSE : TRUE;
+        dump_engine |= param_value;
+    }
+    else if (strcmp(param_name, "snap_len") == 0) {
+        if (param_value < 0) {
+            fprintf(fp_stderr, "dump engine: '%s = %d' syntax error in config file\n", 
+                param_name, param_value);
+            exit(1);
+        }
+        snap_len = param_value;
+    }
+    else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
         exit(1);
     }
-    if (debug)
-        fprintf(fp_stderr, "dump engine: enabling dump for %s\n", 
-            proto2dump[pos].protoname);
-    proto2dump[pos].enabled = (param_value == 0) ? FALSE : TRUE;
-    dump_enabled |= param_value;
 }
 
 // this function is called the first time by the plugin system; 
@@ -162,7 +174,7 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
 void dump_init(void) {
     int i;
 
-    dump_enabled = FALSE;
+    dump_engine = FALSE;
     timestamp.tv_sec = -1;
     timestamp.tv_usec = -1;
     /* UDP dump protocols 
@@ -184,7 +196,6 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_BT, "udp_bittorrent");
     dump_reset_dump_file(proto2dump, P2P_DC, "udp_dc");
     dump_reset_dump_file(proto2dump, P2P_KAZAA, "udp_kazaa");
-    dump_reset_dump_file(proto2dump, P2P_JOOST, "udp_joost");
     dump_reset_dump_file(proto2dump, P2P_PPLIVE, "udp_pplive");
     dump_reset_dump_file(proto2dump, P2P_SOPCAST, "udp_sopcast");
     dump_reset_dump_file(proto2dump, P2P_TVANTS, "udp_tvants");
@@ -197,16 +208,19 @@ void dump_packet(FILE *fp,
                  void *plast)
 {
     struct pcap_pkthdr phdr;
+    long cap_bytes;
+    
+    cap_bytes = (char *) plast - (char *) pip + 1;
+    cap_bytes = (snap_len == 0) ? cap_bytes : (min(snap_len, cap_bytes));
 
     // create a pcap packet header (adding size of bogus ethernet header)
+    // caplen = the portion of packet writed
+    // len    = the real packet dimension
     phdr.ts.tv_sec = current_time.tv_sec;
     phdr.ts.tv_usec = current_time.tv_usec;
-    phdr.caplen = (char *) plast - (char *) pip + 1;
+    phdr.caplen = cap_bytes;
     phdr.caplen += sizeof(struct ether_header); /* add in the ether header */
     phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));	
-    if (fp == NULL) {
-        printf("AAAA\n");
-    }
     fwrite(&phdr, sizeof(struct pcap_pkthdr), 1, fp);
 
     // write a (bogus) ethernet header
@@ -253,7 +267,7 @@ void dump_flow_stat (struct ip *pip,
                      void *hdr, 
                      void *plast) 
 {
-    if (!dump_enabled)
+    if (!dump_engine)
         return;
 
     if (tproto == PROTOCOL_TCP) {
@@ -278,7 +292,7 @@ void dump_flow_stat (struct ip *pip,
 void dump_flush(Bool trace_completed) {
     int i;
 
-    if (!dump_enabled)
+    if (!dump_engine)
         return;
     
     if (trace_completed && !con_cat)
@@ -314,7 +328,7 @@ void dump_create_outdir(char * basedir) {
     int tot;
     char *fname;
 
-    if (!dump_enabled)
+    if (!dump_engine)
         return;
 
     log_basedir = basedir;
@@ -330,7 +344,7 @@ void dump_create_outdir(char * basedir) {
         fprintf(fp_stderr, "dump engine err: error creating '%s'\n", outdir);
         exit(1);
     }
-    fprintf(fp_stdout, "Creating output dir %s\n", outdir);
+    fprintf(fp_stdout, "(%s) Creating output dir %s\n", Timestamp(), outdir);
 
     tot += strlen(DUMP_LOG_FNAME);
     fname = malloc(sizeof(char) * tot + 1);
@@ -343,4 +357,20 @@ void dump_create_outdir(char * basedir) {
     free(fname);
 
     dir_counter++;
+}
+
+static Bool old_dump_engine;
+void dump_ini_start_section(void) {
+    if (current_time.tv_sec != 0) {
+        dump_flush(FALSE);
+    }
+    old_dump_engine = dump_engine;
+    dump_init();
+}
+
+void dump_ini_end_section(void) {
+    if (old_dump_engine != dump_engine || current_time.tv_sec == 0) {
+        fprintf(fp_stdout, "(%s) %s dump engine\n", 
+            Timestamp(), (dump_engine) ? "Enabling" : "Disabling");
+    }
 }

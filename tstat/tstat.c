@@ -91,6 +91,7 @@ static Bool basedirspecified = FALSE;
 static char *basenamedir;
 static char basename[100];
 static char log_tstat_fname[200];
+char *outdir_basename = &basename[0];
 Bool internal_src = FALSE;
 Bool internal_dst = FALSE;
 
@@ -187,7 +188,6 @@ static int num_files = 0;
 static u_int numfiles;
 #endif
 static char *cur_filename;
-static char *progname;
 static unsigned int step = 0;	/* counter to track the dir storing the
 				   periodic dumping of histograms. */
 static Bool first_packet_readed = FALSE; 
@@ -1178,7 +1178,7 @@ static int ProcessPacket(struct timeval *pckt_time,
         // with the original file when a change is made)
         stat_error = stat(runtime_conf_fname, &finfo);
         if (!stat_error) {
-            stat_err_counter = 2;
+            stat_err_counter = 5;
             if (difftime(finfo.st_mtime, last_mtime)) {
                 mtime_stable_counter = RUNTIME_MTIME_COUNTER;
                 last_mtime = finfo.st_mtime;
@@ -1193,8 +1193,6 @@ static int ProcessPacket(struct timeval *pckt_time,
                 if (mtime_stable_counter == 0) {
                     if (debug)
                         fprintf(fp_stdout, "Reload runtime configuration...\n");
-                    dump_flush(FALSE);
-                    dump_init();
                     ini_read(runtime_conf_fname);
                     dump_create_outdir(basename);
                 }
@@ -1202,10 +1200,9 @@ static int ProcessPacket(struct timeval *pckt_time,
         }
         else if (stat_err_counter) {
             stat_err_counter--;
-            printf("%d %s", stat_err_counter, ctime(&current_time.tv_sec));
         }
         else {
-            fprintf(fp_stderr, "error executing stat() on %s\n", runtime_conf_fname);
+            fprintf(fp_stderr, "err: '%s' - No such file\n", runtime_conf_fname);
             exit(1);
         }
     }
@@ -1923,14 +1920,16 @@ fExists (const char *fname)
 static void
 CheckArguments (int *pargc, char *argv[])
 {
-    /* remember the name of the program for errors... */
-    progname = (*pargc == 1) ? "tstat" : argv[0];
     char **tmpargv, *fname;
     int i, tot_args;
 
     if (*pargc == 1)
     {
-        fname = (strcmp(argv[0], "tstat") == 0) ? "tstat.conf" : argv[0];
+#ifdef TSTAT_RUNASLIB
+        fname = argv[0];
+#else
+        fname = "tstat.conf";
+#endif
         tmpargv = ArgsFromFile (fname, pargc);
         tot_args = *pargc;
         ParseArgs (pargc, tmpargv);
@@ -2602,9 +2601,9 @@ void log_parse_ini_arg(char *param_name, int enabled) {
     else if (strcmp(param_name, "log_engine") == 0) {
         //stdout messages
         if (!log_engine && enabled)
-            fprintf(fp_stdout, "(%s) Enabling l4/l7 logs\n", Timestamp());
+            fprintf(fp_stdout, "(%s) Enabling logs\n", Timestamp());
         else if (log_engine && !enabled)
-            fprintf(fp_stdout, "(%s) Disabling l4/l7 logs\n", Timestamp());
+            fprintf(fp_stdout, "(%s) Disabling logs\n", Timestamp());
         log_engine = enabled;
     }
 

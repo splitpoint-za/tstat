@@ -54,18 +54,17 @@
 #define L7_FLOW_WASTE           23
 #define L7_FLOW_XDCC            24
 
-#define L7_FLOW_SMTP		25
-#define L7_FLOW_POP3		26
-#define L7_FLOW_IMAP		27
+#define L7_FLOW_SMTP            25
+#define L7_FLOW_POP3            26
+#define L7_FLOW_IMAP            27
 
 #define L7_FLOW_UNKNOWN         28
 
-#define L7_FLOW_JOOST           29 
-#define L7_FLOW_PPLIVE          30
-#define L7_FLOW_SOPCAST         31
-#define L7_FLOW_TVANTS          32
+#define L7_FLOW_PPLIVE          29
+#define L7_FLOW_SOPCAST         30
+#define L7_FLOW_TVANTS          31
 
-#define L7_FLOW_SKYPE_SIG       33
+#define L7_FLOW_SKYPE_SIG       32
 
-#define L7_FLOW_TOT             34
+#define L7_FLOW_TOT             33
 

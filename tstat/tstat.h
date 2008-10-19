@@ -602,6 +602,7 @@ extern Bool con_cat;
 extern FILE *fp_stdout;
 extern FILE *fp_stderr;
 extern Bool redirect_output; 
+extern char *outdir_basename;
 
 unsigned long tot_conn_TCP;
 unsigned long tot_conn_UDP;

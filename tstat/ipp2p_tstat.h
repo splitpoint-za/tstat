@@ -20,28 +20,27 @@ struct ipt_p2p_info {
 //#define SHORT_HAND_DATA               4 /* --ipp2p-data switch*/
 #define SHORT_HAND_NONE		5	/* no short hand */
 
-#define IPP2P_EDK		(1 << 1)
-#define IPP2P_DATA_KAZAA	(1 << 2)
-#define IPP2P_DATA_EDK		(1 << 3)
-#define IPP2P_DATA_DC		(1 << 4)
-#define IPP2P_DC		(1 << 5)
-#define IPP2P_DATA_GNU		(1 << 6)
-#define IPP2P_GNU		(1 << 7)
-#define IPP2P_KAZAA		(1 << 8)
-#define IPP2P_BIT		(1 << 9)
-#define IPP2P_APPLE		(1 << 10)
-#define IPP2P_SOUL		(1 << 11)
-#define IPP2P_WINMX		(1 << 12)
-#define IPP2P_ARES		(1 << 13)
-#define IPP2P_MUTE		(1 << 14)
-#define IPP2P_WASTE		(1 << 15)
-#define IPP2P_XDCC		(1 << 16)
-#define IPP2P_KAD		(1 << 17)
-#define IPP2P_KADU		(1 << 18)
-#define IPP2P_JOOST		(1 << 19)
-#define IPP2P_PPLIVE		(1 << 20)
-#define IPP2P_SOPCAST		(1 << 21)
-#define IPP2P_TVANTS		(1 << 22)
+#define IPP2P_EDK           (1 << 1)
+#define IPP2P_DATA_KAZAA    (1 << 2)
+#define IPP2P_DATA_EDK      (1 << 3)
+#define IPP2P_DATA_DC       (1 << 4)
+#define IPP2P_DC            (1 << 5)
+#define IPP2P_DATA_GNU      (1 << 6)
+#define IPP2P_GNU           (1 << 7)
+#define IPP2P_KAZAA         (1 << 8)
+#define IPP2P_BIT           (1 << 9)
+#define IPP2P_APPLE         (1 << 10)
+#define IPP2P_SOUL          (1 << 11)
+#define IPP2P_WINMX         (1 << 12)
+#define IPP2P_ARES          (1 << 13)
+#define IPP2P_MUTE          (1 << 14)
+#define IPP2P_WASTE         (1 << 15)
+#define IPP2P_XDCC          (1 << 16)
+#define IPP2P_KAD           (1 << 17)
+#define IPP2P_KADU          (1 << 18)
+#define IPP2P_PPLIVE		(1 << 19)
+#define IPP2P_SOPCAST		(1 << 20)
+#define IPP2P_TVANTS		(1 << 21)
 
 int search_all_edk (const unsigned char *, const int, int);
 int search_kazaa (const unsigned char *, const int, int);
@@ -65,7 +64,6 @@ int udp_search_bit (unsigned char *, const int, int);
 int udp_search_gnu (unsigned char *, const int, int);
 int udp_search_edk (unsigned char *, const int, int);
 int udp_search_directconnect (unsigned char *, const int, int);
-int udp_search_joost (unsigned char *, const int, int);
 int udp_search_pplive (unsigned char *, const int, int);
 int udp_search_sopcast (unsigned char *, const int, int);
 int udp_search_tvants (unsigned char *, const int, int);

@@ -48,6 +48,7 @@ struct proto *proto_list_head;
 static int proto_num = 0;
 
 /* any new protocol analyzer module MUST export these two functions:  */
+void *dummy_init(void);
 void *getdummy (void *pproto, int tproto, void *plast, void *phdr);
 void dummy_flow_stat (struct ip *pip, void *pproto, int tproto, ucb * pdir,
 		      int dir, void *hdr, void *plast);
@@ -70,7 +71,7 @@ proto_init ()
       proto_register(PROTOCOL_BOTH, "DUMP", "Dump file accordingly DPI",
         (void *) getdummy,
         (void *) dump_flow_stat,
-        (void *) dump_init,
+        (void *) dummy_init,
         NULL);
   }
   
@@ -78,27 +79,28 @@ proto_init ()
 		  (void *) gettcpL7,
 		  (void *) tcpL7_flow_stat,
 		  (void *) tcpL7_init,
-                  (void *) make_tcpL7_conn_stats);
+          (void *) make_tcpL7_conn_stats);
 
   proto_register (PROTOCOL_UDP, "RTP", "Real Time Protocol",
 		  (void *) getrtp,
 		  (void *) rtp_flow_stat,
-                  NULL,
-                  (void *) make_rtp_conn_stats);
+          NULL,
+          (void *) make_rtp_conn_stats);
 
 #ifdef P2P_CLASSIFIER
   proto_register (PROTOCOL_BOTH, "P2P", "P2P Protocols",
 		  (void *) getp2p,
 		  (void *) p2p_flow_stat,
 		  (void *) p2p_init,
-                  (void *) make_p2p_conn_stats);
+          (void *) make_p2p_conn_stats);
 #endif
 
 #ifdef SKYPE_CLASSIFIER
   proto_register (PROTOCOL_BOTH, "SKYPE", "Skype",
 		  (void *) getSkype,
 		  (void *) skype_flow_stat,
-		  (void *) skype_init, (void *) make_skype_conn_stats);
+		  (void *) skype_init, 
+          (void *) make_skype_conn_stats);
 #endif
 
 
@@ -193,6 +195,7 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    {
 	      if (PROTO_DEBUG)
 		fprintf (fp_stderr, "yup!\n");
+
 	      protocol->analyze (pip, pproto, tproto, pdir, dir, ret, plast);
 	    }
 #if PROTO_DEBUG_LEVEL
@@ -259,6 +262,10 @@ make_proto_stat (void *thisflow, int tproto)
 //===================================================================================
 // dummy protocol analyzer example 
 //-----------------------------------------------------------------------------------
+
+void * dummy_init(void) {
+    return (void *)NULL;
+}
 
 void *
 getdummy (void *pproto, int tproto, void *plast, void *p)

@@ -24,13 +24,18 @@
 #include <string.h>
 
 typedef void ini_section_handler(char * param_name, int param_value);
+typedef void ini_section_limit(void);
+
 struct ini_section {
     char *name;
     ini_section_handler *handler;
+    ini_section_limit *handler_start;
+    ini_section_limit *handler_end;
 };
+
 static struct ini_section ini_sections[] = {
-    {"[dump]", dump_parse_ini_arg},
-    {"[log]", log_parse_ini_arg},
+    {"[dump]", dump_parse_ini_arg, dump_ini_start_section, dump_ini_end_section},
+    {"[log]", log_parse_ini_arg, NULL, NULL},
 };
 #define INI_SECTION_LEN (sizeof(ini_sections) / sizeof(struct ini_section))
 #define BUF_SIZE 50
@@ -80,7 +85,7 @@ void ini_read(char *fname) {
     char *line, *word, *param_name;
     int param_value;
     int i, len;
-    ini_section_handler *handler;
+    struct ini_section *curr_section;
 
 
     fp = fopen(fname, "r");
@@ -89,7 +94,7 @@ void ini_read(char *fname) {
         exit(1);
     }
 
-    handler = NULL;
+    curr_section = NULL;
     while (1) {
         line = readline(fp);
         if (line == NULL)
@@ -105,7 +110,12 @@ void ini_read(char *fname) {
            
             //search for the handler related to the current section
             if (word[0] == '[') { 
-                handler = NULL;
+                //look if the previous section has an end handler
+                if (curr_section && curr_section->handler_end) {
+                    curr_section->handler_end();
+                }
+
+                curr_section = NULL;
                 for (i = 0; i < INI_SECTION_LEN; i++) {
                     if (strcmp(word, ini_sections[i].name) == 0)
                         break;
@@ -114,7 +124,9 @@ void ini_read(char *fname) {
                     fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
                     exit(1);
                 }
-                handler = ini_sections[i].handler;
+                curr_section = &ini_sections[i];
+                if (curr_section->handler_start)
+                    curr_section->handler_start();
             }
             //parse section parameter and call handler
             else if (word[0] != '=') {
@@ -139,12 +151,17 @@ void ini_read(char *fname) {
             word = strtok(NULL, " \t\n");
         }
 
-        if (handler != NULL && param_name != NULL) {
+        if (curr_section->handler != NULL && param_name != NULL) {
             if (param_value == INI_PARAM_VALUE_DEFAULT)
                 param_value = 1;
-            handler(param_name, param_value);
+            curr_section->handler(param_name, param_value);
         }
     }
+
+    if (curr_section->handler_end) {
+        curr_section->handler_end();
+    }
+
     fclose(fp);
 }
 

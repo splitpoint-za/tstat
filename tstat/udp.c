@@ -177,6 +177,7 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 	    }
 	  *pdir = dir;
 
+/*
 #ifdef RUNTIME_SKYPE_RESET
 	  if (elapsed (pup->first_time, current_time) >
 	      SKYPE_UPDATE_DELTA_TIME)
@@ -190,6 +191,7 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 	    }
 	  else
 #endif
+*/
 	    return (pup);
 	}
       pup_last = pup;

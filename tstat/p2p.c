@@ -283,10 +283,6 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     case IPP2P_KAZAA:
               udir->type = P2P_KAZAA;
 	      break;
-	    case IPP2P_JOOST:
-	      /* add bayes engine */
-	      udir->type = P2P_JOOST; 
-	      break; 
 	    case IPP2P_PPLIVE:
 	      udir->type = P2P_PPLIVE;
 	      break;
@@ -322,17 +318,14 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     case IPP2P_KAZAA:
 	      (udir->p2p).pkt_type_num[6]++;
 	      break;
-	     case IPP2P_JOOST:
+	     case IPP2P_PPLIVE:
 	      (udir->p2p).pkt_type_num[7]++;
 	      break;
-	     case IPP2P_PPLIVE:
+	     case IPP2P_SOPCAST:
 	      (udir->p2p).pkt_type_num[8]++;
 	      break;
-	     case IPP2P_SOPCAST:
-	      (udir->p2p).pkt_type_num[9]++;
-	      break;
 	     case IPP2P_TVANTS:
-	      (udir->p2p).pkt_type_num[10]++;
+	      (udir->p2p).pkt_type_num[9]++;
 	      break;
 	   }
 #endif
@@ -753,9 +746,6 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case P2P_BT:
       return L7_FLOW_BIT;
       
-    case P2P_JOOST:
-      return L7_FLOW_JOOST;
-
     case P2P_PPLIVE:
       return L7_FLOW_PPLIVE;
       

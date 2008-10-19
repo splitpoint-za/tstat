@@ -87,10 +87,9 @@ consider blocks of 32 bits
 
 #define OUT_EXPECTED_PROB (1.0/(N_RANDOM_BIT_VALUES))
 
-//#define RUNTIME_SKYPE_RESET /* to enable runtime classification and flow closing */
-//#define RUNTIME_SKYPE       /* to enable runtime classification only */
-#define SKYPE_UPDATE_DELTA_TIME 5000000	/* time between two updates in a runtime
-					   classification [us] */
+#define SKYPE_EARLY_CLASSIF                 
+#define SKYPE_EARLY_CLASSIF_WINDOW 5000000	/* time between two updates in a runtime
+					                           classification [us] */
 
 struct skype_hdr
 {

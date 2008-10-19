@@ -218,35 +218,32 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   int payload_len;
   tcphdr *ptcp;
   ptcp = (tcphdr *) hdr;
+  ucb *thisdir, *otherdir;
 
-
+  thisdir = (ucb *)pdir;
+  otherdir = (dir == C2S) ? &(thisdir->pup->s2c) : &(thisdir->pup->c2s);
 
   type = (tproto == PROTOCOL_UDP) ?
-    is_skype_pkt (pip, pproto, pdir, pskype, plast) : NOT_SKYPE;
+      is_skype_pkt (pip, pproto, pdir, pskype, plast) : NOT_SKYPE;
 
   if (tproto == PROTOCOL_UDP)
-    {
+  {
       payload_len = ntohs (((struct udphdr *) pproto)->uh_ulen) - 8;
       ((ucb *) pdir)->skype.pkt_type_num[type]++;
       update_delta_t (&((ucb *) pdir)->skype.stat[type]);
       update_randomness (&((ucb *) pdir)->skype.random, pproto, pskype, plast,
-			 tproto, payload_len);
-#ifdef RUNTIME_SKYPE
-      float etime_s =
-	(elapsed (((ucb *) pdir)->skype.LastSkypePrint_time, current_time));
-
-      if (etime_s > SKYPE_UPDATE_DELTA_TIME)
-	if ((((ucb *) pdir)->packets - ((ucb *) pdir)->lastnumpkt) > 10)
-	  //if ((&((ucb *) pdir)->skype)->pkt_type_num[TOTAL_SKYPE_KNOWN_TYPE] > 10)
-	  {
-	    //  fprintf (fp_stdout, " %.2f ", etime_s);
-	    ((ucb *) pdir)->skype.LastSkypePrint_time = current_time;
-	    //((ucb *) pdir)->lastnumpkt = ((ucb *) pdir)->packets;
-	    skype_conn_stats (&(((ucb *) pdir)->pup->c2s), C2S, PROTOCOL_UDP);
-	    skype_conn_stats (&(((ucb *) pdir)->pup->s2c), S2C, PROTOCOL_UDP);
-	  }
-
-
+              tproto, payload_len);
+#ifdef SKYPE_EARLY_CLASSIF
+      // try to identify skype comunication after few packets
+      if (elapsed(thisdir->first_pkt_time, current_time) > SKYPE_EARLY_CLASSIF_WINDOW &&
+          thisdir->packets > 10 &&
+          !thisdir->skype.early_classification)
+          {
+              thisdir->skype.early_classification = TRUE;
+              otherdir->skype.early_classification = TRUE;
+              skype_conn_stats (((ucb *) pdir)->pup, C2S, PROTOCOL_UDP);
+              skype_conn_stats (((ucb *) pdir)->pup, S2C, PROTOCOL_UDP);
+          }
 #endif
     }
   else
@@ -562,6 +559,12 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       exit (1);
     }
 
+  if (thisUdir -> pup == NULL) {
+      printf("skype module: pup == NULL!!!\n");
+      exit(1);
+
+    }
+
   if (!log_engine || fp_skype_logc == NULL)
     return;
 
@@ -601,7 +604,6 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       case P2P_GNU:
       case P2P_KAZAA:
       case P2P_BT:
-      case P2P_JOOST:
       case P2P_PPLIVE:
       case P2P_SOPCAST:
       case P2P_TVANTS:
@@ -610,8 +612,10 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       case SKYPE_E2E:
       case SKYPE_OUT:
       case SKYPE_SIG:
-          fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
-          exit (1);
+          if (!thisUdir->skype.early_classification) {
+              fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
+              exit (1);
+          }
           break;
 
       case FIRST_RTP:
@@ -661,6 +665,7 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
             if (dir == C2S)
               return;
           #endif
+
           if (tproto == PROTOCOL_UDP)
           {
               print_skype_conn_stats_UDP (thisUdir, dir);	/* thisUdir */
@@ -690,7 +695,6 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   pup = thisUdir->pup;
   pskype = &thisUdir->skype;
   double minCHI_E2O_HDR, maxCHI_E2E_HDR, minCHI_E2E_HDR, maxCHI_PAY;
-
 
   if (bayes_engine)
     {
@@ -876,9 +880,12 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	   (!b_avgipg && b_pktsize) ? -1 :
 	   (b_avgipg && !b_pktsize) ? -2 : -255, CSFT, video_present);
 
-  if ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT)
-      && (b_avgipg && b_pktsize) && CSFT != NOT_SKYPE)
+  if ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
+      b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
     C2S_is_Skype = 1;
+ 
+    printf("ipg:%d pkt:%d CSFT:%d type:%d\n",
+        b_avgipg, b_pktsize, (CSFT != NOT_SKYPE), thisUdir->type);
 
 /* add this flow to the skype one */
   if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
@@ -1101,12 +1108,14 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	   elapsed (pup->first_time, pup->last_time) / 1000.0 / 1000.0);
 
   /* log flow if at least one of two dir is SKYPE */
-  if (C2S_is_Skype || (
-      (thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT)
-	    && (b_avgipg && b_pktsize) && CSFT != NOT_SKYPE))
+  if (C2S_is_Skype || 
+      ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
+	   b_avgipg && b_pktsize && CSFT != NOT_SKYPE))
 
     fprintf (fp_skype_logc, "%s U\n", logline);
 
+    printf("ipg:%d pkt:%d CSFT:%d type:%d\n",
+        b_avgipg, b_pktsize, (CSFT != NOT_SKYPE), thisUdir->type);
 #else
   //     
   //     #   Field Meaning
@@ -1701,7 +1710,6 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
   if (C2S_is_Skype || ((b_avgipg && b_pktsize) && CSFT != NOT_SKYPE))
 
     fprintf (fp_skype_logc, "%s T\n", logline);
-
 
 #else
   //     #   Field Meaning

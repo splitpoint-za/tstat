@@ -216,6 +216,8 @@ typedef struct skype_stat
 
   deltaT_stat stat[TOTAL_SKYPE_KNOWN_TYPE];
   random_stat random;
+  Bool early_classification;
+  /*
 #ifdef RUNTIME_SKYPE
   timeval LastSkypePrint_time;
 #else
@@ -223,7 +225,7 @@ typedef struct skype_stat
   timeval LastSkypePrint_time;
 #endif
 #endif
-
+    */
 } skype_stat;
 
 /* Skype */
@@ -231,7 +233,7 @@ typedef struct skype_stat
 #ifdef P2P_DETAILS
 typedef struct p2p_stat
 {
-  int pkt_type_num[11];  /*  [EDK,KAD,KADU,GNU,BT,DC,KAZAA,JOOST,PPLIVE,SOPCAST,TVANTS] */
+  int pkt_type_num[10];  /*  [EDK,KAD,KADU,GNU,BT,DC,KAZAA,PPLIVE,SOPCAST,TVANTS] */
   int total_pkt;
 } p2p_stat;
 #endif
@@ -549,7 +551,6 @@ enum udp_type
   P2P_BT,
   P2P_DC, 
   P2P_KAZAA,
-  P2P_JOOST,
   P2P_PPLIVE,
   P2P_SOPCAST,
   P2P_TVANTS,
@@ -589,8 +590,6 @@ enum udp_type
  printf("P2P_DC = %d\n",temp); \
  temp = P2P_KAZAA; \
  printf("P2P_KAZAA = %d\n",temp); \
- temp = P2P_JOOST; \
- printf("P2P_JOOST = %d\n",temp); \
  temp = P2P_PPLIVE; \
  printf("P2P_PPLIVE = %d\n",temp); \
  temp = P2P_SOPCAST; \

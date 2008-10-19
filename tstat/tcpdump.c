@@ -163,147 +163,147 @@ find_ip_ppp (char *buf)
 static int
 callback (char *user, struct pcap_pkthdr *phdr, char *buf)
 {
-  int type;
-  int iplen;
-  static int offset = -1;
+    int type;
+    int iplen;
+    static int offset = -1;
 
-  iplen = phdr->caplen;
-  if (iplen > IP_MAXPACKET)
-    iplen = IP_MAXPACKET;
+    iplen = phdr->caplen;
+    if (iplen > IP_MAXPACKET)
+        iplen = IP_MAXPACKET;
 
-  type = pcap_datalink (pcap);
+    type = pcap_datalink (pcap);
 
-  /* remember the stuff we always save */
-  callback_phdr = phdr;
-  pcap_current_hdr = *phdr;
-  pcap_current_buf = buf;
+    /* remember the stuff we always save */
+    callback_phdr = phdr;
+    pcap_current_hdr = *phdr;
+    pcap_current_buf = buf;
 
-  /* kindof ugly, but about the only way to make them fit together :-( */
-  switch (type)
+    /* kindof ugly, but about the only way to make them fit together :-( */
+    switch (type)
     {
-    case 100:
-      /* for some reason, the windows version of tcpdump is using */
-      /* this.  It looks just like ethernet to me */
-    case PCAP_DLT_EN10MB:
-      offset = find_ip_eth (buf);	/* Here we check if we are dealing with Straight Ethernet encapsulation or PPPoE */
-      iplen -= offset;
-      memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
-      switch (offset)
-	{
-	case -1:		/* Not an IP packet */
-	  return (-1);
-	case EH_SIZE:		/* straight Ethernet encapsulation */
-	  memcpy ((char *) ip_buf, buf + offset, iplen);
-	  callback_plast = ip_buf + iplen - 1;
-	  break;
-	case PPPOE_SIZE:	/* PPPoE encapsulation */
-	  /* we use a fake ether type here */
-	  eth_header.ether_type = htons (ETHERTYPE_IP);
-	  memcpy ((char *) ip_buf, buf + offset, iplen);
-	  callback_plast = ip_buf + iplen - 1;
-	  break;
-	case IEEE8021Q_SIZE:	/* VLAN encapsulation */
-	  /* we use a fake ether type here */
-	  eth_header.ether_type = htons (ETHERTYPE_IP);
-	  memcpy ((char *) ip_buf, buf + offset, iplen);
-	  callback_plast = ip_buf + iplen - 1;
-	  break;
-	default:		/* should not be used, but we never know ... */
-	  return (-1);
-	}
-      break;
-    case PCAP_DLT_IEEE802:
-      /* just pretend it's "normal" ethernet */
-      offset = 14;		/* 22 bytes of IEEE cruft */
-      memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
-      iplen -= offset;
-      memcpy (ip_buf, buf + offset, iplen);
-      callback_plast = (char *) ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_SLIP:
-      memcpy (ip_buf, buf + 16, iplen);
-      iplen -= 16;
-      callback_plast = (char *) ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_PPP:
-      /* deals with raw PPP and also with HDLC PPP frames */
-      offset = find_ip_ppp (buf);
-      if (offset < 0)		/* Not an IP packet */
-	return (-1);
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_FDDI:
-      if (offset < 0)
-	offset = find_ip_fddi (buf, iplen);
-      if (offset < 0)
-	return (-1);
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_NULL:
-      /* no phys header attached */
-      offset = 4;
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_ATM_RFC1483:
-      /* ATM RFC1483 - LLC/SNAP ecapsulated atm */
-      iplen -= 8;
-      memcpy ((char *) ip_buf, buf + 8, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_RAW:
-      /* raw IP */
-      offset = 0;
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_LINUX_SLL:
-      /* linux cooked socket */
-      offset = 16;
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-      // Patch sent by Brandon Eisenamann to passby 802.11, LLC/SNAP
-      // and Prism2 headers to get to the IP packet.
-    case PCAP_DLT_IEEE802_11:
-      offset = 24 + 8;		// 802.11 header + LLC/SNAP header
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_IEEE802_11_RADIO:
-      offset = 64 + 24;		//WLAN header + 802.11 header
-      iplen -= offset;
-      memcpy (&eth_header, buf, EH_SIZE);	// save ethernet header
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_PRISM2:
-      offset = 144 + 24 + 8;	// PRISM2+IEEE 802.11+ LLC/SNAP headers
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = ip_buf + iplen - 1;
-      break;
-    case PCAP_DLT_C_HDLC:
-      offset = 4;
-      iplen -= offset;
-      memcpy ((char *) ip_buf, buf + offset, iplen);
-      callback_plast = (char *) ip_buf + iplen - 1;
-      break;
-    default:
-      fprintf (fp_stderr, "Don't understand link-level format (%d)\n", type);
+        case 100:
+            /* for some reason, the windows version of tcpdump is using */
+            /* this.  It looks just like ethernet to me */
+        case PCAP_DLT_EN10MB:
+            offset = find_ip_eth (buf);	/* Here we check if we are dealing with Straight Ethernet encapsulation or PPPoE */
+            iplen -= offset;
+            memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
+            switch (offset)
+            {
+                case -1:		/* Not an IP packet */
+                    return (-1);
+                case EH_SIZE:		/* straight Ethernet encapsulation */
+                    memcpy ((char *) ip_buf, buf + offset, iplen);
+                    callback_plast = ip_buf + iplen - 1;
+                    break;
+                case PPPOE_SIZE:	/* PPPoE encapsulation */
+                    /* we use a fake ether type here */
+                    eth_header.ether_type = htons (ETHERTYPE_IP);
+                    memcpy ((char *) ip_buf, buf + offset, iplen);
+                    callback_plast = ip_buf + iplen - 1;
+                    break;
+                case IEEE8021Q_SIZE:	/* VLAN encapsulation */
+                    /* we use a fake ether type here */
+                    eth_header.ether_type = htons (ETHERTYPE_IP);
+                    memcpy ((char *) ip_buf, buf + offset, iplen);
+                    callback_plast = ip_buf + iplen - 1;
+                    break;
+                default:		/* should not be used, but we never know ... */
+                    return (-1);
+            }
+            break;
+        case PCAP_DLT_IEEE802:
+            /* just pretend it's "normal" ethernet */
+            offset = 14;		/* 22 bytes of IEEE cruft */
+            memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
+            iplen -= offset;
+            memcpy (ip_buf, buf + offset, iplen);
+            callback_plast = (char *) ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_SLIP:
+            memcpy (ip_buf, buf + 16, iplen);
+            iplen -= 16;
+            callback_plast = (char *) ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_PPP:
+            /* deals with raw PPP and also with HDLC PPP frames */
+            offset = find_ip_ppp (buf);
+            if (offset < 0)		/* Not an IP packet */
+                return (-1);
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_FDDI:
+            if (offset < 0)
+                offset = find_ip_fddi (buf, iplen);
+            if (offset < 0)
+                return (-1);
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_NULL:
+            /* no phys header attached */
+            offset = 4;
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_ATM_RFC1483:
+            /* ATM RFC1483 - LLC/SNAP ecapsulated atm */
+            iplen -= 8;
+            memcpy ((char *) ip_buf, buf + 8, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_RAW:
+            /* raw IP */
+            offset = 0;
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_LINUX_SLL:
+            /* linux cooked socket */
+            offset = 16;
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+            // Patch sent by Brandon Eisenamann to passby 802.11, LLC/SNAP
+            // and Prism2 headers to get to the IP packet.
+        case PCAP_DLT_IEEE802_11:
+            offset = 24 + 8;		// 802.11 header + LLC/SNAP header
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_IEEE802_11_RADIO:
+            offset = 64 + 24;		//WLAN header + 802.11 header
+            iplen -= offset;
+            memcpy (&eth_header, buf, EH_SIZE);	// save ethernet header
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_PRISM2:
+            offset = 144 + 24 + 8;	// PRISM2+IEEE 802.11+ LLC/SNAP headers
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = ip_buf + iplen - 1;
+            break;
+        case PCAP_DLT_C_HDLC:
+            offset = 4;
+            iplen -= offset;
+            memcpy ((char *) ip_buf, buf + offset, iplen);
+            callback_plast = (char *) ip_buf + iplen - 1;
+            break;
+        default:
+            fprintf (fp_stderr, "Don't understand link-level format (%d)\n", type);
 
-      exit (1);
+            exit (1);
     }
 
-  return (0);
+    return (0);
 }
 
 

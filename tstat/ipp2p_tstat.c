@@ -480,20 +480,22 @@ udp_search_bit (unsigned char *haystack, const int packet_len, int payload_len)
   return 0;
 }				/*udp_search_bit */
 
+/*
 int
 udp_search_joost (unsigned char *haystack, const int packet_len,
 		  int payload_len)
 {
 
   // if (payload_len <= 100)
-  //   return 0;                 /* match only video streaming packets */
+  //   return 0;                 // match only video streaming packets 
 
   if (get_u8 (haystack, 10) == 0x02)
-  /* add bayes engine */
+    // add bayes engine 
     return (IPP2P_JOOST * 100 + 0);
     
   return 0;
 }
+*/
 
 
 int
@@ -1359,6 +1361,5 @@ struct udpmatch udp_list[] = {
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
-  {IPP2P_JOOST, SHORT_HAND_IPP2P, 22, &udp_search_joost},
   {0, 0, 0, NULL}
 };

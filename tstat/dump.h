@@ -8,4 +8,9 @@ void dump_flush         (Bool trace_completed);
 void dump_create_outdir (char * basedir);
 //void dump_restart       (void);
 void dump_parse_ini_arg (char *param_name, int param_value);
+void dump_ini_start_section (void);
+void dump_ini_end_section (void);
+
+
+extern Bool dump_engine;
 #endif
