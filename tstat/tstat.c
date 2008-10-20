@@ -1946,7 +1946,7 @@ CheckArguments (int *pargc, char *argv[])
     }
 
     /* make sure we found the files */
-    if (filenames[0] == NULL && 
+    if (filenames == NULL && 
         live_flag == FALSE && 
         dump_all_histo_definition == FALSE)
     {
@@ -2314,8 +2314,8 @@ ParseArgs (int *pargc, char *argv[])
 	}
     }
 
-  filenames = &argv[optind];
   *pargc -= optind;
+  filenames = (*pargc != 0) ? &argv[optind]: NULL;
 
 
   if (bayes_engine)
