@@ -1,0 +1,36 @@
+News in 2.0 
+-------------
+* Added a Skype classification engine
+* Added a Deep Packet Inspector - DPI classifier for application level
+* Added support to create dump traces splitting the input traffic 
+  w.r.t DPI classification
+* Added a runtime module to enable/disable writing of traces and logs 
+  without kill the Tstat process
+* Added support for building Libtstat, a shared library that enable to 
+  use Tstat features from external tools
+* Added a new compact format for log files
+
+News in 1.01
+------------
+* updated erf.c so that also VLAN encapsulation over SDH should be correctly decoded
+* experimental and quick patch that allows to read from two separate files 
+  when using the ERF file formats. This is useful when using two separate trace 
+  files (one file for each directions). To enable this, add the -2 switch, 
+  and then pass two files at tstat, e.g., tstat -2 in.erf out.erf 
+  Warning: the first file may be compressed, while the second one must not; 
+  use a pipe to avoid this limitation. 
+
+News in 1.0
+------------
+* Integration with RRDtool
+* Live analysis with libpcap and DAG interface
+* multithread to support live analysis on high-speed links
+* new measurement indexes
+  o TCP out-of-sequence and duplicate classification
+  o RTP/RTCP flow analysis
+  o UDP flow analysis
+  o other changes and tune-up 
+* updated code to TCPTrace ver 6.6.x
+* many bug fixes
+* uniformed naming to English (possibly) language
+* many more... 

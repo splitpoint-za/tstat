@@ -310,7 +310,8 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 //       fprintf (fp_stdout, " %d ",(4*ptcp->th_off));
 	  break;
 	default:
-	  perror ("skype_flow_stat: fatal - you should never stop here!!\n");
+	  fprintf (fp_stderr, "skype_flow_stat: fatal - you should never stop here!!\n");
+      fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 	}
 
@@ -555,15 +556,11 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 	}
       break;
     default:
-      perror ("skype_conn_stats: fatal - you should never stop here!!\n");
+      fprintf (fp_stderr, "skype_conn_stats: fatal - you should never stop here!!\n");
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 
-  if (thisUdir -> pup == NULL) {
-      printf("skype module: pup == NULL!!!\n");
-      exit(1);
-
-    }
 
   if (!log_engine || fp_skype_logc == NULL)
     return;

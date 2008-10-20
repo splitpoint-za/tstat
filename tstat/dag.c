@@ -131,7 +131,7 @@ pread_dag (struct timeval *ptime,
 	  /* and second_file, which is going to be opened now... */
 	  if ((second_file = fopen (filenames[1], "r")) == NULL)
 	    {
-	      perror ("can not open second file!");
+	      fprintf (fp_stderr, "can not open second file!: %s\n", strerror(errno));
 	      exit (1);
 	    }
 	  /* skip the first byte */

@@ -34,7 +34,6 @@ static char const copyright[] =
 #include "inireader.h"
 #include <sys/wait.h>
 #include <getopt.h>
-#include <errno.h>
 #include <sys/types.h>
 #include <fcntl.h>
 
@@ -90,7 +89,6 @@ char *dev;
 static Bool basedirspecified = FALSE;
 static char *basenamedir;
 static char basename[100];
-static char log_tstat_fname[200];
 char *outdir_basename = &basename[0];
 Bool internal_src = FALSE;
 Bool internal_dst = FALSE;
@@ -1415,7 +1413,7 @@ ProcessFile (char *filename, Bool last)
     {
       if (stat (filename, &str_stat) != 0)
 	{
-	  perror ("stat");
+	  fprintf (fp_stderr, "stat: %s\n", strerror(errno));
 	  exit (EXIT_FAILURE);
 	}
       else
@@ -1746,7 +1744,7 @@ MallocZ (int nbytes)
   ptr = malloc (nbytes);
   if (ptr == NULL)
     {
-      perror ("Malloc failed, fatal\n");
+      fprintf (fp_stderr, "Malloc failed, fatal: %s\n", strerror(errno));
       fprintf(fp_stderr, 
         "when memory allocation fails, it's either because:\n"
         "1) You're out of swap space, talk to your local "
@@ -1774,7 +1772,6 @@ ReallocZ (void *oldptr, int obytes, int nbytes)
     {
       fprintf (fp_stderr, "Realloc failed (%d bytes --> %d bytes), fatal\n",
 	       obytes, nbytes);
-      //perror ("realloc");
       exit (EXIT_FAILURE);
     }
   if (obytes < nbytes)
@@ -1855,7 +1852,7 @@ ArgsFromFile(char *fname, int *pargc) {
     f = fopen(fname, "r");    
     if (f == NULL) {
 //        Help();
-        fprintf(stderr, "'%s' - No such file\n", fname);
+        fprintf(fp_stderr, "'%s' - No such file\n", fname);
         exit(1);
     }
 
@@ -1865,7 +1862,7 @@ ArgsFromFile(char *fname, int *pargc) {
     argv[0] = strdup("tstat");
     
     //debug message
-    //fprintf(stderr, "Reading options from %s\n", fname);
+    //fprintf(fp_stdout, "Reading options from %s\n", fname);
 
     while(fgets(buffer, 1024, f)) {
         word = strtok(buffer, " \t\n");
@@ -1890,14 +1887,14 @@ ArgsFromFile(char *fname, int *pargc) {
             *pargc = *pargc + 1;
 
             //debug message
-            //fprintf(stderr, "new option/param: %s\n", word);
+            //fprintf(fp_stdout, "new option/param: %s\n", word);
 
             word = strtok(NULL, " \t\n");
         }
     }
 
     //debug message
-    //fprintf(stderr, "Configuration file analized\n");
+    //fprintf(fp_stdout, "Configuration file analized\n");
     return argv;
 }
 
@@ -1934,11 +1931,11 @@ CheckArguments (int *pargc, char *argv[])
         ParseArgs (pargc, tmpargv);
         //debug messages
         if (debug >= 2) {
-            fprintf(stderr, "config: reading options from %s\n", fname);
+            fprintf(fp_stdout, "config: reading options from %s\n", fname);
             for (i = 0; i < tot_args; i++) {
-                fprintf(stderr, "config: added option/param: %s\n", tmpargv[i]);
+                fprintf(fp_stdout, "config: added option/param: %s\n", tmpargv[i]);
             }
-            fprintf(stderr, "config: reading options completed\n");
+            fprintf(fp_stdout, "config: reading options completed\n");
         }
     }
     else
@@ -1947,7 +1944,7 @@ CheckArguments (int *pargc, char *argv[])
     }
 
     /* make sure we found the files */
-    if (filenames == NULL && 
+    if (filenames[0] == NULL && 
         live_flag == FALSE && 
         dump_all_histo_definition == FALSE)
     {
@@ -1962,7 +1959,6 @@ CheckArguments (int *pargc, char *argv[])
                 "You MUST specify both the configuration file (-R) AND the database path (-r))\n");
 #endif
 
-    
 
 }
 
@@ -2009,32 +2005,57 @@ ParseArgs (int *pargc, char *argv[])
   int dim;
   char *ptr_help;
 #endif
+  int option_index;
+  int c;
+  static struct option long_options[] = {
+    /* {option_name,has_arg(0=none,1=recquired,2=optional),flag,return_value} */
+    /* see man getopt for details                                             */
+    {"dag", 2, 0, 1},
+    {0, 0, 0, 0}
+  };
 
   fp_stdout = stdout;
   fp_stderr = stderr;
+  option_index = 0;
+  opterr = 0;
+  optind = 1;
+  //check '-z' option immediatelly so we can redirect all the messages
+  while(1) {
+    c = getopt_long (*pargc, argv,
+		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
+		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT
+		     "B:N:H:s:T:z:gpdhtucSLvw21", long_options, &option_index);
+    if (c == -1)
+        break;
+    if (c == 'z') {
+      fp_stdout = fopen(optarg, "w");
+      if (!fp_stdout) {
+          fprintf(stderr, "Error creating %s\n", optarg);
+          exit(1);
+      }
+      fp_stderr = fp_stdout;
+      break;
+    } 
+  }
+
+  //Note: RESET argument so we can parse again command line arguments!!!
+  option_index = 0;
+  optind = 1;
+  opterr = 0;
   /* parse the args */
   while (1)
     {
-      int option_index = 0;
-      int c;
-      static struct option long_options[] = {
-	/* {option_name,has_arg(0=none,1=recquired,2=optional),flag,return_value} */
-	/* see man getopt for details                                             */
-	{"dag", 2, 0, 1},
-	{0, 0, 0, 0}
-      };
-
-      c =
-	getopt_long (*pargc, argv,
+      c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT
 		     "B:N:H:s:T:z:gpdhtucSLvw21", long_options, &option_index);
 
-      if (c == -1)
-	break;
+      if (c == -1) {
+	    break;
+      }
 
       if (debug > 2)
-	fprintf (stderr, "ParseArgs[%d]=%s\n", optind, argv[optind]);
+	fprintf (fp_stdout, "ParseArgs[%d]=%s\n", optind, argv[optind]);
 
       switch (c)
 	{
@@ -2059,9 +2080,9 @@ ParseArgs (int *pargc, char *argv[])
 	      (internal_net_filev6, &internal_net_listv6,
 	       &tot_internal_netsv6))
 	    {
-	      fprintf (stderr,
+	      fprintf (fp_stdout,
 		       "Error while loading IPv6 configuration file\n");
-	      fprintf (stderr, "Could not open %s\n", internal_net_filev6);
+	      fprintf (fp_stdout, "Could not open %s\n", internal_net_filev6);
 	      exit (1);
 	    }
 	  break;
@@ -2095,8 +2116,8 @@ ParseArgs (int *pargc, char *argv[])
 	    char *dpmi_conf = strdup (optarg);
 	    if (!dpmi_parse_config (dpmi_conf))
 	      {
-		fprintf (stderr, "Error while loading DPMI configuration\n");
-		fprintf (stderr, "Could not open %s\n", internal_net_file);
+		fprintf (fp_stderr, "Error while loading DPMI configuration\n");
+		fprintf (fp_stderr, "Could not open %s\n", internal_net_file);
 		exit (1);
 	      }
 	  }
@@ -2112,7 +2133,7 @@ ParseArgs (int *pargc, char *argv[])
 	  /* -ieth0 */
 	  dev = strdup (optarg);
 	  if (debug > 1)
-	    printf ("Capturing device set to %s\n", dev);
+	    fprintf (fp_stdout, "Capturing device set to %s\n", dev);
 	  break;
 #endif /* GROK_LIVE_TCPDUMP */
 	case 't':
@@ -2129,7 +2150,7 @@ ParseArgs (int *pargc, char *argv[])
 	  basenamedir = strdup (optarg);
 	  basedirspecified = TRUE;
 	  if (debug > 1)
-	    printf ("basenamedir set to %s\n", basenamedir);
+	    fprintf (fp_stdout, "basenamedir set to %s\n", basenamedir);
 	  break;
 #ifdef GROK_TCPDUMP
 	case 'f':		/* pcap filter file */
@@ -2149,14 +2170,14 @@ ParseArgs (int *pargc, char *argv[])
 	    if ((stat (rrdpath, &fbuf) == 0) && S_ISDIR (fbuf.st_mode))
 	      {
 		if (debug)
-		  fprintf (stderr,
+		  fprintf (fp_stdout,
 			   "RRDTool database path <%s> exists\n", rrdpath);
 	      }
 	    else
 	      {
 		mkdir (rrdpath, 0775);
 		if (debug)
-		  fprintf (stderr,
+		  fprintf (fp_stdout,
 			   "RRDTool database path <%s> created\n", rrdpath);
 	      }
 	    rrdtool_set_path (rrdpath);
@@ -2172,14 +2193,14 @@ ParseArgs (int *pargc, char *argv[])
 	    if (stat (rrdconf, &fbuf) == 0)
 	      {
 		if (debug)
-		  fprintf (stderr,
+		  fprintf (fp_stdout,
 			   "RRDTool configuration file <%s> found (delayed parsing)\n",
 			   rrdconf);
 		rrdtool_set_conf (rrdconf);
 	      }
 	    else
 	      {
-		fprintf (stderr, "err: Could not open %s\n", rrdconf);
+		fprintf (fp_stderr, "err: Could not open %s\n", rrdconf);
 		exit (1);
 	      }
 	    rrdset_conf = 1;
@@ -2195,11 +2216,11 @@ ParseArgs (int *pargc, char *argv[])
     case 'T':
       sprintf(runtime_conf_fname, "%s", optarg);
       if (stat(runtime_conf_fname, &finfo)) {
-          fprintf(stderr, "err: Could not open %s\n", runtime_conf_fname);
+          fprintf(fp_stderr, "err: Could not open %s\n", runtime_conf_fname);
           exit(1);
       }
       else if (S_ISDIR(finfo.st_mode)) {
-          fprintf(stderr, "err: %s is a directory\n", runtime_conf_fname);
+          fprintf(fp_stderr, "err: %s is a directory\n", runtime_conf_fname);
           exit(1);
       }
       runtime_engine = TRUE;
@@ -2208,15 +2229,6 @@ ParseArgs (int *pargc, char *argv[])
       mtime_stable_counter = -1;
       break;
 
-    //redirect stdout/stderr
-    case 'z':
-      fp_stdout = fopen(optarg, "w");
-      if (!fp_stdout) {
-          fprintf(stderr, "Error creating %s\n", log_tstat_fname);
-          exit(1);
-      }
-      fp_stderr = fp_stdout;
-      break;
 
 	case 'S':
 	  histo_engine = FALSE;
@@ -2257,7 +2269,7 @@ ParseArgs (int *pargc, char *argv[])
 		{
 		  if (num_dev == 4)
 		    {
-		      fprintf (stderr,
+		      fprintf (fp_stderr,
 			       "Error: are only supported at most four DAG card\n");
 		      exit (1);
 		    }
@@ -2288,14 +2300,16 @@ ParseArgs (int *pargc, char *argv[])
 #endif /* GROK_ERF_LIVE */
 
 	    default:
-	      printf ("\n Error in parsing long opt %d\n", option_index);
+	      fprintf (fp_stderr, "\n Error in parsing long opt %d\n", option_index);
 	      break;
 	    }
 	  break;
 
+    case 'z': //skip because we already readed it
+        break;
 	default:
-	  printf ("\n");
-	  Help ();
+      Help();
+      fprintf (fp_stderr, "Unvalid option -%c or missing option argument\n", optopt);
 	  exit (EXIT_FAILURE);
 	}
     }

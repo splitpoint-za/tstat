@@ -179,7 +179,8 @@ pread_snoop (struct timeval *ptime,
 		   fread (&vlanh, 1, sizeof (vlanh),
 			  SYS_STDIN)) != sizeof (vlanh))
 		{
-		  perror ("pread_snoop: seek past vlan header");
+		  fprintf (fp_stderr, "pread_snoop: seek past vlan header\n");
+          fprintf (fp_stderr, "%s\n", strerror(errno));
 		}
 
 	      if ((ntohs (vlanh.vlan_proto) == ETHERTYPE_IP) ||
@@ -217,7 +218,8 @@ pread_snoop (struct timeval *ptime,
 	      /* N.B. fseek won't work - it could be a pipe! */
 	      if ((rlen = fread (pip_buf, 1, len, SYS_STDIN)) != len)
 		{
-		  perror ("pread_snoop: seek past non-IP");
+		  fprintf (fp_stderr, "pread_snoop: seek past non-IP\n");
+          fprintf (fp_stderr, "%s\n", strerror(errno)); 
 		}
 
 	      continue;
@@ -323,7 +325,8 @@ pread_snoop (struct timeval *ptime,
 	      /* N.B. fseek won't work - it could be a pipe! */
 	      if ((rlen = fread (pip_buf, 1, len, SYS_STDIN)) != len)
 		{
-		  perror ("pread_snoop: seek past non-IP");
+		  fprintf (fp_stderr, "pread_snoop: seek past non-IP\n");
+          fprintf (fp_stderr, "%s\n", strerror(errno));
 		}
 
 	      continue;
@@ -380,7 +383,7 @@ is_snoop (char *filename)
 #ifdef __WIN32
   if ((fp = fopen (filename, "r")) == NULL)
     {
-      perror (filename);
+      fprintf (fp_stderr, "%s: %s\n", filename, strerror(errno));
       exit (-1);
     }
 #endif /* __WIN32 */

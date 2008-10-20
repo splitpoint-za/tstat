@@ -225,7 +225,7 @@ is_netscout (char *filename)
 #ifdef __WIN32
   if ((fp = fopen (filename, "r")) == NULL)
     {
-      perror (filename);
+      fprintf (fp_stderr, "%s: %s\n", strerror(errno));
       exit (-1);
     }
 #endif /* __WIN32 */

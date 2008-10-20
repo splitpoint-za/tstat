@@ -585,7 +585,7 @@ PcapSavePacket (char *filename, struct ip *pip, void *plast)
       /* try to open the file */
       if ((f_savefile = Mfopen (filename, "w")) == NULL)
 	{
-	  perror (filename);
+	  fprintf (fp_stderr, "%s: %s\n", strerror(errno));
 	  exit (-1);
 	}
 

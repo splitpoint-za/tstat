@@ -197,7 +197,7 @@ is_netm (char *filename)
 #ifdef __WIN32
   if ((fp = fopen (filename, "r")) == NULL)
     {
-      perror (filename);
+      fprintf (fp_stderr, "%s: %s\n", filename, strerror(errno));
       exit (-1);
     }
 #endif /* __WIN32 */
@@ -238,7 +238,7 @@ is_netm (char *filename)
   /* ignore the header at the top */
   if (fseek (SYS_STDIN, NETM_DUMP_OFFSET, SEEK_SET) == -1)
     {
-      perror ("NETM lseek");
+      fprintf (fp_stderr, "NETM lseek: %s\n", strerror(errno));
       exit (-1);
     }
 

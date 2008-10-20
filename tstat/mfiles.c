@@ -33,7 +33,6 @@
  */
 
 #include "tstat.h"
-#include <errno.h>
 
 
 struct mfile
@@ -115,7 +114,7 @@ Mfpipe (int pipes[])
 
       if (errno != EMFILE)
 	{
-	  perror ("pipe");
+	  fprintf (fp_stderr, "pipe: %s\n", strerror(errno));
 	  exit (-1);
 	}
 
@@ -230,7 +229,7 @@ Mfopen_internal (MFILE * pmf, char *mode)
 
       if (errno != EMFILE)
 	{
-	  perror ("fopen");
+	  fprintf (fp_stderr, "fopen: %s\n", strerror(errno));
 	  exit (-1);
 	}
 
@@ -240,7 +239,7 @@ Mfopen_internal (MFILE * pmf, char *mode)
       stream = fopen (pmf->fname, mode);
       if (stream == NULL)
 	{
-	  perror ("fopen (second try)");
+	  fprintf (fp_stderr, "fopen (second try): %s\n", strerror(errno));
 	  exit (-1);
 	}
     }
@@ -252,7 +251,7 @@ Mfopen_internal (MFILE * pmf, char *mode)
     {
       if (fseek (stream, pmf->fptr, SEEK_SET) != 0)
 	{
-	  perror ("fseek");
+	  fprintf (fp_stderr, "fseek: %s\n", strerror(errno));
 	  exit (-1);
 	}
     }

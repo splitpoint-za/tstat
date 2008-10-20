@@ -40,7 +40,6 @@
  */
 
 
-
 #include "tstat.h"
 
 /* 
@@ -438,7 +437,7 @@ is_erf (char *filename)
 #ifdef __WIN32
   if ((fp = fopen (filename, "r")) == NULL)
     {
-      perror (filename);
+      fprintf (fp_stderr, "%s: %s\n", filename, strerror(errno));
       exit (-1);
     }
 #endif /* __WIN32 */

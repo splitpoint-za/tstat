@@ -1,0 +1,31 @@
+General Information
+===================
+
+This is version 2.0 of Tstat.
+
+Tstat is a a passive sniffer able to provide several insight on 
+the traffic patterns at both the the network and transport levels. 
+
+You can download the latest Tstat tarball on its official site:
+
+    http://tstat.tlc.polito.it/index.shtml
+
+
+Installation
+============
+
+Tstat requires libm, libpcap, libpthread and optionally librrd.
+
+Simple install procedure:
+
+  % tar xxvf tstat-2.0.tgz    # unpack the sources
+  % cd tstat-2.0              # change to the toplevel directory
+  % ./configure                             # run the `configure' script
+  % make                                    # build gtksourceview
+  [ Become root if necessary ]
+  % make install                            # install gtksourceview
+
+See the file 'INSTALL' for more detailed information.
+
+
+The Tstat team.

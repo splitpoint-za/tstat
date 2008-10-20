@@ -54,6 +54,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <math.h>
+#include <errno.h>
 
 
 #ifdef linux

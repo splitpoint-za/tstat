@@ -228,7 +228,7 @@ CompReopenFile (char *filename)
   len = fread (buf, 1, pos, stdin);
   if ((len == 0) && ferror (stdin))
     {
-      perror ("read forward in stdin");
+      fprintf (fp_stderr, "read forward in stdin: %s\n", strerror(errno));
       exit (-1);
     }
 
@@ -265,7 +265,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
     /* create a temporary file name and open it */
     if ((fd = mkstemp (tempfile)) == -1)
       {
-	perror ("template");
+	fprintf (fp_stderr, "template: %s\n", strerror(errno));
 	exit (-1);
       }
 
@@ -279,7 +279,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
   /* open the file */
   if ((f_file = fopen (tempfile, "w+")) == NULL)
     {
-      perror (tempfile);
+      fprintf (fp_stderr, "%s: %s\n", tempfile, strerror(errno));
       exit (-1);
     }
 
@@ -289,7 +289,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
   /* connect a stdio stream to the pipe */
   if ((f_stream = fdopen (fd, "r")) == NULL)
     {
-      perror ("open pipe stream for header");
+      fprintf (fp_stderr, "open pipe stream for header: %s\n", strerror(errno));
       exit (-1);
     }
 
@@ -297,7 +297,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
   len = fread (buf, 1, COMP_HDR_SIZE, f_stream);
   if ((len == 0) && ferror (f_stream))
     {
-      perror ("read pipe stream for header");
+      fprintf (fp_stderr, "read pipe stream for header: %s\n", strerror(errno));
       exit (-1);
     }
 
@@ -317,7 +317,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
   len = fwrite (buf, 1, len, f_file);
   if ((len == 0) && ferror (f_file))
     {
-      perror ("write file stream for header");
+      fprintf (fp_stderr, "write file stream for header: %s", strerror(errno));
       exit (-1);
     }
 
@@ -353,7 +353,7 @@ CompSaveHeader (char *filename, struct comp_formats *pf)
   if ((freopen (tempfile, "r", stdin)) == NULL)
 //  if ((stdin = fopen (tempfile, "r")) == NULL)
     {
-      perror (tempfile);
+      fprintf (fp_stderr, "%s: %s\n", tempfile, strerror(errno));
       exit (-1);
     }
 
@@ -412,14 +412,14 @@ CompOpenPipe (char *filename, struct comp_formats *pf)
 
   if (Mfpipe (fdpipe) == -1)
     {
-      perror ("pipe");
+      fprintf (fp_stderr, "pipe: %s\n", strerror(errno));
       exit (-1);
     }
 
   child_pid = fork ();
   if (child_pid == -1)
     {
-      perror ("fork");
+      fprintf (fp_stderr, "fork: %s", strerror(errno));
       exit (-1);
     }
   if (child_pid == 0)
@@ -442,7 +442,7 @@ CompOpenPipe (char *filename, struct comp_formats *pf)
 
       execv (abspath, args);
       fprintf (fp_stderr, "Exec of '%s' failed\n", abspath);
-      perror (abspath);
+      fprintf (fp_stderr, "%s: %s\n", abspath, strerror(errno));
       exit (-1);
     }
   close (fdpipe[1]);
@@ -500,7 +500,7 @@ CompOpenHeader (char *filename)
       if (freopen (filename, "r", stdin) == NULL)
 //      if ((stdin = fopen (filename, "r")) == NULL)
 	{
-	  perror (filename);
+	  fprintf (fp_stderr, "%s %s\n", filename, strerror(errno));
 	  return (NULL);
 	}
       return (stdin);
@@ -571,7 +571,7 @@ PipeHelper (void)
 
   if (Mfpipe (fdpipe) == -1)
     {
-      perror ("pipe");
+      fprintf (fp_stderr, "pipe: %s\n", strerror(errno));
       exit (-1);
     }
   /* remember: fdpipe[0] is for reading, fdpipe[1] is for writing */
@@ -579,7 +579,7 @@ PipeHelper (void)
   child_pid = fork ();
   if (child_pid == -1)
     {
-      perror ("fork");
+      fprintf (fp_stderr, "fork: %s\n", strerror(errno));
       exit (-1);
     }
   if (child_pid == 0)
@@ -591,7 +591,7 @@ PipeHelper (void)
       f_pipe = fdopen (fdpipe[1], "w");
       if (f_pipe == NULL)
 	{
-	  perror ("fdopen on pipe for writing");
+	  fprintf (fp_stderr, "fdopen on pipe for writing: %s\n", strerror(errno));
 	  exit (-1);
 	}
 
@@ -621,7 +621,7 @@ PipeHelper (void)
   f_return = fdopen (fdpipe[0], "r");
   if (f_return == NULL)
     {
-      perror ("fdopen on pipe for reading");
+      fprintf (fp_stderr, "fdopen on pipe for reading: %s\n", strerror(errno));
       exit (-1);
     }
   return (f_return);
@@ -643,7 +643,7 @@ PipeFitting (FILE * f_pipe, FILE * f_header, FILE * f_orig_stdin)
 	break;
       if (len < 0)
 	{
-	  perror ("fread from f_header");
+	  fprintf (fp_stderr, "fread from f_header: %s\n", strerror(errno));
 	  exit (0);
 	}
 
@@ -654,7 +654,7 @@ PipeFitting (FILE * f_pipe, FILE * f_header, FILE * f_orig_stdin)
       /* send those bytes to the pipe */
       if (fwrite (buf, 1, len, f_pipe) != len)
 	{
-	  perror ("fwrite on pipe");
+	  fprintf (fp_stderr, "fwrite on pipe: %s\n", strerror(errno));
 	  exit (-1);
 	}
     }
@@ -672,7 +672,7 @@ PipeFitting (FILE * f_pipe, FILE * f_header, FILE * f_orig_stdin)
 	break;
       if (len < 0)
 	{
-	  perror ("fread from f_orig_stdin");
+	  fprintf (fp_stderr, "fread from f_orig_stdin: %s\n", strerror(errno));
 	  exit (0);
 	}
 
@@ -683,7 +683,7 @@ PipeFitting (FILE * f_pipe, FILE * f_header, FILE * f_orig_stdin)
       /* send those bytes to the pipe */
       if (fwrite (buf, 1, len, f_pipe) != len)
 	{
-	  perror ("fwrite on pipe");
+	  fprintf (fp_stderr, "fwrite on pipe: %s\n", strerror(errno));
 	  exit (-1);
 	}
     }

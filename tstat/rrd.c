@@ -136,7 +136,7 @@ rrdtool_parse_config (void)
   if (!(conf = fopen (rrd.conf.file, "r")))
     {
       fprintf (fp_stderr, "%s: file open error.\n", rrd.conf.file);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 

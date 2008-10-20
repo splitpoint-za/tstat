@@ -98,7 +98,7 @@ histo_parse_conf ()
   if (!(conf = fopen (histo_conf.fname, "r")))
     {
       fprintf (fp_stderr, "%s: file open error.\n", histo_conf.fname);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 
@@ -146,7 +146,7 @@ histo_parse_conf ()
 	      fprintf (fp_stderr,
 		       "HISTO: cannot find histogram <%s> to include at config line <%d>\n",
 		       arg1, config_line);
-	      perror (NULL);
+	      fprintf (fp_stderr, "%s\n", strerror(errno));
 	      exit (1);
 	    }
 
@@ -169,7 +169,7 @@ histo_parse_conf ()
 	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
-	  perror (NULL);
+	  fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 	}
       fscanf (conf, "\n");

@@ -254,7 +254,7 @@ void dump_to_file(struct dump_file *dump_file,
     dump_packet(dump_file->fp, pip, plast);
 
     if (timestamp.tv_sec == -1) {
-        fprintf(fp_log, "dump start: %s", Timestamp());
+        fprintf(fp_log, "dump start: %s\n", Timestamp());
     }
     timestamp = current_time;
 }
@@ -311,7 +311,8 @@ void dump_flush(Bool trace_completed) {
 
     //write messages to log file
     if (timestamp.tv_sec != -1) {
-        fprintf(fp_log, "dump stop: %s\n"
+        fprintf(fp_log, 
+            "dump stop:  %s"
             "---\n"
             "enabled protocols:\n"
             "---\n", ctime(&timestamp.tv_sec));

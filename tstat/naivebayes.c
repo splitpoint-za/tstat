@@ -140,7 +140,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
   if (!(conf = fopen (config_file, "r")))
     {
       fprintf (fp_stderr, "%s: file open error.\n", config_file);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 
@@ -239,7 +239,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
-	  perror (NULL);
+	  fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 	}
       fscanf (conf, "\n");
@@ -291,7 +291,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
   if (!(conf = fopen (config_file, "r")))
     {
       fprintf (fp_stderr, "%s: file open error.\n", config_file);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 
@@ -440,7 +440,7 @@ bayes_init (char *config_file, char *prefix, void *(*feat2code) ())
 	  fprintf (fp_stderr,
 		   "BAYES: unknown keyword <%s> at config line <%d>\n",
 		   keyword, config_line);
-	  perror (NULL);
+	  fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 	}
       fscanf (conf, "\n");
@@ -699,7 +699,7 @@ bayes_file2vec (const char *fname, int *len, double min_th, Bool use_log)
   if (!(f = fopen (fname, "r")))
     {
       fprintf (fp_stderr, "%s: file open error.\n", fname);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 
@@ -841,7 +841,7 @@ bayes_eval_pdf (struct bayes_settings *settings, int class_num, int index)
     {
       fprintf (fp_stderr, "%s only has %d classes (and you asked for %d)\n",
 	       settings->name, settings->class_num, class_num);
-      perror (NULL);
+      fprintf (fp_stderr, "%s\n", strerror(errno));
       exit (1);
     }
 #endif //BAYES_SAFE
@@ -855,7 +855,7 @@ bayes_eval_pdf (struct bayes_settings *settings, int class_num, int index)
 		   "%s: class %d only has %d indexes (and you asked for %d)\n",
 		   settings->name, settings->class_num,
 		   settings->class_dlen[class_num], index);
-	  perror (NULL);
+	  fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 #endif //BAYES_SAFE
           return settings->min_threshold;
