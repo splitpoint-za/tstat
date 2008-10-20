@@ -1919,6 +1919,8 @@ CheckArguments (int *pargc, char *argv[])
     char **tmpargv, *fname;
     int i, tot_args;
 
+    fp_stdout = stdout;
+    fp_stderr = stderr;
     if (*pargc == 1)
     {
 #ifdef TSTAT_RUNASLIB
@@ -2014,8 +2016,6 @@ ParseArgs (int *pargc, char *argv[])
     {0, 0, 0, 0}
   };
 
-  fp_stdout = stdout;
-  fp_stderr = stderr;
   option_index = 0;
   opterr = 0;
   optind = 1;
