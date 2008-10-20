@@ -1852,7 +1852,7 @@ ArgsFromFile(char *fname, int *pargc) {
     f = fopen(fname, "r");    
     if (f == NULL) {
 //        Help();
-        fprintf(fp_stderr, "'%s' - No such file\n", fname);
+        fprintf(fp_stderr, "No '%s' file. Try 'tstat -h' for more information.\n", fname);
         exit(1);
     }
 
