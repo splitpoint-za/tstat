@@ -507,7 +507,8 @@ main (int argc, char *argv[]) {
     { //no remaing arg is live capture
       num_files = argc;
       fprintf (fp_stdout, "%d arg%s remaining, starting with '%s'\n",
-	      num_files, num_files > 1 ? "s" : "", filenames[0]);
+	      num_files, num_files > 1 ? "s" : "", 
+          (filenames) ? filenames[0] : "");
     }
 
   // knock, knock...
@@ -1946,12 +1947,14 @@ CheckArguments (int *pargc, char *argv[])
     }
 
     /* make sure we found the files */
+    /*
     if (filenames == NULL && 
         live_flag == FALSE && 
         dump_all_histo_definition == FALSE)
     {
         BadArg (NULL, "must specify at least one file name\n");
     }
+    */
 #ifdef HAVE_RRDTOOL
     /*-----------------------------------------------------------*/
     /* RRDtools                                                */
@@ -2315,7 +2318,8 @@ ParseArgs (int *pargc, char *argv[])
     }
 
   *pargc -= optind;
-  filenames = (*pargc != 0) ? &argv[optind]: NULL;
+  if (*pargc)
+    filenames = &argv[optind];
 
 
   if (bayes_engine)
