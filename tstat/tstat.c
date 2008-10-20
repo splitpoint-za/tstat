@@ -1166,16 +1166,15 @@ static int ProcessPacket(struct timeval *pckt_time,
     //* check if the runtime config file is changed
     //********************************************
     if (runtime_engine && 
-        //elapsed(last_runtime_check, current_time) >= RUNTIME_CONFIG_IDLE)
-        difftime(time(NULL), last_mtime_check) >= 1) 
+        difftime(time(NULL), last_mtime_check) >= RUNTIME_CONFIG_IDLE) 
     {
         last_mtime_check = time(NULL);
 
         // for sanity check we use a counter to check the max number
         // of stat fails. A fail may be related to the editor in case
         // of direct editing of the runtime config file
-        // (Vim for example use a temporary file and replace this
-        // with the original file when a change is made)
+            // (Vim for example use a temporary file and replace this
+            // with the original file when a change is made)
         stat_error = stat(runtime_conf_fname, &finfo);
         if (!stat_error) {
             stat_err_counter = 5;

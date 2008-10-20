@@ -884,8 +884,6 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
       b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
     C2S_is_Skype = 1;
  
-    printf("ipg:%d pkt:%d CSFT:%d type:%d\n",
-        b_avgipg, b_pktsize, (CSFT != NOT_SKYPE), thisUdir->type);
 
 /* add this flow to the skype one */
   if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
@@ -1114,8 +1112,6 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 
     fprintf (fp_skype_logc, "%s U\n", logline);
 
-    printf("ipg:%d pkt:%d CSFT:%d type:%d\n",
-        b_avgipg, b_pktsize, (CSFT != NOT_SKYPE), thisUdir->type);
 #else
   //     
   //     #   Field Meaning
