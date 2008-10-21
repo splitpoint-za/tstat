@@ -21,7 +21,7 @@
 */
 
 static char const copyright[] =
-  "@(#)Copyright (c) 2001 -- Telecomunication Network Group \
+  "@(#)Copyright (c) 2001-2008 -- Telecomunication Network Group \
      -- Politecnico di Torino.  All rights reserved.\
      Tstat is based on TCPTRACE,\
     @(#)Copyright (c) 1999 -- Shawn Ostermann -- Ohio University.\n";
