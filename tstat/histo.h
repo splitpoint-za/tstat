@@ -138,8 +138,8 @@ void swap_histo ();
 long *whats_frozen (struct double_histo_list *histo);
 
 int print_all_histo (int flag);
-int print_all_histo_definition ();
 int print_histo (struct double_histo_list *phisto, char *titolo, int flag);
+void print_all_histo_definition ();
 void print_histo_definition (struct double_histo_list *phisto, char *title);
 
 int clear_all_histo ();

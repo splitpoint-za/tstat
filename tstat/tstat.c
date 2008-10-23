@@ -497,7 +497,6 @@ main (int argc, char *argv[]) {
   if (dump_all_histo_definition == TRUE)
     {
       print_all_histo_definition ();
-      fprintf(fp_stdout, "\n");
       exit (0);
     }
 

@@ -464,27 +464,26 @@ clear_histo (struct double_histo_list *phisto)
 }
 
 
-int
+void
 print_all_histo_definition ()
 {
   struct double_histo_list *temphp;
 
-  fprintf (fp_stdout, "#name\t\t|min\t|bin_size\t|max\t|description\n");
+  fprintf (fp_stdout, "#name\tmin\tbin_size\tmax\tdescription\n");
   temphp = hl;
   while (temphp != NULL)
     {
       print_histo_definition (temphp, temphp->name);
       temphp = temphp->next;
     }
-  return 1;
 }
 
 void
 print_histo_definition (struct double_histo_list *phisto, char *titolo)
 {
-  fprintf (fp_stdout, "#%s\t|", phisto->name);
-  fprintf (fp_stdout, "%ld\t|%ld\t|%ld\t|", phisto->min, phisto->bin_size, phisto->max);
-  fprintf (fp_stdout, "#%s\n", phisto->descr);
+  fprintf (fp_stdout, "%s\t", phisto->name);
+  fprintf (fp_stdout, "%ld\t%ld\t%ld\t", phisto->min, phisto->bin_size, phisto->max);
+  fprintf (fp_stdout, "%s\n", phisto->descr);
 }
 
 void
