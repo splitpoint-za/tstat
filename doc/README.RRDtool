@@ -65,11 +65,10 @@ and percentiles are comma separated. The following is a short example:
 	  #best approximation of rtt distribution		   
 	  rtt_avg_usc avg stdev prc:50,90,95,99,99.9
 
-Two examples are provided: rrdconf.lite and rrdconf.full
+An example is provided: tstat-conf/rrd.conf
 
 3.2) -rpath
 path to use to create/update the RR database: this should better
 be outside the directory tree created by Tstat, and may be placed
 somewhere accessible from the Web server for easy integration with RRD
-CGI-like interface. For example see:
-http://people.ee.ethz.ch/~oetiker/webtools/rrdtool/rrdworld/rrgrapher.html
+CGI-like interface. 

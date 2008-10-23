@@ -551,7 +551,7 @@ packet.
 
 
 Therefore, when applicable, Tstat will keep track of measurements referring to
-the same measured quantity by I<appending> a specific tag (see L<Histograms>) or using a I<flag> 
+the same measured quantity by I<appending> a specific tag (see L<"Histograms">) or using a I<flag> 
 (see L<Logs>).
 
 

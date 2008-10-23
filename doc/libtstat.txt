@@ -3,7 +3,7 @@ Install
 First of all, we need to download the last (>=2.0.0) release of 
 Tstat from its official site:
 
-    http://tstat.tlc.polito.it/
+    http://tstat.polito.it/
 
 Unpack the tarball somewhere and enter into the tool's directory.
 The most important directories are:

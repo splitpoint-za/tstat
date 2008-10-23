@@ -1,5 +1,5 @@
 Tstat produces a "dup_ooo" file if the LOG_OOO has being defined during compile.
-See Makefile.in or Makefile for details.
+See tstat/Makefile.conf for details.
 
 Tstat log in this file all the events detected when tracking TCP files which
 refer to "out-of-sequence" or "duplicate" messages received. Or all the packet that are not received in sequence.
