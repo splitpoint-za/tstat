@@ -106,7 +106,8 @@ Assuming that you want version C<2.x.y>:
 	 wget http://tstat.polito.it/download/tstat-2.x.y.tar.gz
          tar -xzvf tstat-2.x.y.tar.gz
          cd tstat-2.x.y
-         ./configure
+         ./autogen.sh
+         ./configure [--enable-libtstat]
          make
          make install (with root privileges)
 
@@ -419,7 +420,7 @@ the following command sequence:
 Tstat collects several network-layer as well as transport-layer measurements,
 which are described in full details in L<http://tstat.polito.it/measure.shtml>.
 As output, Tstat produces four different types of files: histograms, round robin database, 
-dump traces and other plain text logs. 
+packet level traces and other plain text logs. 
 
 By default Tstat collect all the output results in a directory with the same name of the input 
 trace appending the suffix C<.out> or C<stding> in case of a live capture:
@@ -712,7 +713,7 @@ C<log_skype_complete> for skype traffic.
 Description of the file format of each log file can be found in
 L<http://tstat.polito.it/measure.shtml>.
 
-=head2 Dump Traces
+=head2 Packet Level Traces
 
 Inside Tstat there is a C<Deep Packet Inspector - DPI> which is able to identify
 traffic communications at application level looking the composition of the payload
@@ -999,9 +1000,9 @@ configuration section of C<tstat_rrd.cgi> if needed:
 This module has been developped with the specific target to try to controll the disk
 occupation and to have a minimal interface
 to execution process to enable/disable some feature without restarting it. 
-In particular, the system controls two specific outputs: the writing of log files and dump traces, so
+In particular, the system controls two specific outputs: the writing of log files and packet level traces, so
 is possible to disable the writing of logs (histograms, rrd and all the others) if they
-became to bigs, and to dinamically change the set of dump traces to collect. 
+became to bigs, and to dinamically change the set of packet level traces to collect. 
 
 The module works with simple polling system that is it periodically tests if a configuration file,
 specified with the C<-T> option when Tstat is executed, is changed from the previous check
@@ -1046,7 +1047,7 @@ packet of 54 bytes
 
 Note that, a change
 in the dump configuration means the generation of a new C<tracesNN> output directory
-and for this reason, inside the dump traces directories is placed a log file
+and for this reason, inside the packet level traces directories is placed a log file
 called C<log.txt> that indicate the configuration related to the output 
 included in that directory.
 
