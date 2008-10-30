@@ -690,7 +690,7 @@ create_new_outfiles (char *filename)
   if (!histo_engine && !log_engine && !runtime_engine)
     return;
 
-  if (runtime_engine || log_engine)
+  if (log_engine)
     {
       /* Open the files for complete and uncomplete connection logging */
 
@@ -780,7 +780,6 @@ create_new_outfiles (char *filename)
 	}
   #endif
 
-    dump_create_outdir(basename);
 #endif
 
 #ifdef LOG_OOO
@@ -798,6 +797,9 @@ create_new_outfiles (char *filename)
       /* MGM stop */
 #endif
     }
+
+    if (runtime_engine)
+        dump_create_outdir(basename);
 }
 
 
