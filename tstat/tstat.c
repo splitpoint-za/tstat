@@ -651,7 +651,7 @@ create_new_outfiles (char *filename)
   char date[50];
   char logfile[200] = "";
 
-  if ((!histo_engine) && (!log_engine) && (!global_histo))
+  if (!histo_engine && !log_engine && !global_histo && !runtime_engine)
     return;
 
   if (!basedirspecified)
@@ -687,7 +687,7 @@ create_new_outfiles (char *filename)
   if (global_histo)
     sprintf (global_data_dir, "%s/GLOBAL", basename);
 
-  if ((!histo_engine) && (!log_engine))
+  if (!histo_engine && !log_engine && !runtime_engine)
     return;
 
   if (runtime_engine || log_engine)
