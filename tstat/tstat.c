@@ -1207,7 +1207,7 @@ static int ProcessPacket(struct timeval *pckt_time,
     }
 
     //check if is need to flush histograms
-    if (histo_engine && elapsed (last_time_step, current_time) > MAX_TIME_STEP)
+    if ((histo_engine || rrd_engine) && elapsed (last_time_step, current_time) > MAX_TIME_STEP)
     //if (histo_engine && elapsed (last_time_step, current_time) > 1000000)
     {
         flush_histo_engine();
