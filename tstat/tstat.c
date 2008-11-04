@@ -571,6 +571,7 @@ main (int argc, char *argv[]) {
   /* initialize bitrate struct */
   memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
   memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+  memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
 
   
 #ifndef TSTAT_RUNASLIB
@@ -1023,6 +1024,7 @@ void InitAfterFirstPacketReaded(char *filename, int file_count) {
       // reset bitrate stats
       memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
       memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+      memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
       
       tot_conn_TCP = 0;
       tot_conn_UDP = 0;
@@ -1127,6 +1129,7 @@ static int ProcessPacket(struct timeval *pckt_time,
         // reset bitrate stats 
         memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
         memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+        memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
     }
 */
 
@@ -1567,6 +1570,7 @@ ProcessFile (char *filename, Bool last)
       // reset bitrate stats
       memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
       memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+      memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
       
       tot_conn_TCP = 0;
       tot_conn_UDP = 0;
@@ -2651,4 +2655,5 @@ void flush_histo_engine(void) {
     // reset bitrate stats 
     memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
     memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
+    memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
 }
