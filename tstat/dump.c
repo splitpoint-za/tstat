@@ -63,7 +63,7 @@ struct dump_file proto2dump[DUMP_PROTOS];
 static char dump_filename[200];
 static struct ether_header eth_header;
 static char outdir[100];
-static char *log_basedir;
+static char *log_basedir = NULL;
 static FILE *fp_log;
 static timeval timestamp;
 static int dir_counter = 0;
@@ -311,7 +311,7 @@ void dump_flush(Bool trace_completed) {
     }
 
     //write messages to log file
-    if (timestamp.tv_sec != -1) {
+    if (timestamp.tv_sec != -1 && fp_log) {
         fprintf(fp_log, 
             "dump stop:  %s"
             "---\n"
@@ -322,8 +322,9 @@ void dump_flush(Bool trace_completed) {
                 fprintf(fp_log, "%s\n", proto2dump[i].protoname);
         }
         fprintf(fp_log, "---\n");
+        fclose(fp_log);
+        fp_log = NULL;
     }
-    fclose(fp_log);
 }
 
 void dump_create_outdir(char * basedir) {
@@ -333,7 +334,11 @@ void dump_create_outdir(char * basedir) {
     if (!dump_engine)
         return;
 
-    log_basedir = basedir;
+    if (log_basedir && strcmp(log_basedir, basedir) != 0) {
+        dump_flush(TRUE);
+        dir_counter = 0;
+    }
+    log_basedir = strdup(basedir);
 
     tot = strlen(basedir) + strlen(DUMP_DIR_BASENAME) + 4;
     if (tot > (sizeof(outdir) / sizeof(char))) {

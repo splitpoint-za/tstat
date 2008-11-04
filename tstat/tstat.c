@@ -1645,6 +1645,9 @@ QuitSig (int signum)
   tstat_print_report(&report, fp_stderr);
   if (threaded)
     pthread_mutex_unlock (&stat_dump_cond_mutex);
+
+  if (runtime_engine)
+      dump_flush(TRUE);
   exit (EXIT_FAILURE);
 }
 
