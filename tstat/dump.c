@@ -65,7 +65,8 @@ static struct ether_header eth_header;
 static char outdir[100];
 static char *log_basedir = NULL;
 static FILE *fp_log;
-static timeval timestamp;
+static timeval first_dump_tm;
+static timeval last_dump_tm;
 static int dir_counter = 0;
 static int snap_len = 0;
 Bool dump_engine = FALSE;
@@ -176,8 +177,6 @@ void dump_init(void) {
     int i;
 
     dump_engine = FALSE;
-    timestamp.tv_sec = -1;
-    timestamp.tv_usec = -1;
     /* UDP dump protocols 
      * for semplicity we use a vector with as long as the number of classes
      * identified by the DPI. Among these there are some useless classes
@@ -254,10 +253,12 @@ void dump_to_file(struct dump_file *dump_file,
     //dump current packet
     dump_packet(dump_file->fp, pip, plast);
 
-    if (timestamp.tv_sec == -1) {
-        fprintf(fp_log, "dump start: %s\n", Timestamp());
-    }
-    timestamp = current_time;
+    //if (timestamp.tv_sec == -1) {
+    //    fprintf(fp_log, "dump start: %s\n", Timestamp());
+    //}
+    last_dump_tm = current_time;
+    if (first_dump_tm.tv_sec == -1) 
+        first_dump_tm = current_time;
 }
 
 void dump_flow_stat (struct ip *pip, 
@@ -311,17 +312,23 @@ void dump_flush(Bool trace_completed) {
     }
 
     //write messages to log file
-    if (timestamp.tv_sec != -1 && fp_log) {
+    if (fp_log) {
+        if (first_dump_tm.tv_sec == -1)
+            fprintf(fp_log, "no packets to dump\n");
+        else
+            fprintf(fp_log, 
+                "dump start: %s"
+                "dump stop:  %s",
+                ctime(&first_dump_tm.tv_sec),
+                ctime(&last_dump_tm.tv_sec));
         fprintf(fp_log, 
-            "dump stop:  %s"
             "---\n"
             "enabled protocols:\n"
-            "---\n", ctime(&timestamp.tv_sec));
+            "---\n"); 
         for (i = 0; i <  DUMP_PROTOS; i++) {
             if (proto2dump[i].enabled)
                 fprintf(fp_log, "%s\n", proto2dump[i].protoname);
         }
-        fprintf(fp_log, "---\n");
         fclose(fp_log);
         fp_log = NULL;
     }
@@ -339,6 +346,10 @@ void dump_create_outdir(char * basedir) {
         dir_counter = 0;
     }
     log_basedir = strdup(basedir);
+    first_dump_tm.tv_sec = -1;
+    first_dump_tm.tv_usec = -1;
+    last_dump_tm.tv_sec = -1;
+    last_dump_tm.tv_usec = -1;
 
     tot = strlen(basedir) + strlen(DUMP_DIR_BASENAME) + 4;
     if (tot > (sizeof(outdir) / sizeof(char))) {

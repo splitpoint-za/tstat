@@ -2585,6 +2585,7 @@ stat_dumping_old_style ()
   /* In case we are processing live streams, create a new dir every
      DIRS steps */
   if (step >= DIRS && is_stdin)
+  //if (step >= DIRS)
     {
       create_new_outfiles (NULL);
       step = 0;
