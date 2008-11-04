@@ -151,7 +151,10 @@ void ini_read(char *fname) {
             word = strtok(NULL, " \t\n");
         }
 
-        if (curr_section->handler != NULL && param_name != NULL) {
+        if (curr_section && 
+            curr_section->handler != NULL && 
+            param_name != NULL) 
+        {
             if (param_value == INI_PARAM_VALUE_DEFAULT)
                 param_value = 1;
             curr_section->handler(param_name, param_value);

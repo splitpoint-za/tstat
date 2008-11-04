@@ -150,7 +150,8 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
         }
 
         if (debug)
-            fprintf(fp_stderr, "dump engine: enabling dump for %s\n", 
+            fprintf(fp_stderr, "dump engine: %s dump for %s\n", 
+                (param_value == 1) ? "enabling" : "disabling",
                 proto2dump[pos].protoname);
         proto2dump[pos].enabled = (param_value == 0) ? FALSE : TRUE;
         dump_engine |= param_value;
