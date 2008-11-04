@@ -86,9 +86,7 @@ Increase this number on high speed network will help ...*/
    and HISTOGRAM are updated.
    
 */
-//#define MAX_TIME_STEP 300000000.0
-#define MAX_TIME_STEP 60000000
-
+#define MAX_TIME_STEP 300000000.0
 /* 300000000 = 5 min */
 /* 900000000 = 15 min */
 /* #define MAX_TIME_STEP 900000000.0 */
@@ -96,8 +94,7 @@ Increase this number on high speed network will help ...*/
 /* A new directory tree will be created every DIRS MAX_TIME_STEPs */
 /*  4 = 1 hour if MAX_TIME_STEP = 15m */
 /* 12 = 1 hour if MAX_TIME_STEP =  5m */
-//#define DIRS 12
-#define DIRS 1
+#define DIRS 12
 
 #ifndef MAXFLOAT
 #define MAXFLOAT 3.40282347e+38F
