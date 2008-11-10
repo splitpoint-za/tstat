@@ -1359,24 +1359,32 @@ using tstat_report data.
 
 =head1 Author Informations
 
+=over 4
+
+=item Active authors:
 
 
-	Marco Mellia, Assistant Professor.
-	<marco.mellia@polito.it>
+    Marco Mellia <mellia@mail.tlc.polito.it>
+    Dario Rossi  <dario.rossi@enst.fr> 
+
+=item Other active authors:
 
 
+    Maurizio Munafo'    <munafo@polito.it>
+    Alessandro Finamore <finamore@mail.tlc.polito.it>
 
-	Dario Rossi, PostDoc Researcher.
-	<dario.rossi@polito.it>
-
-
-	Dario Bonfiglio, Researcher.
-	<bonfiglio@serverlipar.polito.it>
+=item Other authors:
 
 
-	Telecommunication Networks Group (TNG)
-	DELEN, Politecnico di Torino
-	http://www.tlc-networks.polito.it
+    Andrea Carpani, Luca Muscariello, Dario Bonfiglio, Robert Birke
+
+=item Other links:
+
+    Telecommunication Networks Group (TNG)
+    DELEN, Politecnico di Torino
+    http://www.tlc-networks.polito.it
+
+=back
 
 
 =head1 Acknowledgment
