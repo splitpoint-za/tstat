@@ -8,12 +8,8 @@
  * the Free Software Foun on; either version 2 of the License, or
  * (at your option) any later version.
  *
- * Author:	Marco Mellia, Andrea Carpani, Luca Muscariello, Dario Rossi
- * 		Telecomunication Networks Group
- * 		Politecnico di Torino
- * 		Torino, Italy
- *              http://www.tlc-networks.polito.it/index.html
- *		mellia@mail.tlc.polito.it, rossi@mail.tlc.polito.it
+ * For bug report and other information please visit Tstat site:
+ * http://tstat.polito.it
  *
  * Tstat is deeply based on TCPTRACE. The authors would like to thank
  * Shawn Ostermann for the development of TCPTRACE.

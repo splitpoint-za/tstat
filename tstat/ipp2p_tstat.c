@@ -8,12 +8,8 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  *
- * Author:	Maurizio M. Munafo', Marco Mellia 
- * 		Telecomunication Networks Group
- * 		Politecnico di Torino
- * 		Torino, Italy
- *              http://www.tlc-networks.polito.it/index.html
- *		mellia@mail.tlc.polito.it, munafo@tlc.polito.it
+ * For bug report and other information please visit Tstat site:
+ * http://tstat.polito.it
  *
  * This code is derived from IPP2P, an  extension to iptables to identify P2P
  * traffic, written by Eicke Friedrich and Klaus Degner <ipp2p@ipp2p.org>
