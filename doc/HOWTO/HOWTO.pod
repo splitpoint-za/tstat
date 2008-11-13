@@ -178,8 +178,8 @@ The building of Libtstat is separated from the building of tstat so C<libtstat/M
 file define the set of option specific for the Libtstat, instead C<tstat/Makefile.conf>
 is specific for tstat.
 
-In the directory C<tstat-conf> are placed some examples of configuration files 
-needed by Tstat, for example the set of local addresses (-N option), 
+In the directory C<tstat-conf> there are some examples of configuration files 
+needed by Tstat; for example the set of local addresses (-N option), 
 the configuration of the histograms (-H), rrd tool (-R), runtime (-T) and 
 bayesian framework (-B).
 
@@ -1141,105 +1141,131 @@ couple.
 
 =head1 Bayesian Classification of Skype Traffic
 
+The Bayesian framework is configured through a directory (C<-B> command line option)
+containing several configuration files. A example of configuration
+is provided under the C<tstat-conf> directory so please refer to this directory
+reading this explanation. In the configuration directory 
+two files have to be placed, named C<pktsize.conf> and C<avgipg.conf> which define
+the parameters used by the classification framework to describe the
+B<packet size> and B<average inter-packet gap>.
 
-This section deals with the task of configuring and tuning the 
-Bayesian framework integrated within Tstat.
+Both files have the same format specified in the example below:
 
-=head2 A Simple Example
+       #   ____________________________  
+       #  /                   \ 
+       # /    BayesConf      __________/ 
+       # \__________________/.:nonsns:.  
+       #                   
+       #===============================================
+       # feature name
+       #-----------------------------------------------
+       # Known Skype features:
+       #       PKTSIZE 
+       #       AVGIPG
+       #
+       FEATURE    AVGIPG
+       #
+       #===============================================
+       # default flags 
+       #-----------------------------------------------
+       # USE_LOG        1
+       # NORMALIZE      1
+       # AUTO_OTHER     0
+       #
+       WINDOW_SIZE      1
+       CLASS_LEN        250
+       MIN_THRESHOLD    1e-25
+       AVG_THRESHOLD   -3.5
+       WIN_THRESHOLD   -3
+       #
+       #===============================================
+       # class definition
+       #-----------------------------------------------
+       # syntax
+       #     DISCRETE  class P{class}
+       #     GAUSSIAN  class P{class} mu sigma
+       #     GAUSSIAN+ class P{class} N (w1,m1,s1) .. (wN,mN,sN)
+       #
+       # note: P{class} may be "="
+       #
+       GAUSSIAN mode1 = 10 2
+       GAUSSIAN mode2 = 20 2
+       GAUSSIAN mode3 = 30 2
+       GAUSSIAN mode4 = 40 2
+       GAUSSIAN mode5 = 50 2
+       GAUSSIAN mode6 = 60 2
+       
+
+The keyword C<FEATURE> is used to specify which type of statistic the configuration
+file is refered to. In the example above we are dealing with the average inter-packet gap,
+and specifing C<PKTSIZE> we will describe packet size feature.
+
+Each feature then has a set of flags and other options values that can be 
+used to change the configuration of the NBC engine. Default parameter are strongly suggested, but in case
+you want to experiment with different combinations, you can try to change them.
+
+=over 4
+
+=item C<USE_LOG>:
+
+If set to 1, the function log10() is applied to the probability values 
+instead to use the actual probability value; this avoids eventual underflow errors when dealing 
+with very low probabilities.
 
 
-Assuming that you have configured the Bayesian classifier (a proper configuration sample 
-for the Bayesian detection of Skype traffic is provided in the C<skype> directory), 
-traffic identification can be carried on either on-line or off-line: in both cases, 
-a per-flow logfile will be created as output.
+=item C<NORMALIZE>:
 
-	./tstat -l -B skype -N net.conf
+If set to 1, the beliefs computed are re-normalized in the range 0:1;
+this option is valid only if USE_LOG is disabled (by default is enabled);
 
-	./tstat -B skype -N net.conf tracefile.dump
+=item C<WINDOW_SIZE>:
 
-=head2 Framework Configuration
+The number of packets after which recompute beliefs (by default after each packet);
 
-The Bayesian framework is configured through a directory name, 
-containing several configuration files. A default configuration
-is provided under the C<tstat-conf> directory: 
-there are two main files that allow to finely tune the framework, 
-as described in details below.
-These files specify the parameter settings for different 
-Naive Bayes Classifiers (NBC), corresponding to different features 
-of the flows. As features, the framework consider 
-the B<packet size> (C<pktsize.conf>) and B<average inter-packet gap>
-(C<avgipg.conf>).
+=item C<CLASS_LEN>:
 
-Each of these files has the format specified in the example below, where lines 
-starting with a dash sign C<#> are interpreted as comments.
+The maximum value assumed by the feature and is used to compute class probability
+distribution functions (by default is 0);
 
-	   #   ____________________________  
-	   #  /				   \ 
-	   # /    BayesConf      __________/ 
-	   # \__________________/.:nonsns:.  
-	   # 				  
-	   #===============================================
-	   # feature name
-	   #-----------------------------------------------
-	   # Known Skype features:
-	   # 	PKTSIZE 
-	   # 	MAXDELPKTSIZE  
-	   # 	AVGIPG  
-	   # 	PKTRATE  
-	   # 	BITRATE  
-	   #
-	   FEATURE	AVGIPG
-	   #
-	   #===============================================
-	   # default flags 
-	   #-----------------------------------------------
-	   # USE_LOG        1
-	   # NORMALIZE      1
-	   # AUTO_OTHER     0
-	   #
-	   WINDOW_SIZE 	    1
-	   CLASS_LEN 	    250
-	   MIN_THRESHOLD    1e-25
-	   AVG_THRESHOLD   -3.5
-	   WIN_THRESHOLD   -3
-	   #
-	   #===============================================
-	   # class definition
-	   #-----------------------------------------------
-	   # syntax
-	   # 	DISCRETE  class P{class}
-	   # 	GAUSSIAN  class P{class} mu sigma
-	   # 	GAUSSIAN+ class P{class} N (w1,m1,s1) .. (wN,mN,sN)
-	   #
-	   # note: P{class} may be "="
-	   #
-	   GAUSSIAN mode1 = 10 2
-	   GAUSSIAN mode2 = 20 2
-	   GAUSSIAN mode3 = 30 2
-	   GAUSSIAN mode4 = 40 2
-	   GAUSSIAN mode5 = 50 2
-	   GAUSSIAN mode6 = 60 2
-	   
+=item C<MIN_THRESHOLD>:
 
-First of all, the feature name is defined, then some optional parameters are set
-(such as the window size, the optional use of logarithms to avoid underflows in 
-Bayesian belief computation, the use of normalization, etc.).
+A positive small value that replace the value 0 in the computation of beliefs
+to avoid underflows because of logaritm function (by default 1e-33);
 
-Minimum threshold avoids underflows in Bayesian belief computation,
-the max mean belief is compared against the average threshold to decide
-whether the flow can be considered skype or non-skype and the window
-threshold is used to count the number of individual samples (rather than
+=item C<AVG_THRESHOLD>:
+
+The static threshold used to compare the maximum computed belief and take the classification.
+
+=item C<WIN_THRESHOLD>:
+
+A static threshold is used to count the number of individual samples (rather than
 their mean) that passes a more restrictive test (indeed the window threshold
 is greater than the average threshold).
 
+=back
 
-Finally, different classes for the given feature are defined, which correspond to different
-``modes''. Such classes may be represented as gaussian (or superposition of gaussian) distributions,
-centered over a given mean and with a  given standard deviation, or may be arbitrarily specified (discrete 
-distribution). The class probability is equally shared among the classes by the keyword 
-C<=> as in the example above. As we will see, changing the order of the class definition
-affects the meaning of some of the logfile fields values.
+Important configuration parameters are the ``modes'' which must be carefully defined. Modes are 
+the set of p.d.f. that describe the expected distribution of the feature.
 
+Modes may be described as a C<DISCRETE> function, that is a generic distributions, 
+or as a C<GAUSSIAN> function, that is a gaussian (or a superposition of a gaussian) distribution. 
+
+Each mode then is associated with a name and a probability which is used as a weight.
+If C<'='> is used instead of a weight specific values, all weight are assumed to be uniform.
+
+The special type C<GAUSSIAN+> may be used to define a mode composed of C<N> 
+different gaussian distributions. Each function is defined by mean and sandard deviaton sigma
+and the weight of the mixture have to be specified.
+
+Assuming that you have configured both average ipg and packet size feature 
+in a directory named C<bayes_conf_dir> the classification engine can be 
+enabled simply specifing the C<-B> command line option:
+
+    # using live capture mode
+	./tstat -l -B <bayes_conf_dir> -N net.conf
+
+    # using a packet dump trace
+	./tstat -B <bayes_conf_dir> -N net.conf tracefile.dump
 
 
 =head1 Libtstat library
