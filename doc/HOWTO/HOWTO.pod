@@ -228,7 +228,6 @@ Second, there are the few options that are described in this section.
 Tstat primary usage is as a command-line tool; the synopsis of 
 the command is the following:
 
-
     Usage:
         tstat [-htuvwpgSL] [-d[-d]]
               [-s dir]
@@ -258,13 +257,17 @@ the command is the following:
         -N file: specify the file name which contains the
                  description of the internal networks.
                  This file must contain the subnets that will be
-                 considered as 'internal' during the analysis
-                 Each subnet must be specified using network IP address
-                 on the first line and NETMASK on the next line:
-                 130.192.0.0
-                 255.255.0.0
-                 193.204.134.0
-                 255.255.255.0
+                 considered as 'internal' during the analysis.
+                 Each subnet can be specified in one of the following types:
+                 - <Network IP/NetMask> on a single line 
+                     130.192.0.0/255.255.0.0
+                 - <Network IP/MaskLen> on a single line 
+                     130.192.0.0/16
+                 - Pairs of lines with <Network IP> and <NetMask>
+                     130.192.0.0
+                     255.255.0.0
+                 If the option is not specified all networks are
+                 considered internal
 
         -H ?: print internal histograms names and definitions
         -H file: Read histogram configuration from file
@@ -329,18 +332,64 @@ users will enjoy the ability of on-line processing of traffic
 captured with DAG cards.
 
 As a minimal configuration, you must describe your network to Tstat. Indeed, in
-order to distinguish forward and backward paths, Tstat needs  to know which host
-IP addresses can be considered as ``internal'' to the monitored network. In our
-case, Politecnico di Torino internal addresses are C<130.192.0.0/16> and
-C<193.204.134.0/24>, so the network description C<net.conf> looks as following:
+order to distinguish forward and backward paths, Tstat needs to know which host
+IP addresses can be considered as ``internal'' to the monitored network. 
+There are three different format to specify the internal subnets and
+if for example we use Politecnico di Torino subnets, which are C<130.192.0.0/16> and
+C<193.204.134.0/24>, we can choose to use one of the following formats:
+
+=over 4
 
 
-         bash> cat net.conf
-         130.192.0.0	<-- network
-         255.255.0.0	<-- netmask
-         193.204.134.0	
-         255.255.255.0	
+=item <Network IP/NetMask> on a single line 
 
+    130.192.0.0/255.255.0.0
+    192.204.134.0/255.255.0.0
+                             
+
+=item <Network IP/MaskLen> on a single line 
+
+    130.192.0.0/16
+    192.204.134.0/16
+                                                         
+
+=item (only for backward compatibility) pairs of lines with <Network IP> and <NetMask>
+
+    130.192.0.0
+    255.255.0.0
+    192.204.134.0
+    255.255.0.0
+
+
+=back
+
+
+Note that formats can be mixed in the configuration file and comment lines
+can be specified usin C<'#'> so using following
+configuration is still correct
+
+    # this is a comment
+    130.192.0.0/24
+    192.204.134.0/255.255.0.0
+    192.168.0.0
+    255.255.0.0
+
+In the directory C<tstat-conf> are placed the two files C<net.all> and
+C<net.private> 
+
+    >cat tstat-conf/net.all
+    # Mask to indicate that all IP subnets are supposed to be internal
+    # The same result is obtained omitting the -N option
+    0.0.0.0/0.0.0.0
+
+    >cat tstat-conf/net.private
+    # Example mask to consider as internal all the subnets in the 
+    # 198.168. private addresses range
+    192.168.0.0/16
+
+
+that can be usefull for generic elaborations. In any case, if the C<-N> option
+is not specified all networks are considered internal.
 
 We can now run Tstat to capture the traffic flowing across 
 our network, with the following command, which must be run as C<root> (as you

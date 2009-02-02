@@ -37,11 +37,12 @@ static struct ini_section ini_sections[] = {
 #define BUF_SIZE 50
 #define INI_PARAM_VALUE_DEFAULT -1000
 
-char * readline(FILE *fp) {
+char * readline(FILE *fp, int skip_comment, int skip_void_lines) {
     static char *buf = NULL;
     static int buf_size = 0;
     static int next_pos = 0;
     char *tmp, curr_c;
+    int comment_started = 0;
 
     if (buf == NULL) {
         buf = malloc(BUF_SIZE * sizeof(char));
@@ -49,6 +50,8 @@ char * readline(FILE *fp) {
         next_pos = 0;
     }
 
+    buf[0] = '\0';
+    next_pos = 0;
     while (1) {
         if (next_pos + 1 == buf_size) {
             buf_size += BUF_SIZE;
@@ -64,13 +67,25 @@ char * readline(FILE *fp) {
             break;
         }
 
-        buf[next_pos] = curr_c;
-        buf[next_pos + 1] = '\0';
-        next_pos++;
-        if (curr_c == '\n')
-            break;
+        comment_started |= skip_comment && (curr_c == '#');
+        if (!comment_started || curr_c == '\n') {
+            buf[next_pos] = curr_c;
+            buf[next_pos + 1] = '\0';
+            next_pos++;
+        }
+
+        if (curr_c == '\n') {
+            if (buf[0] == '\n' && skip_void_lines) {
+                buf[0] = '\0';
+                next_pos = 0;
+                comment_started = 0;
+                continue;
+            }
+            else
+                break;
+       }
     }
-    next_pos = 0;
+
     if (buf[0] == '\0')
         return NULL;
     return buf;
@@ -92,7 +107,7 @@ void ini_read(char *fname) {
 
     curr_section = NULL;
     while (1) {
-        line = readline(fp);
+        line = readline(fp, 0, 0);
         if (line == NULL)
             break;
 

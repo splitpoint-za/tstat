@@ -19,4 +19,5 @@
 #define INIREADER_H
 
 void ini_read(char *fname);
+char * readline(FILE *fp, int skip_comment, int skip_void_lines);
 #endif

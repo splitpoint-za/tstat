@@ -313,13 +313,17 @@ Help (void)
     "\t-N file: specify the file name which contains the\n"
     "\t         description of the internal networks.\n"
     "\t         This file must contain the subnets that will be\n"
-    "\t         considered as 'internal' during the analysis\n"
-    "\t         Each subnet must be specified using network IP address\n"
-    "\t         on the first line and NETMASK on the next line:\n"
-    "\t         130.192.0.0\n"
-    "\t         255.255.0.0\n"
-    "\t         193.204.134.0\n"
-    "\t         255.255.255.0\n"
+    "\t         considered as 'internal' during the analysis.\n"
+    "\t         Each subnet can be specified in one of the following types:\n"
+    "\t         - <Network IP/NetMask> on a single line \n"
+    "\t             130.192.0.0/255.255.0.0\n"
+    "\t         - <Network IP/MaskLen> on a single line \n"
+    "\t             130.192.0.0/16\n"
+    "\t         - Pairs of lines with <Network IP> and <NetMask>\n"
+    "\t             130.192.0.0\n"
+    "\t             255.255.0.0\n"
+    "\t         If the option is not specified all networks are\n"
+    "\t         considered internal\n"
     "\n"
 	"\t-H ?: print internal histograms names and definitions\n"
     "\t-H file: Read histogram configuration from file\n"
@@ -1959,6 +1963,23 @@ CheckArguments (int *pargc, char *argv[])
         BadArg (NULL, "must specify at least one file name\n");
     }
     */
+    if (net_conf == FALSE) {
+	    internal_net_mask[0] = 0;
+        inet_aton ("0.0.0.0", &(internal_net_list[0]));
+	    inet_aton ("0.0.0.0", &(internal_net_mask2[0]));
+        tot_internal_nets = 1;
+        if (debug)
+        {
+            fprintf (fp_stdout, "Adding: %s as internal net ",
+                    inet_ntoa (internal_net_list[0]));
+            fprintf (fp_stdout, "with mask %s (%u)\n", 
+                    inet_ntoa (internal_net_mask2[0]),
+                    internal_net_mask[0]);
+        }
+        fprintf(fp_stdout, 
+            "Warning: -N option not specified.\n"
+            "         All subnets are assumed to be internal\n");
+    }
 #ifdef HAVE_RRDTOOL
     /*-----------------------------------------------------------*/
     /* RRDtools                                                */
@@ -2073,7 +2094,7 @@ ParseArgs (int *pargc, char *argv[])
 	    {
 	      fprintf (fp_stderr, 
             "Error while loading configuration\n"
-	        "Could not open %s\n", internal_net_file);
+	        "Wrong or missing %s\n", internal_net_file);
 	      exit (1);
 	    }
 	  net_conf = TRUE;
@@ -2342,49 +2363,124 @@ ParseArgs (int *pargc, char *argv[])
 }
 
 
-
 int
-LoadInternalNets (char *file)
-{
-  int i;
-  FILE *fp;
-  char c[50];
+LoadInternalNets (char *file) {
+    FILE *fp;
+    char *line, *ip_string, *mask_string, *err;
+    int i, len;
+    long int mask_bits;
+    unsigned int full_local_mask;
+    char s[16];
+//    char *slash_p, *tmp;
 
-  fp = fopen (file, "r");
-  if (fp == NULL)
-    {
-      return 0;
+    fp = fopen(file, "r");
+    if (!fp) {
+        fprintf(fp_stderr, "Unable to open file '%s'\n", file);
+        return 0;
     }
 
-  i = 0;
+    tot_internal_nets = 0;
+    i = 0;
+    while (1) {
+        line = readline(fp, 1, 1);
+        if (!line)
+            break;
 
-  while (fgets (c, 20, fp) != NULL)
-    {
-      inet_aton (c, &(internal_net_list[i]));
-      if (fgets (c, 20, fp) != NULL)
-	{
-	  inet_aton (c, &(internal_net_mask2[i]));
-	  internal_net_mask[i] = inet_addr (c);
-	}
-      else
-	{
-	  fprintf (fp_stderr, "Cannot parse mask for net %d\n", (i + 1));
-	  return 0;
-	}
-      if (debug)
-	{
-	  fprintf (fp_stdout, "Adding: %s as internal net ",
-		  inet_ntoa (internal_net_list[i]));
-	  fprintf (fp_stdout, "with mask %s (%d)\n", inet_ntoa (internal_net_mask2[i]),
-		  internal_net_mask[i]);
-	}
-      i++;
+        len = strlen(line);
+        if (line[len - 1] == '\n')
+            line[len - 1] = '\0';
+        ip_string = line;
+
+        if (i == MAX_INTERNAL_HOSTS) {
+            fprintf (fp_stderr, "Maximum number of internal hosts/networks (%d) exceeded\n", MAX_INTERNAL_HOSTS);
+            return 0;
+        }
+
+        //single line format
+        if (strchr(ip_string,'/'))
+        {
+            ip_string = strtok(ip_string,"/");
+            mask_string = strtok(NULL,"/");
+
+            if (!mask_string) {
+                fprintf(fp_stderr, "Missing ip or network mask in net config n.%d\n", (i+1));
+                return 0;
+            }
+            if (!inet_aton (ip_string, &(internal_net_list[i]))) {
+                fprintf(fp_stderr, "Invalid ip address in net config n.%d\n", (i+1));
+                return 0;
+            }
+
+            //network mask as a single number
+            if (!strchr(mask_string,'.'))
+            { 
+                err = NULL;
+                mask_bits = strtol(mask_string, &err, 10);
+                if (*err || mask_bits < 1 || mask_bits > 32) {
+                    fprintf(fp_stderr, "Invalid network mask in net config n.%d\n", (i+1));
+                    return 0;
+                }
+
+                if (internal_net_list[i].s_addr == 0)
+                   full_local_mask = 0;
+                else
+                   full_local_mask = 0xffffffff << (32 - mask_bits);
+
+                sprintf(s,"%d.%d.%d.%d",
+                    full_local_mask >> 24,
+                    (full_local_mask >> 16)  & 0x00ff,
+                    (full_local_mask >> 8 ) & 0x0000ff,
+                    full_local_mask & 0xff);
+                inet_aton (s, &(internal_net_mask2[i]));
+                internal_net_mask[i] = inet_addr(s);
+            }
+            //mask in dotted format
+            else
+            {
+                if (!inet_aton (mask_string, &(internal_net_mask2[0]))) {
+                    fprintf(fp_stderr, "Invalid network mask in net config n.%d\n", (i+1));
+                    return 0;
+                }
+                internal_net_mask[i] = inet_addr (mask_string);
+            }
+        }
+        //old format
+        else
+        {
+            if (!inet_aton (ip_string, &(internal_net_list[i]))) {
+                fprintf(fp_stderr, "Invalid ip address in net config n.%d\n", (i+1));
+                return 0;
+            }
+
+            mask_string = readline(fp, 1, 1);
+            if (!mask_string){
+                fprintf(fp_stderr, "Missing network mask in net config n.%d\n", (i+1));
+                return 0;
+            }
+
+            len = strlen(mask_string);
+            if (mask_string[len - 1] == '\n')
+                mask_string[len - 1] = '\0';
+            if (!inet_aton (mask_string, &(internal_net_mask2[i]))) {
+                fprintf(fp_stderr, "Invalid network mask in net config n.%d\n", (i+1));
+                return 0;
+            }
+            internal_net_mask[i] = inet_addr (mask_string);
+        }
+        if (debug)
+        {
+            fprintf (fp_stdout, "Adding: %s as internal net ",
+                    inet_ntoa (internal_net_list[i]));
+            fprintf (fp_stdout, "with mask %s (%u)\n", 
+                    inet_ntoa (internal_net_mask2[i]),
+                    internal_net_mask[i]);
+        }
+
+        tot_internal_nets++;
+        i++;
     }
-  tot_internal_nets = i;
-  return 1;
+    return 1;
 }
-
-
 
 /* the memcpy() function that gcc likes to stuff into the program has alignment
    problems, so here's MY version.  It's only used for small stuff, so the
