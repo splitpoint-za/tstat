@@ -132,9 +132,20 @@ udp_search_edk (unsigned char *haystack, const int packet_len, int payload_len)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 62);
 	    break;
 	  case 0x11:   /* KAD2 HELLO_REQ */ /* packet_len 8+22?? */
-	    if (packet_len == 30)
-	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 62);
-	    break;
+	    if (packet_len == 30 || 
+	        ( ( packet_len>30 && payload_len > 30) && 
+		    t[21]!=0 && (t[22]>=0x01 && t[22]<0x0B)))
+		    /*
+		       Either there is no Tag (size==8+2+20) or
+		       there are variable size tags, so t[21] (tag count)
+		       is not zero and t[22] is a valid tag type (0x01-0x0B)
+		    */
+	     { 
+	       return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 62);
+	     }
+//	    if (packet_len == 30)
+//	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 62);
+//	    break;
 
 	    /* e4 18 .. 00 | size == 35 ? */
 	  case 0x18:   /* KAD HELLO_RES */
@@ -164,6 +175,12 @@ udp_search_edk (unsigned char *haystack, const int packet_len, int payload_len)
 	    break;
 	  case 0x21:   /* KAD2 REQ *//* packet_len 8+2+33 */
 	    if (packet_len == 43)
+             {
+	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 60);
+	      }
+	    break;
+	  case 0x22:   /* KAD2 HELLO_RES_ACK *//* packet_len 8+2+ 16+tags */
+	    if (packet_len >=27)
              {
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 60);
 	      }
@@ -232,18 +249,27 @@ udp_search_edk (unsigned char *haystack, const int packet_len, int payload_len)
 	    if (packet_len == 27)
 	    return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
 
+	  case 0x4C:   /* KAD2 PUBLISH_RES_ACK */ /* packet_len=8+2 */
+	    if (packet_len == 10)
+	    return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
+
 	  case 0x50:  /* KAD FIREWALLED_REQ */ /* packet_len=8+2 + 2 */
 	    if (packet_len == 12)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 68);
 	    break;
 
-	  case 0x51:  /* KAD FINDBUDDY_REQ */ /* packet_len=8+2 + 16+16+2 */
-	    if (packet_len == 44)
+	  case 0x51:  /* KAD FINDBUDDY_REQ */ /* packet_len=8+2 + 16+16+2 +1? */
+	    if (packet_len == 44 || packet_len == 45)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
 	    break;
 
 	  case 0x52:  /* KAD_CALLBACK_REQ */ /* packet_len=8+2 + 16+16+2 */
 	    if (packet_len == 44)
+	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 64);
+	    break;
+	    
+	  case 0x53:  /* KAD_FIREWALLED2_REQ */ /* packet_len=8+2 + 2+16+1 */
+	    if (packet_len == 29)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 64);
 	    break;
 	    
@@ -258,13 +284,18 @@ udp_search_edk (unsigned char *haystack, const int packet_len, int payload_len)
 	    break;
 
 	  case 0x5A:  /* KAD FINDBUDDY_RES */ /* packet_len=8+2 + 16+16+2 */
-	    if (packet_len == 44)
+	    if (packet_len == 44 || packet_len == 45)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
 	    break;
 	    
 	  case 0x60: /* KAD2 PING */  /* packet_len=8+2 + 0 */
 	  case 0x61: /* KAD2 PONG */  /* packet_len=8+2 + 0 */
 	    if (packet_len == 10)
+	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
+	    break;
+
+	  case 0x62:  /* KAD2 FIREWALLUDP */ /* packet_len=8+2 + 1 +2 */
+	    if (packet_len == 13)
 	      return (((t[0]==0xa4?IPP2P_KADU:IPP2P_KAD) * 100) + 74);
 	    break;
 
@@ -295,6 +326,11 @@ udp_search_edk (unsigned char *haystack, const int packet_len, int payload_len)
              }
 	   else
 	      return 0;
+	 case 0x95: /* DirectCallbackReq 8+2 + 2+16+1 */
+	   if (packet_len == 29)
+	     {  
+	      return ((IPP2P_EDK * 100) + 70); /* eMule extended UDP command*/
+             }
 	 default:
 	   return 0;
 	}
@@ -1251,7 +1287,7 @@ search_dc (const unsigned char *payload, const int plen, int payload_len)
 
 /*intensive but slower check for all direct connect packets*/
 int
-search_all_dc (const unsigned char *payload, const int plen, int payload_len)
+_search_all_dc (const unsigned char *payload, const int plen, int payload_len)
 {
   if ((payload_len == plen) && payload[0] == 0x24
       && payload[plen - 1] == 0x7c)
@@ -1263,6 +1299,36 @@ search_all_dc (const unsigned char *payload, const int plen, int payload_len)
       /* Client-Client-Protocol, some are already recognized by client-hub (like lock) */
       if (memcmp (t, "MyNick ", 7) == 0)
 	return ((IPP2P_DC * 100) + 38);
+    }
+  return 0;
+}
+
+/*intensive but slower check for all direct connect packets*/
+/* - MMM - Modified to support looser matches over partial packets */
+int
+search_all_dc (const unsigned char *payload, const int plen, int payload_len)
+{
+  /* All commands start with '$' */
+  if (payload[0] != 0x24)
+    return 0;
+
+  /* All commands end with '|' - If we have a complete packet, we check that */
+ 
+  if ((payload_len == plen) && payload[plen - 1] != 0x7c)
+    return 0;
+
+  if (payload_len <= plen)
+    {
+      const unsigned char *t = &payload[1];
+      /* Client-Hub-Protocol */
+      if ( payload_len>=6 && memcmp (t, "Lock ", 5) == 0)
+	 return ((IPP2P_DC * 100) + 1);
+      /* Client-Client-Protocol, some are already recognized by client-hub (like lock) */
+      if ( payload_len>=8 && memcmp (t, "MyNick ", 7) == 0)
+	return ((IPP2P_DC * 100) + 38);
+      /* Client-Client-Protocol, Upload command */
+      if ( payload_len>=6 && memcmp (t, "Send|", 5) == 0)
+	return (IPP2P_DC * 100);
     }
   return 0;
 }

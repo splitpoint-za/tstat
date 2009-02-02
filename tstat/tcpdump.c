@@ -104,6 +104,9 @@ find_ip_eth (char *buf)
     case ETHERTYPE_8021Q:
       offset = 18;
       break;
+    case ETHERTYPE_MPLS: /* it's IP over MPLS over Eth - skip 4 bytes of MPLS label */
+      offset = 18;
+      break;
 
     default:			/* well, this is not an IP packet */
       offset = -1;
@@ -199,6 +202,7 @@ callback (char *user, struct pcap_pkthdr *phdr, char *buf)
                     callback_plast = ip_buf + iplen - 1;
                     break;
                 case IEEE8021Q_SIZE:	/* VLAN encapsulation */
+                //case MPLS_SIZE:			/* MPLS encapsulation - same len*/
                     /* we use a fake ether type here */
                     eth_header.ether_type = htons (ETHERTYPE_IP);
                     memcpy ((char *) ip_buf, buf + offset, iplen);
@@ -581,7 +585,7 @@ PcapSavePacket (char *filename, struct ip *pip, void *plast)
       /* try to open the file */
       if ((f_savefile = Mfopen (filename, "w")) == NULL)
 	{
-	  fprintf (fp_stderr, "%s: %s\n", strerror(errno));
+	  fprintf (fp_stderr, "%s: %s\n", filename, strerror(errno));
 	  exit (-1);
 	}
 

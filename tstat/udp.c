@@ -18,6 +18,7 @@
 
 
 #include "tstat.h"
+#include "tcpL7.h"
 
 
 /* Dichiarazione dei mutex per gestione dei thread */
@@ -52,23 +53,26 @@ extern unsigned long int f_UDP_count;
 
 #ifdef CHECK_UDP_DUP
 Bool
-dup_udp_check (struct ip *pip, ucb * thisdir, int dir, udp_pair * pup_save)
+dup_udp_check (struct ip *pip, struct udphdr *pudp, ucb * thisdir)
 {
 //  static int tot;
   double delta_t = elapsed (thisdir->last_pkt_time, current_time);
   if (thisdir->last_ip_id == pip->ip_id &&
+      thisdir->last_checksum == ntohs(pudp->uh_sum) && 
       delta_t < MIN_DELTA_T_UDP_DUP_PKT && thisdir->last_len == pip->ip_len)
     {
 //       fprintf (fp_stdout, "dup udp %d , id = %u ",tot++, pip->ip_id);
-//       fprintf (fp_stdout, "TTL: %d ID: %d Delta_t: %g\n", 
-//          pip->ip_ttl,pip->ip_id,delta_t);
+//       fprintf (fp_stdout, "TTL: %d ID: %d Checksum: %d Delta_t: %g\n", 
+//          pip->ip_ttl,pip->ip_id,ntohs(pudp->uh_sum),delta_t);
       thisdir->last_ip_id = pip->ip_id;
       thisdir->last_len = pip->ip_len;
+      thisdir->last_checksum = ntohs(pudp->uh_sum); 
       return TRUE;
     }
 //    fprintf (fp_stdout, "NOT dup udp %d\n",tot);
   thisdir->last_ip_id = pip->ip_id;
   thisdir->last_len = pip->ip_len;
+  thisdir->last_checksum = ntohs(pudp->uh_sum); 
   return FALSE;
 }
 #endif
@@ -127,6 +131,10 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 
   pup->c2s.type = UDP_UNKNOWN;
   pup->s2c.type = UDP_UNKNOWN;
+  
+  pup->c2s.kad_state = OUDP_UNKNOWN;
+  pup->s2c.kad_state = OUDP_UNKNOWN;
+
   return (utp[num_udp_pairs]);
 }
 
@@ -263,8 +271,107 @@ a new one */
 }
 
 
+void check_udp_obfuscate(ucb *thisdir, ucb *otherdir, u_short uh_ulen)
+{
+  if (thisdir->obfuscate_state==0 && otherdir->obfuscate_state==0)
+   {
+     switch(uh_ulen)
+      {
+	case 43:
+	  thisdir->kad_state=OUDP_REQ43;
+          break;
+	case 59:
+	  thisdir->kad_state=OUDP_REQ59;
+          break;
+        case 22:
+          if (otherdir->obfuscate_last_len>=36 &&
+              otherdir->obfuscate_last_len<=70)
+            {
+	      otherdir->kad_state=OUDP_SIZEX_22;
+	      otherdir->obfuscate_state=1;
+	      thisdir->pup->kad_state = OUDP_SIZEX_22;
+            } 
+          break;
+	default:
+	  if ( uh_ulen>=52 && (uh_ulen-52)%25 == 0)
+	   {
+	     if (otherdir->kad_state==OUDP_REQ43)
+              {
+		otherdir->kad_state=OUDP_RES52_K25;
+		otherdir->obfuscate_state=1;
+		thisdir->pup->kad_state=OUDP_RES52_K25;
+	      }
+             else if (uh_ulen==52 && 
+        	      otherdir->obfuscate_last_len>=46 &&
+        	      otherdir->obfuscate_last_len<=57)
+              {
+		otherdir->kad_state=OUDP_SIZEX_52;
+		otherdir->obfuscate_state=1;
+	        thisdir->pup->kad_state = OUDP_SIZEX_52;
+              } 
+             else
+		otherdir->kad_state=OUDP_UNKNOWN;
+             break;
+           }
+	  else if ( uh_ulen>=68 && (uh_ulen-68)%25 == 0)
+	   {
+	     if (otherdir->kad_state==OUDP_REQ59)
+              {
+		otherdir->kad_state=OUDP_RES68_K25;
+		otherdir->obfuscate_state=1;
+		thisdir->pup->kad_state=OUDP_RES68_K25;
+	      }
+             else
+		otherdir->kad_state=OUDP_UNKNOWN;
+             break;
+           }
+	  else if ( uh_ulen>=46 && uh_ulen<=57 &&
+		    otherdir->obfuscate_last_len >=46 &&
+        	    otherdir->obfuscate_last_len <=57)
+           {
+	     otherdir->kad_state=OUDP_SIZE_IN_46_57;
+	     otherdir->obfuscate_state=1;
+	     thisdir->pup->kad_state=OUDP_SIZE_IN_46_57;
+	   }
+          else
+           {
+	     thisdir->kad_state=OUDP_UNKNOWN;
+	     otherdir->kad_state=OUDP_UNKNOWN;
+           }
+	  break;
+      }
 
-udp_pair *
+     thisdir->obfuscate_last_len = uh_ulen;
+
+   }
+
+  return;
+}
+
+
+void
+udp_header_stat (struct udphdr * pudp, struct ip * pip)
+{
+  if (internal_src && !internal_dst)
+    {
+      L4_bitrate.out[UDP_TYPE] += ntohs (pip->ip_len);
+      add_histo (udp_port_dst_in, (float) (pudp->uh_dport));
+    }
+  else if (!internal_src && internal_dst)
+    {
+      L4_bitrate.in[UDP_TYPE] += ntohs (pip->ip_len);
+      add_histo (udp_port_dst_out, (float) (pudp->uh_dport));
+    }
+  else if (internal_src && internal_dst)
+    {
+      L4_bitrate.loc[UDP_TYPE] += ntohs (pip->ip_len);
+      add_histo (udp_port_dst_loc, (float) (pudp->uh_dport));
+    }
+
+  return;
+}
+
+int
 udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
 {
 
@@ -286,7 +393,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
 		 "UDP packet %lu truncated too short to trace, ignored\n",
 		 pnum);
       ++ctrunc;
-      return (NULL);
+      return (FLOW_STAT_SHORT);
     }
 
 
@@ -294,22 +401,6 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
   uh_sport = ntohs (pudp->uh_sport);
   uh_dport = ntohs (pudp->uh_dport);
   uh_ulen = ntohs (pudp->uh_ulen);
-
-  if (internal_src && !internal_dst)
-    {
-      L4_bitrate.out[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_in, (float) (uh_dport));
-    }
-  else if (!internal_src && internal_dst)
-    {
-      L4_bitrate.in[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_out, (float) (uh_dport));
-    }
-  else if (internal_src && internal_dst)
-    {
-      L4_bitrate.loc[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_loc, (float) (uh_dport));
-    }
 
   /* stop at this level of analysis */
   ++udp_trace_count;
@@ -321,7 +412,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
 
   if (pup_save == NULL)
     {
-      return (NULL);
+      return (FLOW_STAT_NULL);
     }
 
   /* do time stats */
@@ -349,8 +440,8 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
 
 #ifdef CHECK_UDP_DUP
   /* check if this is a dupe udp */
-  if (dup_udp_check (pip, thisdir, dir, pup_save)) {
-    return NULL;
+  if (dup_udp_check (pip, pudp,thisdir)) {
+    return (FLOW_STAT_DUP);
   }
 #endif
 
@@ -389,10 +480,13 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     // 
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
 
+    if (pup_save->packets<MAX_UDP_OBFUSCATE)
+       check_udp_obfuscate(thisdir,otherdir,uh_ulen);
+    
     //if (thisdir != NULL && thisdir->pup != NULL)
     make_udpL7_rate_stats(thisdir, ntohs(pip->ip_len));
 
-  return (pup_save);
+  return (FLOW_STAT_OK);
 }
 
 

@@ -79,13 +79,36 @@ static u_int FinCount (tcp_pair * ptp);
 void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
-inline struct tcphdr *
-tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
+#ifdef CHECK_TCP_DUP
+Bool
+dup_tcp_check (struct ip *pip, struct tcphdr *ptcp, tcb * thisdir)
 {
-  if ((ptcp = gettcp (pip, &plast)) == NULL)
-    return NULL;
+//  static int tot;
+  double delta_t = elapsed (thisdir->last_time, current_time);
+  if (thisdir->last_ip_id == pip->ip_id &&
+      thisdir->last_checksum == ntohs(ptcp->th_sum) && 
+      delta_t < MIN_DELTA_T_TCP_DUP_PKT && thisdir->last_len == pip->ip_len)
+    {
+ //      fprintf (fp_stdout, "dup tcp %d , id = %u ",tot++, pip->ip_id);
+ //      fprintf (fp_stdout, "TTL: %d ID: %d Checksum: %d Delta_t: %g\n", 
+ //           pip->ip_ttl,pip->ip_id,ntohs(ptcp->th_sum),delta_t);
+      thisdir->last_ip_id = pip->ip_id;
+      thisdir->last_len = pip->ip_len;
+      thisdir->last_checksum = ntohs(ptcp->th_sum);
+      return TRUE;
+    }
+ //   fprintf (fp_stdout, "NOT dup tcp %d\n",tot);
+  thisdir->last_ip_id = pip->ip_id;
+  thisdir->last_len = pip->ip_len;
+  thisdir->last_checksum = ntohs(ptcp->th_sum);
+  return FALSE;
+}
+#endif
 
-  ++tcp_packet_count;
+
+void
+tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
+{
 
   /* perform TCP packet analysis */
   if ((!ACK_SET (ptcp) && SYN_SET (ptcp)))
@@ -126,7 +149,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
       add_histo (tcp_port_dst_loc, (float) ntohs (ptcp->th_dport));
     }
 
-  return ptcp;
+  return;
 }
 
 /*
@@ -522,7 +545,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
   return (pptph_head);
 }
 
-tcp_pair *
+int
 tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 {
   struct tcp_options *ptcpo;
@@ -565,7 +588,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 		 (unsigned long) ptcp + sizeof (struct tcphdr) -
 		 (unsigned long) plast);
       ++ctrunc;
-      return (NULL);
+      return (FLOW_STAT_SHORT);
     }
 
 
@@ -584,7 +607,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   /* if the connection is not to be analyzed return a NULL */
   if (ptph_ptr == NULL)
     {
-      return (NULL);
+      return (FLOW_STAT_NULL);
     }
 
   ptph_save = (*ptph_ptr);
@@ -593,7 +616,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   if (ptp_save == NULL)
     {
-      return (NULL);
+      return (FLOW_STAT_NULL);
     }
 
   if (internal_src && !internal_dst)
@@ -637,6 +660,12 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       otherdir = &ptp_save->c2s;
     }
 
+#ifdef CHECK_TCP_DUP
+  /* check if this is a dupe udp */
+  if (dup_tcp_check (pip, ptcp,thisdir)) {
+    return(FLOW_STAT_DUP);
+  }
+#endif
 
   /* meta connection stats */
   if (SYN_SET (ptcp))
@@ -698,7 +727,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 #endif
 	}
 
-      return (ptp_save);
+      return (FLOW_STAT_OK);
     }
 #endif
 
@@ -1038,7 +1067,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (thisdir != NULL && thisdir->ptp != NULL)
         make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
 
-      return (ptp_save);
+      return (FLOW_STAT_OK);
     }
 
 
@@ -1178,7 +1207,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 #endif
 	}
     }
-  return (ptp_save);
+  return (FLOW_STAT_OK);
 }
 
 void
@@ -1925,9 +1954,12 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   print_jabber_conn_stats(ptp_save);
 #endif
 
-  /* Statistichs from the plugins */
+  /* Statistics from the plugins */
 
-  make_proto_stat (ptp_save, PROTOCOL_TCP);
+  /* TCP proto stats should be done only for complete flows 
+     This affects only the histograms of L7 TCP flows */
+  if (complete)
+     make_proto_stat (ptp_save, PROTOCOL_TCP);
 
   if (complete)
     {
@@ -2624,7 +2656,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       sprintf (loglines2c, "%s %d", loglines2c, ptp_save->con_type);
 
       /* P2P: added 98-99th colon: p2p protocol / p2p message type /  */
-      sprintf (loglines2c, "%s %d %2d", loglines2c, ptp_save->p2p_type / 100,
+      sprintf (loglines2c, "%s %d %d", loglines2c, ptp_save->p2p_type / 100,
 	       ptp_save->p2p_type % 100);
 
       /* P2P: added 100-103th colon: p2p data mesg. / p2p signalling msg.   */
@@ -2636,9 +2668,9 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       /*      currently only for ED2K-TCP - MMM 5/6/08*/
       sprintf (loglines2c, "%s %d", loglines2c, ptp_save->p2p_msg_count);
 
-
       /* write to log file */
       fprintf (fp, "%s %s\n", loglinec2s, loglines2c);
+
    }
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))

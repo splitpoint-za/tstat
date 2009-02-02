@@ -98,14 +98,18 @@ Increase this number on high speed network will help ...*/
 #define MAXFLOAT 3.40282347e+38F
 #endif
 
-/* Euristc to detect dup UDP packet. */
-/* May be usefull when the original trace has some NETWORK dups*/
-/* discard udp packets with */
+/* Euristic to detect dup TCP/UDP packets. */
+/* May be useful when the original trace has some NETWORK dups*/
+/* Discard tcp/udp packets with: */
 /* - same IP_ID */
-/* - interarrival time smaller than MIN_DELTA_T_UDP_DUP_PKT */
+/* - same TCP/UDP checksum */
+/* - interarrival time smaller than MIN_DELTA_T_XXX_DUP_PKT */
+/* - same IP length */ 
 
-#define MIN_DELTA_T_UDP_DUP_PKT 50 /* microsec */
+#define MIN_DELTA_T_UDP_DUP_PKT 1000 /* microsec (previously 50us) */
 #define CHECK_UDP_DUP
+#define MIN_DELTA_T_TCP_DUP_PKT 2000 /* microsec (previously 50us) */
+#define CHECK_TCP_DUP
 
 
 /* RTP parameters */

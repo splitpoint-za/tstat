@@ -43,6 +43,134 @@ gettcpL7 (struct udphdr *pudp, int tproto, void *pdir, void *plast)
   return (void *) pudp;
 }
 
+Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len)
+{
+  int record_length;
+  if (  *(char *)pdata == 0x16 && 
+      *(char *)(pdata + 1) == 0x03 && 
+    ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 ) && 
+    ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) &&
+      *(char *)(pdata + 5) == 0x01
+     )
+   { 
+     /* Match SSL 3 - TLS 1.x Handshake Client HELLO */
+      ptp->state = SSL_HANDSHAKE;
+      return TRUE;
+   }
+  else if (  *(char *)(pdata + 2) == 0x01 &&
+             *(char *)(pdata + 3) == 0x03 &&
+           ( *(char *)(pdata + 4) >= 0x00 && *(char *)(pdata + 4) <= 0x03 )
+          ) 
+   { 
+     /* Match SSL 2.0 Handshake CLient HELLO */
+      record_length = ((*(char *)pdata & 0x7f) << 8) | (*(char *)(pdata + 1));
+      if (record_length == payload_len-2)
+        { 
+	  ptp->state = SSL_HANDSHAKE;
+          return TRUE;
+	}
+   }
+  return FALSE;
+}
+
+Bool ssl_server_check(void *pdata)
+{
+  if (  *(char *)pdata == 0x16 && 
+        *(char *)(pdata + 1) == 0x03 && 
+      ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 ) && 
+      ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) &&
+        *(char *)(pdata + 5) == 0x02
+     )
+   { 
+     /* Match SSL 3 - TLS 1.x Handshake Server HELLO */
+      return TRUE;
+   }
+  return FALSE;
+}
+
+Bool is_imap_tag(void *pdata)
+{
+  int i;
+  char c;
+
+  /* Identify the IMAP tag with pattern /^.+[0-9A-Za-z] /
+    (space after either a digit or a letter) in the first 6 chars.
+     General tag identification not possible, since it can be
+     any alphanumeric unique string
+  */
+  
+  for (i=1;i<6;i++)
+   {
+     if ( *(char *)(pdata + i) == 0x20 )
+       {
+         c = *(char *)(pdata + i-1 );
+	 if ( (c>=0x30 && c<=0x39) ||    /* digit */
+	      (c>=0x61 && c<=0x7a) ||    /* lowercase letter */
+	      (c>=0x41 && c<=0x5a) )     /* uppercase letter */
+	   return TRUE;   
+       }  
+   }
+  return FALSE;
+}
+
+void ed2k_obfuscate_check(tcp_pair *ptp,int payload_len)
+{
+/* Identification of sequences of messages through the packet size
+   information (and only if the packet has the PSH/ACK flags set):
+     11 -> 83 -> 55 => SecureID with key exchange 
+     11 -> 55       => SecureID without key exchange
+     22 -> 18       => Upload queue management
+      6 -> 46	  => Accept-upload/Request Parts
+*/	
+
+  switch(payload_len)
+   {
+     case 11:
+       ptp->state_11=1;
+       break;
+     case 83:
+       if (ptp->state_11==1)
+     	  ptp->state_11_83=1;
+       break;
+     case 55:
+       if (ptp->state_11_83==1)
+     	 { 
+     	   ptp->state_11_83_55=1;
+     	   ptp->con_type |= OBF_PROTOCOL;
+	 }
+       else if (ptp->state_11==1)
+     	 { 
+     	   ptp->state_11_55=1; 
+     	   ptp->con_type |= OBF_PROTOCOL;
+     	 }
+       break;
+
+     case 22:
+       ptp->state_22=1;
+       break;
+     case 18:
+       if (ptp->state_22==1)
+     	 {
+     	   ptp->state_22_18=1;
+     	   ptp->con_type |= OBF_PROTOCOL;
+     	 }  
+       break;
+
+     case 6:
+       ptp->state_6=1;
+       break;
+     case 46:
+       if (ptp->state_6==1)
+     	{
+     	  ptp->state_6_46=1;
+     	  ptp->con_type |= OBF_PROTOCOL;
+     	}
+       break;
+     default:
+       break;
+   }
+}
+
 #ifdef MSN_CLASSIFIER
 void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pdata, void *plast)
 {
@@ -59,6 +187,7 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
    {
      case VER:
         ptp->con_type |= MSN_PROTOCOL;
+	ptp->con_type &= ~OBF_PROTOCOL;
         ptp->state = MSN_VER_S2C;
         ptp->s2c.msn.MSN_VER_count = 1;
 	
@@ -66,24 +195,27 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
 	if ((char *) pdata + 6 <= (char *) plast)
 	 {
 	   pMSNP_ver = (char *) pdata + 6;
-	   sscanf ((char *) (pMSNP_ver), "%s", MSNP_ver);
+	   sscanf ((char *) (pMSNP_ver), "%7s", MSNP_ver);
 
-       	   strcpy (ptp->s2c.msn.MSNPversion, MSNP_ver);
-	   strcpy (ptp->c2s.msn.MSNPversion, MSNP_ver);
+       	   strncpy (ptp->s2c.msn.MSNPversion, MSNP_ver,7);
+	   strncpy (ptp->c2s.msn.MSNPversion, MSNP_ver,7);
 	 }
 	break;
      case USR:
         ptp->con_type |= MSN_PROTOCOL;
+	ptp->con_type &= ~OBF_PROTOCOL;
         ptp->state = MSN_USR_S2C;
         ptp->s2c.msn.MSN_USR_count = 1;
 	break;
      case ANS:
         ptp->con_type |= MSN_PROTOCOL;
+	ptp->con_type &= ~OBF_PROTOCOL;
         ptp->state = MSN_ANS_COMMAND;
         ptp->s2c.msn.MSN_ANS_count = 1;
 	break;
      case IRO:
         ptp->con_type |= MSN_PROTOCOL;
+	ptp->con_type &= ~OBF_PROTOCOL;
         ptp->state = MSN_IRO_COMMAND;
         ptp->s2c.msn.MSN_IRO_count = 1;
         break;
@@ -126,6 +258,9 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   if (data_length <= 0 || payload_len == 0)
     return;
 
+  if (ACK_SET(ptcp) && PUSH_SET(ptcp))
+    ed2k_obfuscate_check(ptp,payload_len);
+
   if (dir == C2S)
     tcp_stats = &(ptp->c2s);
   else
@@ -151,6 +286,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	   case YMSG:
 	     ptp->state = YMSGP;
 	     ptp->con_type |= YMSG_PROTOCOL;
+	     ptp->con_type &= ~OBF_PROTOCOL;
 
 	      /* try to find Yahoo! Messenger Protocol version */
 
@@ -170,6 +306,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	   case XMPP_SMELL:
 	     ptp->state = XMPP;
 	     ptp->con_type |= XMPP_PROTOCOL;
+	     ptp->con_type &= ~OBF_PROTOCOL;
 	     break;
 #endif
 #ifdef MSN_CLASSIFIER
@@ -274,9 +411,14 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      break;
 
            default:
-	      if (ptp->packets > MAX_UNKNOWN_PACKETS)
+             if ( dir==C2S && 
+	         ((char *) pdata + 6 <= (char *) plast) &&
+	          ssl_client_check(ptp,pdata,payload_len) )
+	        break;
+
+	     if (ptp->packets > MAX_UNKNOWN_PACKETS)
 	         ptp->state = IGNORE_FURTHER_PACKETS;
-	      break;
+	     break;
 	 }
 	break;
      case SMTP_OPENING:
@@ -290,6 +432,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      case SMTP_HELO:
 	      case SMTP_EHLO:
 	        ptp->con_type |= SMTP_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 	      default:
@@ -312,6 +455,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      case POP_QUIT:
               case POP_APOP:
 	        ptp->con_type |= POP3_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 	      default:
@@ -322,19 +466,34 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	 }
         break;
      case IMAP_OPENING:
-        if (dir == C2S && ((char *) pdata + 4 <= (char *) plast))
+        if (dir == C2S && ((char *) pdata + 6 <= (char *) plast))
 	 {
-	   /* Identify the most common IMAP tag with pattern /^[Aa]\d\d\d/
-	      General tag identification not possible, since it can be
-	      any alphanumeric unique string
+             if (is_imap_tag(pdata))
+	     {
+	        ptp->state = IMAP_COMMAND;
+		break;
+	     }
+
+	   if (ptp->packets > MAX_HTTP_COMMAND_PACKETS)
+	     ptp->state = IGNORE_FURTHER_PACKETS;
+	 }
+        break;
+     case IMAP_COMMAND:
+        if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))
+	 {
+	   /* 
+	     Answer to a possible IMAP command starts either with '* '
+	     or with an IMAP tag 
 	   */
-           if ( ( *(char *)pdata == 'A' ||  *(char *)pdata == 'a' ) && 
-	        ( *(char *)(pdata + 1) >= 0x30 && *(char *)(pdata + 1) <= 0x39 ) && 
-	        ( *(char *)(pdata + 2) >= 0x30 && *(char *)(pdata + 2) <= 0x39 ) && 
-	        ( *(char *)(pdata + 3) >= 0x30 && *(char *)(pdata + 3) <= 0x39 ) )
+           if ( ( ( *(char *)(pdata) == 0x2a ) && 
+                    *(char *)(pdata + 1) == 0x20 ) || 
+		is_imap_tag(pdata)
+              )
 	     {
 	        ptp->con_type |= IMAP_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
+		break;
 	     }
 
 	   if (ptp->packets > MAX_HTTP_COMMAND_PACKETS)
@@ -349,11 +508,13 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      case HTTP:
 	        tcp_stats->u_protocols.f_http = current_time;
 	        ptp->con_type |= HTTP_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = HTTP_RESPONSE;
 	        break;
 	      case ICY:
 	        tcp_stats->u_protocols.f_icy = current_time;
 	        ptp->con_type |= ICY_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 #ifdef MSN_CLASSIFIER
@@ -412,7 +573,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	         {
 	           tcp_stats->u_protocols.f_rtsp = current_time;
 	           ptp->state = RTSP_RESPONSE;
-	           ptp->con_type |= RTSP_PROTOCOL;
+ 	           ptp->con_type |= RTSP_PROTOCOL;
+	           ptp->con_type &= ~OBF_PROTOCOL;
 	         }
 #endif
 	        break;
@@ -432,6 +594,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        tcp_stats->u_protocols.f_rtsp = current_time;
 	        ptp->state = RTSP_RESPONSE;
 	        ptp->con_type |= RTSP_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
 	        break;
 	      default:
 	        break;
@@ -458,6 +621,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
 	      ptp->state = IGNORE_FURTHER_PACKETS;
 	      ptp->con_type |= RTP_PROTOCOL;
+	      ptp->con_type &= ~OBF_PROTOCOL;
 	    }
 	 }
 #endif
@@ -512,6 +676,23 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    }
 	 }
 #endif     
+     case SSL_HANDSHAKE:
+        if (dir == S2C && ((char *) pdata + 6 <= (char *) plast) &&
+	    ssl_server_check(pdata) )
+	  {
+	    ptp->con_type |= SSL_PROTOCOL;
+	    ptp->con_type &= ~OBF_PROTOCOL;
+	    ptp->state = IGNORE_FURTHER_PACKETS;
+	  }
+         else
+	  {
+            if (ptp->packets > MAX_SSL_HANDSHAKE_PACKETS )
+	     { 
+	    //   printf("Reset SSL State\n");
+	       ptp->state = UNKNON_TYPE;
+	     }
+	  }  
+        break;
      default:
 	break;
    }
@@ -527,8 +708,8 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 {
    int type;
    tcp_pair * ptp = (tcp_pair *)thisflow;
-   type = map_flow_type(ptp);
 
+   type = map_flow_type(ptp);
    
         switch ((in_out_loc(ptp->internal_src, ptp->internal_dst, C2S)))
 	{
@@ -556,6 +737,12 @@ return;
 int map_flow_type(tcp_pair *thisflow)
 {
    int type=L7_FLOW_UNKNOWN;
+
+   /* OBF (lowest priority) */
+   if(thisflow->con_type & OBF_PROTOCOL)
+   {
+      type = L7_FLOW_OBF;
+   }
 
    /* HTTP */
    if(thisflow->con_type & HTTP_PROTOCOL)
@@ -621,6 +808,12 @@ int map_flow_type(tcp_pair *thisflow)
    if(thisflow->con_type & IMAP_PROTOCOL)
    {
       type = L7_FLOW_IMAP;
+   }
+
+   /* SSL */
+   if(thisflow->con_type & SSL_PROTOCOL)
+   {
+      type = L7_FLOW_SSL;
    }
 
    /* P2P */

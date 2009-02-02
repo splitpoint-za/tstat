@@ -81,7 +81,9 @@ AVE_init (win_stat * stat, char *name, timeval tc)
   stat->n = 0;
   stat->t = tc;
   stat->t0 = tc;
-  strcpy (stat->name, name);
+  strncpy (stat->name, name, 20); /* stat->name is char[20] */
+  stat->name[19]='\0';            /* force null termination, 
+                                     just to stay on the safe side... */ 
 }
 
 void

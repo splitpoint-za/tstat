@@ -53,8 +53,8 @@
 #define L7_FLOW_SMTP            25
 #define L7_FLOW_POP3            26
 #define L7_FLOW_IMAP            27
+#define L7_FLOW_OBF		28
 
-#define L7_FLOW_UNKNOWN         28
 
 #define L7_FLOW_PPLIVE          29
 #define L7_FLOW_SOPCAST         30
@@ -62,5 +62,10 @@
 
 #define L7_FLOW_SKYPE_SIG       32
 
-#define L7_FLOW_TOT             33
+#define L7_FLOW_SSL		33
+
+#define L7_FLOW_OBF_KAD		34
+#define L7_FLOW_UNKNOWN         35
+
+#define L7_FLOW_TOT             36
 

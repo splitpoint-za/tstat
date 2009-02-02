@@ -432,6 +432,14 @@ typedef struct tcb
 #ifdef XMPP_CLASSIFIER
   jabber_stat jabber;
 #endif
+
+#ifdef CHECK_TCP_DUP
+  /* dupe verify */
+  u_short last_ip_id;		/* 16 bit ip identification field  */
+  u_short last_len;		/* length of the last packet  */
+  u_short last_checksum;        /* checksum of the last packet */
+#endif
+
 }
 tcb;
 
@@ -471,6 +479,8 @@ enum state_type
   SMTP_OPENING,
   POP3_OPENING,
   IMAP_OPENING,
+  IMAP_COMMAND,
+  SSL_HANDSHAKE,
   IGNORE_FURTHER_PACKETS
 };
 
@@ -480,7 +490,6 @@ enum state2_type
   MORE_PACKETS2,
   IGNORE_FURTHER_PACKETS2
 };
-
 
 struct stcp_pair
 {
@@ -512,6 +521,17 @@ struct stcp_pair
   enum state_type p2p_state;
   unsigned char rtp_pt;
   Bool ignore_dpi;
+
+  /* obfuscate ed2k identification */
+  unsigned state_11:1;
+  unsigned state_11_83:1;
+  unsigned state_11_83_55:1;
+  unsigned state_11_55:1;
+  unsigned state_22:1;
+  unsigned state_22_18:1;
+  unsigned state_6:1;
+  unsigned state_6_46:1;
+
 };
 typedef struct stcp_pair tcp_pair;
 
@@ -549,6 +569,7 @@ enum udp_type
   P2P_PPLIVE,
   P2P_SOPCAST,
   P2P_TVANTS,
+  P2P_OKAD,
   LAST_UDP_PROTOCOL
 };
 
@@ -591,6 +612,8 @@ enum udp_type
  printf("P2P_SOPCAST = %d\n",temp); \
  temp = P2P_TVANTS; \
  printf("P2P_TVANTS = %d\n",temp); \
+ temp = P2P_OKAD; \
+ printf("P2P_OKAD = %d\n",temp); \
 }
 
 
@@ -659,6 +682,18 @@ typedef struct rtcp
 } rtcp;
 
 
+enum obfuscate_udp_state
+{ 
+  OUDP_UNKNOWN = 0,
+  OUDP_REQ43,
+  OUDP_RES52_K25,
+  OUDP_REQ59,
+  OUDP_RES68_K25,
+  OUDP_SIZEX_22,
+  OUDP_SIZEX_52,
+  OUDP_SIZE_IN_46_57
+};
+
 /* minimal support for UDP "connections" */
 typedef struct ucb
 {
@@ -671,6 +706,9 @@ typedef struct ucb
   timeval first_pkt_time;	/* time of the first pkt seen */
   timeval last_pkt_time;	/* time of the last pkt seen */
   enum udp_type type;
+  enum obfuscate_udp_state kad_state;
+  Bool obfuscate_state;
+  u_short obfuscate_last_len;
 
   union
   {
@@ -699,6 +737,7 @@ typedef struct ucb
   /* dupe verify */
   u_short last_ip_id;		/* 16 bit ip identification field  */
   u_short last_len;		/* length of the last packet  */
+  u_short last_checksum;        /* checksum of the last packet */
 #endif
 }
 ucb;
@@ -721,6 +760,8 @@ struct sudp_pair
   u_llong packets;
   ucb c2s;
   ucb s2c;
+
+  enum obfuscate_udp_state kad_state;
 
   /* linked list of usage */
   struct sudp_pair *next;
@@ -769,7 +810,7 @@ struct rrdstat
 /* Struct to evaluate the average of n(t) */
 typedef struct win_stat
 {
-  char name[10];		/* name of observed struct */
+  char name[20];		/* name of observed struct */
   timeval t0;			/* Initial time of this observation window */
   timeval t;			/* Last measurement time */
   int n;			/* Last measurement value */

@@ -497,8 +497,11 @@ fake_histo_bitrate_update (struct double_histo_list *phisto,
     
   for(i=0; i<num_elem; i++)
   {
-    set_histo (phisto, i+1, bitrate[i] * 8.0 / elapsed_time);
-    tot+= bitrate[i] * 8.0 / elapsed_time;
+//    set_histo (phisto, i+1, bitrate[i] * 8.0 / elapsed_time);
+//    tot+= bitrate[i] * 8.0 / elapsed_time;
+    /* Converted to rate to bit/s, so multiply by 1000.0 */
+    set_histo (phisto, i+1, bitrate[i] * 8000.0 / elapsed_time);
+    tot+= bitrate[i] * 8000.0 / elapsed_time;
   }
   /* set the total value correctly */
   /* recall than in histo[num+1] we count the hit number... */
@@ -915,13 +918,13 @@ create_all_histo (void)
 		  1);
 
   ip_bitrate_in = create_histo ("ip_bitrate_in",
-				"IP bitrate [kbit/s] - incoming packets", 0,
+				"IP bitrate [bit/s] - incoming packets", 0,
 				4, 1);
   ip_bitrate_out =
-    create_histo ("ip_bitrate_out", "IP bitrate [kbit/s] - outgoing packets",
+    create_histo ("ip_bitrate_out", "IP bitrate [bit/s] - outgoing packets",
 		  0, 4, 1);
   ip_bitrate_loc =
-    create_histo ("ip_bitrate_loc", "IP bitrate [kbit/s] - local packets", 0,
+    create_histo ("ip_bitrate_loc", "IP bitrate [bit/s] - local packets", 0,
 		  4, 1);
 
   ip_len_out = create_histo ("ip_len_out",
@@ -1047,13 +1050,13 @@ create_all_histo (void)
 		  65536, 1);
 
   tcp_bitrate_in = create_histo ("tcp_bitrate_in",
-				  "TCP application bitrate [kbit/s] - incoming segments", 0,
+				  "TCP application bitrate [bit/s] - incoming segments", 0,
 				  L7_FLOW_TOT, 1);
   tcp_bitrate_out = create_histo ("tcp_bitrate_out",
-				   "TCP application bitrate [kbit/s] - outgoing segments", 0,
+				   "TCP application bitrate [bit/s] - outgoing segments", 0,
 				   L7_FLOW_TOT, 1);
   tcp_bitrate_loc = create_histo ("tcp_bitrate_loc",
-				   "TCP application bitrate [kbit/s] - local segments", 0,
+				   "TCP application bitrate [bit/s] - local segments", 0,
 				   L7_FLOW_TOT, 1);
 
 
@@ -1891,13 +1894,13 @@ create_all_histo (void)
                    0, L7_FLOW_TOT, 1);
 
   udp_bitrate_in = create_histo ("udp_bitrate_in",
-				  "UDP application bitrate [kbit/s] - incoming segments", 0,
+				  "UDP application bitrate [bit/s] - incoming segments", 0,
 				  L7_FLOW_TOT, 1);
   udp_bitrate_out = create_histo ("udp_bitrate_out",
-				   "UDP application bitrate [kbit/s] - outgoing segments", 0,
+				   "UDP application bitrate [bit/s] - outgoing segments", 0,
 				   L7_FLOW_TOT, 1);
   udp_bitrate_loc = create_histo ("udp_bitrate_loc",
-				   "UDP application bitrate [kbit/s] - local segments", 0,
+				   "UDP application bitrate [bit/s] - local segments", 0,
 				   L7_FLOW_TOT, 1);
 
   /* Microsoft messenger  classification */

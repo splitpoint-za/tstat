@@ -25,13 +25,16 @@
 #define MAX_PACKETS_CON 50
 
 /*Max packets to wait in each state*/
-#define MAX_UNKNOWN_PACKETS 10
+#define MAX_UNKNOWN_PACKETS 40
 #define MAX_HTTP_COMMAND_PACKETS 20
 #define MAX_HTTP_RESPONSE_PACKETS 30
 #define MAX_RTSP_COMMAND_PACKETS 20
 #define MAX_RTSP_RESPONSE_PACKETS 30
+#define MAX_SSL_HANDSHAKE_PACKETS 10
 
-
+/* Maximum number of UDP packets to analyze per flow (c2s+s2c) */
+/* trying to identify obfuscate KAD traffic                    */
+#define MAX_UDP_OBFUSCATE 10
 
 /* Definition of the RTP magic number */
 #define RTP_MAGICNUMBER 0x24

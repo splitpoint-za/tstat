@@ -31,6 +31,7 @@ extern int ED2K_type;
 extern int ED2K_subtype;
 
 int UDP_p2p_to_L7type (ucb *thisflow);
+int UDP_p2p_to_logtype(ucb *thisflow);
 
 int ED2K_is_C2C(int type, int subtype)
 {
@@ -109,6 +110,10 @@ int ED2K_is_C2C(int type, int subtype)
         case  0xA2:
         case  0xA3:
         case  0xA4:
+        case  0xA5:
+        case  0xA6:
+        case  0xA7:
+        case  0xA8:
 	   return 1;
         default:
 	   return 0;
@@ -345,6 +350,7 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               /* this flow is a P2P flow, so the L7 FLOW must be set */
               
 	      ptp->con_type |= P2P_PROTOCOL;
+	      ptp->con_type &= ~OBF_PROTOCOL;
               
               if (ptp->p2p_type != 0
 		  && (ptp->p2p_type / 100) != (return_code / 100))
@@ -554,18 +560,21 @@ make_p2p_conn_stats (void * flow, int tproto)
      
       L7type = UDP_p2p_to_L7type(thisS2C);
       
-      switch (in_out_loc(thisflow->internal_src, thisflow->internal_dst,S2C))
-      {
-      case OUT_FLOW:
-            add_histo (L7_UDP_num_out, L7type);
-            break;
-      case IN_FLOW:
-            add_histo (L7_UDP_num_in, L7type);
-            break;
-      case LOC_FLOW:
-            add_histo (L7_UDP_num_loc, L7type);
-            break;
-      }
+      if (thisS2C->packets!=0)
+       {
+	 switch (in_out_loc(thisflow->internal_src, thisflow->internal_dst,S2C))
+     	  {
+     	   case OUT_FLOW:
+     	       add_histo (L7_UDP_num_out, L7type);
+     	       break;
+     	   case IN_FLOW:
+     	       add_histo (L7_UDP_num_in, L7type);
+     	       break;
+     	   case LOC_FLOW:
+     	       add_histo (L7_UDP_num_loc, L7type);
+     	       break;
+     	  }
+       }
    }
 #ifndef LOG_ALL_UDP
    else
@@ -605,7 +614,7 @@ make_p2p_conn_stats (void * flow, int tproto)
   // 8 udp_type
 
   sprintf (logline, "%s %d %d",
-	   logline, thisflow->internal_src, thisUdir->type);
+	   logline, thisflow->internal_src,  UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
   sprintf (logline, "%s %d %d %d %d %d %d %d %d %d %d",
@@ -664,7 +673,7 @@ make_p2p_conn_stats (void * flow, int tproto)
   // 16 udp_type
 
   sprintf (logline, "%s %d %d",
-	   logline, thisflow->internal_dst, thisUdir->type);
+	   logline, thisflow->internal_dst, UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
   sprintf (logline, "%s %d %d %d %d %d %d",
@@ -695,6 +704,33 @@ make_p2p_conn_stats (void * flow, int tproto)
   fprintf (fp_udp_logc, "%s\n", logline);
 
   return;
+}
+
+int UDP_p2p_to_logtype(ucb *thisflow)
+{
+   switch(thisflow->type)
+   {
+    case UDP_UNKNOWN:
+    case FIRST_RTP:
+    case FIRST_RTCP:
+      switch(thisflow->pup->kad_state)
+        {
+          case OUDP_RES52_K25:
+          case OUDP_RES68_K25:
+          case OUDP_SIZE_IN_46_57:
+          case OUDP_SIZEX_22:
+          case OUDP_SIZEX_52:
+	    if (thisflow->pup->addr_pair.b_port!=53 &&
+	        thisflow->pup->addr_pair.b_port!=123)
+	        return P2P_OKAD;
+	    else
+	        return thisflow->type;
+          default:
+	    return thisflow->type;
+	}
+    default:
+      return thisflow->type;
+   }
 }
 
 int UDP_p2p_to_L7type (ucb *thisflow)
@@ -750,6 +786,21 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:
+      switch(thisflow->pup->kad_state)
+        {
+          case OUDP_RES52_K25:
+          case OUDP_RES68_K25:
+          case OUDP_SIZE_IN_46_57:
+          case OUDP_SIZEX_22:
+          case OUDP_SIZEX_52:
+	    if (thisflow->pup->addr_pair.b_port!=53 &&
+	        thisflow->pup->addr_pair.b_port!=123)
+	        return L7_FLOW_OBF_KAD;
+	    else
+	        return L7_FLOW_UNKNOWN;
+          default:
+	    return L7_FLOW_UNKNOWN;
+	}
     default:
       return L7_FLOW_UNKNOWN;
    }

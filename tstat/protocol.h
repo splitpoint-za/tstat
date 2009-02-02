@@ -43,6 +43,8 @@
 #define SMTP_PROTOCOL  1024
 #define POP3_PROTOCOL  2048
 #define IMAP_PROTOCOL  4096
+#define SSL_PROTOCOL   8192
+#define OBF_PROTOCOL  16384
 
 /* IP address classes */
 #define UNICAST       0

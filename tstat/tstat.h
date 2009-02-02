@@ -170,9 +170,8 @@ void *stats_dumping ();		/* thread Stat_dump */
 void *MallocZ (int);
 void *ReallocZ (void *oldptr, int obytes, int nbytes);
 void trace_init (void);
-struct tcphdr *tcp_header_stat (struct tcphdr *ptcp, struct ip *pip,
-				void *plast);
-tcp_pair *tcp_flow_stat (struct ip *, struct tcphdr *ptcp, void *plast,
+void tcp_header_stat (struct tcphdr *ptcp, struct ip *pip);
+int tcp_flow_stat (struct ip *, struct tcphdr *ptcp, void *plast,
 			 int *dir);
 double elapsed (timeval, timeval);
 int tv_cmp (struct timeval lhs, struct timeval rhs);
@@ -228,7 +227,8 @@ int IPcmp (ipaddr * pipA, ipaddr * pipB);
 /* UDP support routines */
 void udptrace_init (void);
 void udptrace_done (void);
-udp_pair *udp_flow_stat (struct ip *pip, struct udphdr *pudp, void *plast);
+void udp_header_stat (struct udphdr *pudp, struct ip *pip);
+int udp_flow_stat (struct ip *pip, struct udphdr *pudp, void *plast);
 void close_udp_flow (udp_pair * pup, int ix, int dir);
 
 /* TCP flags macros */
@@ -252,8 +252,6 @@ void close_udp_flow (udp_pair * pup, int ix, int dir);
 
 #define C2S 1
 #define S2C -1
-#define DIR_C2S   C2S
-#define DIR_S2C   C2S
 
 #define OUT_FLOW 1
 #define IN_FLOW 2
@@ -536,6 +534,14 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #define IEEE8021Q_SIZE		18
 #endif /* VLAN header size */
 
+/* support for MPLS over ETH */
+#ifndef ETHERTYPE_MPLS
+#define ETHERTYPE_MPLS	0x8847
+#endif /* PPPoE ether type */
+#ifndef MPLS_SIZE
+#define MPLS_SIZE		18
+#endif /* MPLS header size */
+
 /* support for PPPoE encapsulation added by Yann Samama (ysamama@nortelnetworks.com)*/
 #ifndef ETHERTYPE_PPPOE_SESSION
 #define ETHERTYPE_PPPOE_SESSION	0x8864
@@ -544,10 +550,27 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #define PPPOE_SIZE		22
 #endif /* PPPOE header size */
 
+#ifndef ETHERTYPE_IPV6
+#define ETHERTYPE_IPV6 0x86DD	/* Ethernet type for ipv6 */
+#endif
+
+#ifndef ETHERTYPE_8021Q
+#define ETHERTYPE_8021Q 0x8100	/* Ethernet type for VLAN */
+#endif
+
+
 #define TCP_TYPE        0
 #define UDP_TYPE        1
 #define ICMP_TYPE       2
 #define IP_TYPE         3
+
+
+/* Return Values for tcp_flow_stat() and udp_flow_stat() */
+#define FLOW_STAT_NULL  0
+#define FLOW_STAT_OK    1
+#define FLOW_STAT_DUP   2
+#define FLOW_STAT_NONE  3
+#define FLOW_STAT_SHORT 4
 
 /* LM start- possible classification of out of order and retransmission */
 #define IN_SEQUENCE			0

@@ -25,21 +25,25 @@
 #include <time.h>
 
 
+/* Resulting string format: "Fri Sep 13 00:00:00.123456 1986" */
+/*			               1         2         3   */
+/*		             0123456789012345678901234567890 */
+
 /* Unix format: "Fri Sep 13 00:00:00 1986\n" */
 /*			   1         2          */
 /*		 012345678901234567890123456789 */
 char *
 ts2ascii (struct timeval *ptime)
 {
-  static char buf[30];
+  static char buf[32];
   struct tm *ptm;
   char *now;
   int decimal;
 
-  if (ZERO_TIME (ptime))
+  if (ZERO_TIME(ptime))
     return ("        <the epoch>       ");
 
-  ptm = localtime (&ptime->tv_sec);
+  ptm = localtime ((time_t *)&ptime->tv_sec);
   now = asctime (ptm);
 
   /* splice in the microseconds */
@@ -48,12 +52,12 @@ ts2ascii (struct timeval *ptime)
   decimal = ptime->tv_usec;	/* for 6 digits */
 
   now[24] = '\00';		/* nuke the newline */
-  sprintf (buf, "%s.%06d %s", now, decimal, &now[20]);
+  snprintf (buf,sizeof(buf), "%s.%06d %s", now, decimal, &now[20]);
 
   return (buf);
 }
 
-/* same as ts2ascii, but leave the year on */
+/* same as ts2ascii, but no year */
 char *
 ts2ascii_date (struct timeval *ptime)
 {
@@ -62,16 +66,16 @@ ts2ascii_date (struct timeval *ptime)
   char *now;
   int decimal;
 
-  if (ZERO_TIME (ptime))
+  if (ZERO_TIME(ptime))
     return ("        <the epoch>       ");
 
-  ptm = localtime (&ptime->tv_sec);
+  ptm = localtime ((time_t *)&ptime->tv_sec);
   now = asctime (ptm);
   now[24] = '\00';
 
   /*    decimal = (ptime->tv_usec + 50) / 100; *//* for 4 digits */
   decimal = ptime->tv_usec;	/* for 6 digits */
-  sprintf (buf, "%s.%06d", now, decimal);
+  snprintf (buf,sizeof(buf), "%s.%06d", now, decimal);
 
   return (buf);
 }

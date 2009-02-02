@@ -902,11 +902,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  switch (CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
+	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
 	      L7_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
+	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
 	      L7_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
@@ -915,11 +915,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  switch (CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
+	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
 	      L7_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
+	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2O);
 	      L7_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
@@ -1333,11 +1333,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  switch (CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
+	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
 	      L7_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
+	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
 	      L7_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
@@ -1346,11 +1346,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  switch (CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
+	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
 	      L7_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
-	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
+	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2O);
 	      L7_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
@@ -1543,6 +1543,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
     {
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
+      ptp->con_type &= ~OBF_PROTOCOL;
       pskype->skype_type = CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))
@@ -1885,6 +1886,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
     {
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
+      ptp->con_type &= ~OBF_PROTOCOL;
       pskype->skype_type = CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))

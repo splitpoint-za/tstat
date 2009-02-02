@@ -26,14 +26,6 @@
 #include <sys/types.h>
 #include <netinet/icmp6.h>
 
-#ifndef ETHERTYPE_IPV6
-#define ETHERTYPE_IPV6 0x86DD	/* Ethernet type for ipv6 */
-#endif
-
-#ifndef ETHERTYPE_8021Q
-#define ETHERTYPE_8021Q 0x8100	/* Ethernet type for VLAN */
-#endif
-
 /* just guessing... */
 #if !defined(IPPROTO_NONE) && !defined(IPPROTO_FRAGMENT) && !defined(IPPROTO_DSTOPTS) && !defined(INET6_ADDRSTRLEN)
 /* when IPv6 is more widely/standardly deployed, these constants won't need to be

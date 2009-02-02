@@ -373,12 +373,13 @@ print_msn_conn_stats (tcp_pair *ptp)
   if (pmsn->MFT == MSN_CHAT)
     AVE_departure (current_time, &msn_chat_number);
   else if (pmsn->MFT == MSN_PRESENCE)
-    AVE_departure (current_time, &msn_presence_number);
+   { 
+     AVE_departure (current_time, &msn_presence_number);
 
-  /* chat session with Yahoo! user */
-  else if (pmsn->MFT == MSN_PRESENCE && pmsn->MSN_MSG_Y_count)
-    AVE_departure (current_time, &msn_chat_number);
-
+     /* chat session with Yahoo! user */
+      if (pmsn->MSN_MSG_Y_count)
+         AVE_departure (current_time, &msn_chat_number);
+    }
   else if (pmsn->MFT == MFT_UNKNOWN)
     return;
 

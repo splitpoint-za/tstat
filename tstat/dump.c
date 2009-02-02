@@ -312,11 +312,14 @@ void dump_flush(Bool trace_completed) {
         if (first_dump_tm.tv_sec == -1)
             fprintf(fp_log, "no packets to dump\n");
         else
+	  {
             fprintf(fp_log, 
-                "dump start: %s"
+                "dump start: %s",
+                ctime(&first_dump_tm.tv_sec));
+            fprintf(fp_log, 
                 "dump stop:  %s",
-                ctime(&first_dump_tm.tv_sec),
                 ctime(&last_dump_tm.tv_sec));
+	  }
         fprintf(fp_log, 
             "---\n"
             "enabled protocols:\n"
