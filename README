@@ -18,6 +18,7 @@ Tstat requires libm, libpcap, libpthread and optionally librrd.
 
 Simple install procedure:
 
+  % ./autogen.sh
   % ./configure [--enable-libtstat]   # use --enable-libtstat to build libtstat
   % make                                    
   [ Become root if necessary ]

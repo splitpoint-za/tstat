@@ -254,7 +254,7 @@ pread_erf_live (struct timeval *ptime,
 	      *plen = ETHERNET_WLEN (curr_erf);
 	      *pphys = &curr_erf->rec.eth.dst;
 	      ether_type = ntohs (curr_erf->rec.eth.etype);
-	      if ( ether_type == 0x8100 ) {
+	      if ( ether_type == ETHERTYPE_8021Q || ether_type == ETHERTYPE_MPLS) {
   		// 802.1Q or MPLS over ethernet
   		// warning, no strict size check, just take into account a 4 bytes label
 	      	*ppip = (struct ip *) &curr_erf->rec.eth.pload[3];

@@ -124,3 +124,9 @@ Here it follows a brief description of the columns.
 # 98  # P2P type       # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
 # 99  # P2P subtype    # P2P protocol message type, as identified by the IPP2P engine. Application dependent. See ipp2p_tstat.c.
 ############################################################################
+# 100 # ED2K Data      # For P2P ED2K flows, the number of data messages
+# 101 # ED2K Signaling # For P2P ED2K flows, the number of signaling (not data) messages
+# 102 # ED2K C2S       # For P2P ED2K flows, the number of client<->server messages
+# 103 # ED2K C2C       # For P2P ED2K flows, the number of client<->client messages
+# 104 # ED2K Chat      # For P2P ED2K flows, the number of chat messages 
+############################################################################

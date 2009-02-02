@@ -375,17 +375,6 @@ findheader (u_int ipproto, struct ip *pip, void **pplast)
                 *pplast = (void *) ((unsigned long) pip + ntohs (pip->ip_len));
             }
 
-#ifdef OLD
-            /* this is better verified when used, the error message is better */
-
-            /* make sure the whole header is there */
-            if ((u_long) ptcp + (sizeof struct tcphdr) -1 > (u_long) * pplast)
-            {
-                /* part of the header is missing */
-                return NULL;
-            }
-#endif
-
             return (theheader);
         }
         else
