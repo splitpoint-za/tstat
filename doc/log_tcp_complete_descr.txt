@@ -11,7 +11,7 @@ if the three way handshake succeeded and if the connection tear-down a
 case) is observed, then a line in the log_complete file is added.
 Otherwise, the connection is logged in the log_nocomplete file.
 
-Both files have the same format. Values are separated by tabs.
+Both files have the same format. Values are separated by spaces.
 
 Each line is composed of three main parts: values referring to the client
 host, values referring to the server hosts, and flow information (time 
@@ -130,3 +130,65 @@ Here it follows a brief description of the columns.
 # 103 # ED2K C2C       # For P2P ED2K flows, the number of client<->client messages
 # 104 # ED2K Chat      # For P2P ED2K flows, the number of chat messages 
 ############################################################################
+
+Connection type (Column no. 97) description (from protocol.h)
+-------------------------------------------------------------
+#########################################
+# Bitmask # Protocol			#
+#  Value  # Description			#
+#########################################
+# 	0 # Unknown protocol		#
+#	1 # HTTP protocol		#
+#	2 # RTSP protocol		#
+#	4 # RTP protocol		#
+#	8 # ICY protocol		#
+#      16 # RTCP protocol		#
+#      32 # MSN protocol		#
+#      64 # YMSG protocol		#
+#     128 # XMPP protocol		#
+#     256 # P2P protocol		#
+#     512 # SKYPE protocol		#
+#    1024 # SMTP protocol		#
+#    2048 # POP3 protocol		#
+#    4096 # IMAP4 protocol		#
+#    8192 # SSL/TLS protocol		#
+#   16384 # ED2K protocol (obfuscated)	# 
+#########################################
+
+Since the connection type is a bitmask, it's possible to have combinated
+values. Common combinations are 257 (HTML and P2P), or 16640 (P2P and OBF).
+
+
+P2P type (Column no. 98) description (from ipp2p_tstat.h)
+---------------------------------------------------------
+#################################################
+# Set-to-1  # Protocol				#
+# n-th bit  # Description			#
+# of Bitmask#					#
+#################################################
+# 1	    # IPP2P_ED2K - eMule		#
+# 2	    # IPP2P_DATA_KAZAA			#
+# 3	    # IPP2P_DATA_ED2K			#
+# 4	    # IPP2P_DATA_DC			#
+# 5	    # IPP2P_DC - DirectConnect++       	#
+# 6	    # IPP2P_DATA_GNU		       	#
+# 7	    # IPP2P_GNU - Gnutella	       	#
+# 8	    # IPP2P_KAZAA		       	#
+# 9	    # IPP2P_BIT - BitTorrent	       	#
+# 10	    # IPP2P_APPLE		       	#
+# 11	    # IPP2P_SOUL - SoulSeek	       	#
+# 12	    # IPP2P_WINMX		       	#
+# 13	    # IPP2P_ARES		       	#
+# 14	    # IPP2P_MUTE		       	#
+# 15	    # IPP2P_WASTE		       	#
+# 16	    # IPP2P_XDCC		       	#
+# 17	    # IPP2P_KAD - eMule KAD	       	#
+# 18	    # IPP2P_KADU - Adunanza (eMule mod)	#
+# 19	    # IPP2P_PPLIVE		       	#
+# 20	    # IPP2P_SOPCAST		       	#
+# 21	    # IPP2P_TVANTS		       	#
+#################################################
+
+Some of these values are actually internally used for UDP only, 
+or correspond to currently disabled alternate matching rules,
+so they might never appear in log_tcp_(no)complete. 

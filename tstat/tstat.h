@@ -529,6 +529,10 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #define ETHERTYPE_VLAN		0x8100
 #endif /* 802.1Q Virtual LAN */
 
+#ifndef ETHERTYPE_8021Q
+#define ETHERTYPE_8021Q 0x8100	/* Ethernet type for VLAN */
+#endif
+
 /* support for vlan tagging */
 #ifndef IEEE8021Q_SIZE
 #define IEEE8021Q_SIZE		18
@@ -538,9 +542,11 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 #ifndef ETHERTYPE_MPLS
 #define ETHERTYPE_MPLS	0x8847
 #endif /* MPLS ether type */
+
 #ifndef MPLS_SIZE
 #define MPLS_SIZE		18
-#endif /* Plain MPLS header size */
+#endif /* MPLS over ETH header size */
+
 #ifndef MPLS8021Q_SIZE
 #define MPLS8021Q_SIZE		22
 #endif /* MPLS over VLAN header size */
@@ -555,10 +561,6 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 
 #ifndef ETHERTYPE_IPV6
 #define ETHERTYPE_IPV6 0x86DD	/* Ethernet type for ipv6 */
-#endif
-
-#ifndef ETHERTYPE_8021Q
-#define ETHERTYPE_8021Q 0x8100	/* Ethernet type for VLAN */
 #endif
 
 

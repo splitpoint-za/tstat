@@ -1,3 +1,34 @@
+03/02/09 -MMM & Finamore
+- Main changes from 2.0 to 2.1:
+  * added snap_len option in dump engine and fixed bug in skype runtime engine
+  * added TODO
+  * updated ChangeLog and NEWS.in
+  * bugfix: corrected use of RUNTIME_CONFIG_IDLE and removed skype debug 
+    message
+  * bugfix in stderr/stdout redirection
+  * bugfix: segmentation fault executing tstat without parameters
+  * bugfix: segmentation fault using tstat.conf
+  * tstat now execute even if no trace file is specified
+  * changed format of print histograms using -H? option
+  * New format for the file containing the internal networks
+  * update tstat-conf subnet files to the new file format
+  * SSL Handshake (Client/Server Hello) identification
+  * Better IMAP4 matching
+  * Adapted DirectConnect matching for partial packets
+  * Added MySQL scripts
+  * Obfuscated eMule/ED2K/KAD support
+  * eMule 0.49b new opcodes added
+  * Code for removal of duplicate TCP packets
+  * Do not include duplicate datagrams in IP Histograms/RRDs
+  * Minor IPv6 compatibility update
+  * Bugfix: nocomplete flows were considered as UNKNOWN L7 flows in histograms
+  * Change: in histograms, count unanswered UDP flows only in C2S direction, 
+    not both
+  * Use snprintf() to reduce problems with random stack overflows
+  * Bug: wrong stop time in log.txt due to ctime() called twice in a row
+  * MSN Chat bugfixes and paranoic string size checking
+  * Added support for MPLS over ETH and MPLS over VLAN
+
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made
 

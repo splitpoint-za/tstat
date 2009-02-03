@@ -796,11 +796,15 @@ argument cannot be treated exhaustively. Perl, Awk, Ruby
 I<Your-Favorite-Scripting-Language> scripts are definitively
 best candidates to post-process C<log_*> files.
 
-In the Tstat download page, you
+In the Tstat download page and in the source archive, you
 can find C<plot_time.pl> and C<plot_cum.pl>, two Perl scripts that may be useful
 to produce either i) time or ii) aggregated plots over different time spans.
 They directly access the histogram database created by Tstat.
 Please, refer to L<http://tstat.polito.it/software.php#postprocess>.
+
+In the source code, in C<scripts/MySQL/>, you can also find a few Perl 
+scripts to load the main C<log_*> files in a simple MySQL database, for further 
+post-processing.
 
 RRD files can be manipulated to obtain I<indirect> 
 metrics through the RPN manipulations mechanism provided 
