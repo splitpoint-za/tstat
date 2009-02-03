@@ -537,10 +537,13 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 /* support for MPLS over ETH */
 #ifndef ETHERTYPE_MPLS
 #define ETHERTYPE_MPLS	0x8847
-#endif /* PPPoE ether type */
+#endif /* MPLS ether type */
 #ifndef MPLS_SIZE
 #define MPLS_SIZE		18
-#endif /* MPLS header size */
+#endif /* Plain MPLS header size */
+#ifndef MPLS8021Q_SIZE
+#define MPLS8021Q_SIZE		22
+#endif /* MPLS over VLAN header size */
 
 /* support for PPPoE encapsulation added by Yann Samama (ysamama@nortelnetworks.com)*/
 #ifndef ETHERTYPE_PPPOE_SESSION

@@ -83,6 +83,7 @@ find_ip_eth (char *buf)
 {
   unsigned short ppp_proto_type;	/* the protocol type field of the PPP header */
   unsigned short eth_proto_type;	/* the protocol type field of the Ethernet header */
+  unsigned short vlan_proto_type;	/* the protocol type field of the VLAN header */
   int offset = -1;		/* the calculated offset that this function will return */
 
   memcpy (&eth_proto_type, buf + 12, 2);
@@ -103,6 +104,12 @@ find_ip_eth (char *buf)
       break;
     case ETHERTYPE_8021Q:
       offset = 18;
+      memcpy (&vlan_proto_type, buf + 16, 2);
+      vlan_proto_type = ntohs (vlan_proto_type);
+      if (vlan_proto_type == ETHERTYPE_MPLS)	/* it's MPLS over VLAN */
+        {
+	  offset += 4; /* Skip 4 bytes of MPLS label*/
+	}
       break;
     case ETHERTYPE_MPLS: /* it's IP over MPLS over Eth - skip 4 bytes of MPLS label */
       offset = 18;
@@ -196,6 +203,7 @@ callback (char *user, struct pcap_pkthdr *phdr, char *buf)
                     callback_plast = ip_buf + iplen - 1;
                     break;
                 case PPPOE_SIZE:	/* PPPoE encapsulation */
+                //case MPLS8021Q_SIZE:		/* VLAN-MPLS encapsulation - same len*/
                     /* we use a fake ether type here */
                     eth_header.ether_type = htons (ETHERTYPE_IP);
                     memcpy ((char *) ip_buf, buf + offset, iplen);

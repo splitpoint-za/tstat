@@ -136,10 +136,6 @@ print_erf_record (erf_record_t * r)
 #define ETHERNET_WLEN(h)    (ntohs((h)->wlen) - (fcs_bits >> 3))
 #define ETHERNET_SLEN(h)     min(ETHERNET_WLEN(h), ntohs((h)->rlen) - ERF_HEADER_LEN - 2)
 
-#define ETH8021Q_WLEN(h)    (ntohs((h)->wlen) - (fcs_bits >> 3))
-#define ETH8021Q_SLEN(h)     min(ETHERNET_WLEN(h), ntohs((h)->rlen) - ERF_HEADER_LEN - 2)
-
-
 /*
  * Size of HDLC payload
  */
@@ -212,8 +208,8 @@ pread_erf_live (struct timeval *ptime,
 	  len = ntohs (curr_erf->rlen);
 	  /* User processing here */
 	  if (debug > 1)
-	    fprintf (fp_stderr, "Got a new packet from the buffer (len = %d, type = %d)\n",
-		     len, curr_erf->type);
+	    fprintf (fp_stderr, "Got a new packet from the buffer (len = %d)\n",
+		     len);
 	  if (debug > 2)
 	    print_erf_record (curr_erf);
 
@@ -254,17 +250,9 @@ pread_erf_live (struct timeval *ptime,
 	      *plen = ETHERNET_WLEN (curr_erf);
 	      *pphys = &curr_erf->rec.eth.dst;
 	      ether_type = ntohs (curr_erf->rec.eth.etype);
-	      if ( ether_type == ETHERTYPE_8021Q || ether_type == ETHERTYPE_MPLS) {
-  		// 802.1Q or MPLS over ethernet
-  		// warning, no strict size check, just take into account a 4 bytes label
-	      	*ppip = (struct ip *) &curr_erf->rec.eth.pload[3];
-		*pplast = 
-			((char *) *ppip) + *ptlen - sizeof (struct ether_header) - 4 - 1;
-	      } else {
-	      	*ppip = (struct ip *) &curr_erf->rec.eth.pload[0];
-	      	*pplast =
-			((char *) *ppip) + *ptlen - sizeof (struct ether_header) - 1;
-	      }
+	      *ppip = (struct ip *) &curr_erf->rec.eth.pload[0];
+	      *pplast =
+		((char *) *ppip) + *ptlen - sizeof (struct ether_header) - 1;
 	      break;
 	    case ERFT_HDLC_POS:
 	      erftype_ok = TRUE;
