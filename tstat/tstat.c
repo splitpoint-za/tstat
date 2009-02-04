@@ -17,7 +17,7 @@
 */
 
 static char const copyright[] =
-  "@(#)Copyright (c) 2001-2008 -- Telecomunication Network Group \
+  "@(#)Copyright (c) 2001-2009 -- Telecomunication Network Group \
      -- Politecnico di Torino.  All rights reserved.\
      Tstat is based on TCPTRACE,\
     @(#)Copyright (c) 1999 -- Shawn Ostermann -- Ohio University.\n";
@@ -1263,9 +1263,9 @@ static int ProcessPacket(struct timeval *pckt_time,
     if (flow_stat_code != FLOW_STAT_OK)
       return 0;
 
-    //********************************************
-    //* check if the runtime config file is changed
-    //********************************************
+    //********************************************/
+    //* check if the runtime config file is changed */
+    //********************************************/
     if (runtime_engine && 
         difftime(time(NULL), last_mtime_check) >= RUNTIME_CONFIG_IDLE) 
     {
@@ -1285,7 +1285,7 @@ static int ProcessPacket(struct timeval *pckt_time,
                 if (debug) 
                     fprintf(fp_stdout, "Runtime configuration is changed\n");
             }
-            // postpone reload runtime configuration untill
+            // postpone reload runtime configuration until
             // the timestamp isn't changed for RUNTIME_MTIME_COUNTER times
             else if (mtime_stable_counter >= 0) {
                 mtime_stable_counter--;
