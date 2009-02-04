@@ -1084,7 +1084,7 @@ ip_header_stat (int phystype,
   if (elapsed (L3_last_time, current_time) > L3_BITRATE_DELTA)
    {
      double L3_delta = elapsed (L3_last_time, current_time);
-     if (log_engine && l3_engine_log)
+     if (log_engine && l3_engine_log && fp_l3bitrate!=NULL)
         fprintf(fp_l3bitrate,"%.6f %.2f %.2f %.2f %.2f %.2f %.2f\n",
             (double)current_time.tv_sec + (double) current_time.tv_usec / 1000000.0,
              L3_bitrate_in*8.0/L3_delta*1000.,
