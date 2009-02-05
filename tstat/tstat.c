@@ -789,7 +789,7 @@ create_new_outfiles (char *filename)
 	{
 	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
-  #ifdef MSN_OTHER_COMMANDS
+#ifdef MSN_OTHER_COMMANDS
       sprintf (logfile, "%s/%s", basename, "log_msn_OtherCommands");
       if (fp_msn_log_othercomm != NULL)
 	fclose (fp_msn_log_othercomm);
@@ -798,21 +798,21 @@ create_new_outfiles (char *filename)
 	{
 	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
 	}
-  #endif
-  #ifdef L3_BITRATE
-    if (l3_engine_log)
-     {
-      sprintf (logfile, "%s/%s", basename, "log_l3_bitrate");
-      if (fp_l3bitrate != NULL)
-	fclose (fp_l3bitrate);
-      fp_l3bitrate = fopen (logfile, "w");
-      if (fp_l3bitrate == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
-     }
-  #endif
+#endif
+#endif
 
+#ifdef L3_BITRATE
+      if (l3_engine_log)
+        {
+          sprintf (logfile, "%s/%s", basename, "log_l3_bitrate");
+          if (fp_l3bitrate != NULL)
+	    fclose (fp_l3bitrate);
+          fp_l3bitrate = fopen (logfile, "w");
+          if (fp_l3bitrate == NULL)
+	    {
+	      fprintf (fp_stderr, "Could not open file %s\n", logfile);
+	    }
+        }
 #endif
 
 #ifdef LOG_OOO
