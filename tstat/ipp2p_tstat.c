@@ -389,7 +389,7 @@ udp_search_kazaa (unsigned char *haystack, const int packet_len, int payload_len
 
 /*Search for UDP DirectConnect commands*/
 int
-udp_search_directconnect (unsigned char *haystack, const int packet_len,
+_udp_search_directconnect (unsigned char *haystack, const int packet_len,
 			  int payload_len)
 {
   unsigned char *t = haystack;
@@ -405,6 +405,26 @@ udp_search_directconnect (unsigned char *haystack, const int packet_len,
   return 0;
 }				/*udp_search_directconnect */
 
+/*Search for UDP DirectConnect commands*/
+/* MMM - Original function completely wrong */
+int
+udp_search_directconnect (unsigned char *haystack, const int packet_len,
+			  int payload_len)
+{
+  unsigned char *t = haystack;
+
+  if (*(t + 8) != 0x24)
+    return 0;  /* UDP commands start with '$' */
+
+  t += 9;
+
+  if ((payload_len>11) && (memcmp (t, "SR ", 3) == 0) )
+    return ((IPP2P_DC * 100) + 60);
+  else if ((payload_len>13) && (memcmp (t, "Ping ", 5) == 0))
+    return ((IPP2P_DC * 100) + 61);
+  else 
+    return 0;
+}				/*udp_search_directconnect */
 
 
 /*Search for UDP BitTorrent commands*/
