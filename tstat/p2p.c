@@ -540,8 +540,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   /* log only P2P or unknown traffic. avoid RTP and SKYPE that are managed
   by their plugin */
   
-  if ( ( thisC2S->type < RTP || thisC2S->type >= P2P_EDK ) &&
-       ( thisS2C->type < RTP || thisS2C->type >= P2P_EDK ) )
+  if ( ( thisC2S->type < RTP || thisC2S->type >= SKYPE_SIG ) &&
+       ( thisS2C->type < RTP || thisS2C->type >= SKYPE_SIG ) )
   {
      int L7type = UDP_p2p_to_L7type(thisC2S);
       
