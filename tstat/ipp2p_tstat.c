@@ -414,7 +414,7 @@ udp_search_directconnect (unsigned char *haystack, const int packet_len,
   unsigned char *t = haystack;
 
   if (*(t + 8) != 0x24)
-    return 0;  /* UDP commands start with '$' */
+    return 0;  /* DirectConnect commands start with '$' */
 
   t += 9;
 

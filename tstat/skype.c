@@ -29,6 +29,7 @@ extern Bool log_engine;
 extern Bool bayes_engine;
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
+extern struct L7_bitrates L7_udp_bitrate;
 
 void
 skype_init ()
@@ -586,89 +587,92 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 
   /* log only SKYPE or unknown traffic */
 
-  if (tproto != PROTOCOL_UDP)
-      return;
+  if (tproto == PROTOCOL_UDP)
+   { /* Protocol_UDP */
+      switch (thisUdir->type)
+      {
+  	  case RTP:
+  	  case RTCP:
+  	  case P2P_DC:
+  	  case P2P_GNU:
+  	  case P2P_KAZAA:
+  	  case P2P_BT:
+  	  case P2P_PPLIVE:
+  	  case P2P_SOPCAST:
+  	  case P2P_TVANTS:
+  	      break;
 
-  switch (thisUdir->type)
-  {
-      case RTP:
-      case RTCP:
-      case P2P_DC:
-      case P2P_GNU:
-      case P2P_KAZAA:
-      case P2P_BT:
-      case P2P_PPLIVE:
-      case P2P_SOPCAST:
-      case P2P_TVANTS:
-          break;
+  	  case SKYPE_E2E:
+  	  case SKYPE_OUT:
+  	  case SKYPE_SIG:
+  	      if (!thisUdir->skype.early_classification) {
+  		  fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
+  		  exit (1);
+  	      }
+  	      break;
 
-      case SKYPE_E2E:
-      case SKYPE_OUT:
-      case SKYPE_SIG:
-          if (!thisUdir->skype.early_classification) {
-              fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
-              exit (1);
-          }
-          break;
+  	  case FIRST_RTP:
+  	  case FIRST_RTCP:
+  	  case P2P_EDK:  /* Skype could be matched by generic Emule/Kad rules */
+  	  case P2P_KAD:
+  	  case P2P_KADU:
+  	  case P2P_OKAD:
+  	  case UDP_UNKNOWN:
+  	  default: 
+  	      if ((pskype->pkt_type_num[SKYPE_E2E_DATA] > MIN_SKYPE_E2E_NUM) &&
+  		      ((double) pskype->pkt_type_num[SKYPE_E2E_DATA] * 100.0 /
+  		       (double) thisUdir->packets > MIN_SKYPE_E2E_PERC))
+  	      {
+  		  thisUdir->type = SKYPE_E2E;
+  	      }
+  	      else if ((pskype->pkt_type_num[SKYPE_OUT_DATA] > MIN_SKYPE_OUT_NUM)
+  		      && ((double) pskype->pkt_type_num[SKYPE_OUT_DATA] * 100.0 /
+  			  (double) thisUdir->packets > MIN_SKYPE_OUT_PERC))
+  	      {
+  		  thisUdir->type = SKYPE_OUT;
+  		  /*	if (dir == S2C) {
+  			if (strcmp(ServiceName(pup->addr_pair.a_port),"12340")==0)  {
 
-      case FIRST_RTP:
-      case FIRST_RTCP:
-      case P2P_EDK:  /* Skype could be matched by generic Emule/Kad rules */
-      case P2P_KAD:
-      case P2P_KADU:
-      case UDP_UNKNOWN:
-      default: 
-          if ((pskype->pkt_type_num[SKYPE_E2E_DATA] > MIN_SKYPE_E2E_NUM) &&
-                  ((double) pskype->pkt_type_num[SKYPE_E2E_DATA] * 100.0 /
-                   (double) thisUdir->packets > MIN_SKYPE_E2E_PERC))
-          {
-              thisUdir->type = SKYPE_E2E;
-          }
-          else if ((pskype->pkt_type_num[SKYPE_OUT_DATA] > MIN_SKYPE_OUT_NUM)
-                  && ((double) pskype->pkt_type_num[SKYPE_OUT_DATA] * 100.0 /
-                      (double) thisUdir->packets > MIN_SKYPE_OUT_PERC))
-          {
-              thisUdir->type = SKYPE_OUT;
-              /*    if (dir == S2C) {
-                    if (strcmp(ServiceName(pup->addr_pair.a_port),"12340")==0)  {
+  			thisUdir->type = SKYPE_OUT;
+  			}
+  			}
+  			else 
+  			if (strcmp(ServiceName(pup->addr_pair.b_port),"12340")==0)  {
 
-                    thisUdir->type = SKYPE_OUT;
-                    }
-                    }
-                    else 
-                    if (strcmp(ServiceName(pup->addr_pair.b_port),"12340")==0)  {
+  			thisUdir->type = SKYPE_OUT;
+  			} */
+  	      }
+  	      else if (thisUdir->packets
+  		      && (tot_skype * 100 / thisUdir->packets > MIN_SKYPE_PERC))
+  	      {
+  		  thisUdir->type = SKYPE_SIG;
+  	      }
+  	      else
+  	      {
+  		  if (thisUdir->type==FIRST_RTP || thisUdir->type==FIRST_RTCP)
+  		  {
+  		      thisUdir->type = UDP_UNKNOWN;
+  		  }
+  	      }
 
-                    thisUdir->type = SKYPE_OUT;
-                    } */
-          }
-          else if (thisUdir->packets
-                  && (tot_skype * 100 / thisUdir->packets > MIN_SKYPE_PERC))
-          {
-              thisUdir->type = SKYPE_SIG;
-          }
-          else
-          {
-              if (thisUdir->type==FIRST_RTP || thisUdir->type==FIRST_RTCP)
-              {
-                  thisUdir->type = UDP_UNKNOWN;
-              }
-          }
+  	      #ifdef ONELINE_LOG_FORMAT
+  		if (dir == C2S)
+  		  return;
+  	      #endif
 
-          #ifdef ONELINE_LOG_FORMAT
-            if (dir == C2S)
-              return;
-          #endif
+  	      print_skype_conn_stats_UDP (thisUdir, dir);    /* thisUdir */
 
-          if (tproto == PROTOCOL_UDP)
-          {
-              print_skype_conn_stats_UDP (thisUdir, dir);	/* thisUdir */
-          }
-          else
-          {
-              print_skype_conn_stats_TCP (thisTdir, dir);	/* thisTdir */
-          }
-          break;
-  }
+  	      break;
+      } /* switch*/
+   }
+  else
+   { /* Protocol_TCP */
+#ifdef ONELINE_LOG_FORMAT
+     if (dir == C2S)
+       return;
+#endif
+     print_skype_conn_stats_TCP (thisTdir, dir);       /* thisTdir */
+   }  
 }
 
 
@@ -889,11 +893,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -903,11 +907,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -916,11 +920,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -1320,11 +1324,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -1334,11 +1338,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -1347,11 +1351,11 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
-	      L7_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      L7_udp_bitrate.loc[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2O);
-	      L7_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      L7_udp_bitrate.loc[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
 	      break;
 	    }
 	  break;
@@ -1552,10 +1556,10 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	case IN_FLOW:
-	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
+	  L7_bitrate.in[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	case LOC_FLOW:
-	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
+	  L7_bitrate.loc[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	}
     }
@@ -1895,10 +1899,10 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	case IN_FLOW:
-	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
+	  L7_bitrate.in[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	case LOC_FLOW:
-	  L7_bitrate.out[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
+	  L7_bitrate.loc[L7_FLOW_SKYPE_TCP] += thisTdir->data_bytes;
 	  break;
 	}
     }

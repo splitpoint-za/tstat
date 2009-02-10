@@ -868,6 +868,10 @@ make_udpL7_rate_stats (ucb * thisflow, int len)
 
    /* skype bitrate is managed by skype.c since classification is done 
       at flow end */
+   if (type==L7_FLOW_SKYPE_E2E ||
+       type==L7_FLOW_SKYPE_E2O ||
+       type==L7_FLOW_SKYPE_TCP) /* SKYPE_SIG is not counted in skype.c */
+       return;
       
    if (internal_src && !internal_dst)
     {
