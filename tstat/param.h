@@ -43,8 +43,8 @@
 
 /* TCP_IDLE_TIME in microseconds: timeout to consider a TCP flow closed if no
 segmentes are observed since TCP_IDLE_TIME */
-/* 1 min */
-#define TCP_IDLE_TIME 60000000
+/* 5 min */
+#define TCP_IDLE_TIME 300000000
 /* 10 min */
 /*#define TCP_IDLE_TIME 600000000 */
 
