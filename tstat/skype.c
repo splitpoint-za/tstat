@@ -258,7 +258,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
 //===================================================================================
 //  bayes classification
-#define SKYPE_WINDOW_SIZE 30.0
+#define SKYPE_WINDOW_SIZE 30
 
   if (bayes_engine)
     {
@@ -327,7 +327,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       else
 	{
 	  sk->audiovideo_pkts++;
-	  full_window = !(sk->audiovideo_pkts % ((int) SKYPE_WINDOW_SIZE));
+	  full_window = !(sk->audiovideo_pkts % SKYPE_WINDOW_SIZE);
 	}
 
       // update window size      

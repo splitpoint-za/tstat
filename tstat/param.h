@@ -61,11 +61,11 @@ segmentes are observed since UDP_IDLE_TIME */
 
 /* maximum number of concurrent TCP connection stored in the vector TTP 
 Increase this number on high speed network will help ...*/
-#define MAX_TCP_PAIRS 35001
+#define MAX_TCP_PAIRS 35023
 
 /* maximum number of concurrent UDP connection stored in the vector UTP 
 Increase this number on high speed network will help ...*/
-#define MAX_UDP_PAIRS 350001
+#define MAX_UDP_PAIRS 350003
 
 /* max depth of the linear serch in the previous vector... */
 #define LIST_SEARCH_DEPT 200
@@ -73,7 +73,7 @@ Increase this number on high speed network will help ...*/
 /* connection records are stored in a hash table.  Buckets are linked	*/
 /* lists sorted by most recent access.					*/
 /* oughta be prime  and larger than MAX_TCP_PAIRS */
-#define HASH_TABLE_SIZE 2000007
+#define HASH_TABLE_SIZE 2000003
 
 /* Histograms will be saved every MAX_TIME_STEP microseconds... 
    please, note that changing this may affect the RRD definition as well. 
@@ -113,7 +113,7 @@ Increase this number on high speed network will help ...*/
 
 
 /* RTP parameters */
-#define WIN 16			/* sliding window size used to track RTP
+#define RTP_WIN 16		/* sliding window size used to track RTP
 				   flows. MUST BE a power of 2!!! */
 #define OVERFLOW_TH 2000	/* threshold to consider rtp segment as out
 				   of sequence */

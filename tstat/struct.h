@@ -621,7 +621,7 @@ enum udp_type
 typedef struct rtp
 {
 
-  u_int16_t packets_win[WIN];	/* the sliding window vector used to track
+  u_int16_t packets_win[RTP_WIN];	/* the sliding window vector used to track
 				   seqnum */
   Bool w;			/* true if we got a full window */
   u_int16_t initial_seqno;

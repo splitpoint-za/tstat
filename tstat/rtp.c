@@ -732,16 +732,16 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 
 /** management of the window used for oos, duplicate, late or lost packets **/
 
-  if ((u_int16_t) (pseq - f_rtp->initial_seqno) >= WIN)
+  if ((u_int16_t) (pseq - f_rtp->initial_seqno) >= RTP_WIN)
     f_rtp->w = TRUE;		/* got data for at least 1 window */
-  index = ((u_int16_t) (pseq - f_rtp->initial_seqno) % WIN);
+  index = ((u_int16_t) (pseq - f_rtp->initial_seqno) % RTP_WIN);
   delta_seq_win = (u_int16_t) (pseq - f_rtp->packets_win[index]);
 
   /* if there is a sudden jump in the sequence number 
      it happens that some bogus implementation of rtp encoders 
      change the sequence numbering at random (CISCO...)
      So try to detect them */
-  if (delta_seq_win > WIN * 5
+  if (delta_seq_win > RTP_WIN * 5
       && (u_int32_t) (pts - f_rtp->largest_ts) < 0xffff0000
       && f_rtp->w == TRUE)
     {
@@ -752,10 +752,10 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
       f_rtp->largest_ts = pts;
       f_rtp->bogus_reset_during_flow = TRUE;
 
-      for (i = 0; i < WIN; i++)	/* reset of the window at the beginning of the flow */
+      for (i = 0; i < RTP_WIN; i++)	/* reset of the window at the beginning of the flow */
 	f_rtp->packets_win[i] = pseq - 1;
 
-      index = ((u_int16_t) (pseq - f_rtp->initial_seqno) % WIN);	/* equal to 1 */
+      index = ((u_int16_t) (pseq - f_rtp->initial_seqno) % RTP_WIN);	/* equal to 1 */
       delta_seq_win = (u_int16_t) (pseq - f_rtp->packets_win[index]);	/* idem */
     }
 
@@ -926,7 +926,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 #endif
 	  f_rtp->n_dup++;
 	}
-      else if (delta_seq_win > WIN)
+      else if (delta_seq_win > RTP_WIN)
 	{
 #ifdef LOG_OOO
 	  seg_type = LOST;
@@ -935,7 +935,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	  f_rtp->burst++;
 	  f_rtp->packets_win[index] = pseq;
 	}
-      else if (delta_seq_win == WIN)
+      else if (delta_seq_win == RTP_WIN)
 	{
 	  /* in sequence */
 	  /* Statistics of the burst and reset of the burst length */
@@ -1711,7 +1711,7 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 /* analysis of the last window before the closing of the flow */
 /* maximum index reached in the window */
   max_index =
-    ((u_int16_t) (f_rtp->largest_seqno - f_rtp->initial_seqno) % WIN);
+    ((u_int16_t) (f_rtp->largest_seqno - f_rtp->initial_seqno) % RTP_WIN);
 /* value that must be contained in the first elemet of the window */
   min_val = (u_int16_t) (f_rtp->largest_seqno - max_index);
   for (index = 0; index <= max_index; index++)
