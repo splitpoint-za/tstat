@@ -1,13 +1,17 @@
 News in 2.1
 -------------
-* Bugfixes
+* Bugfixes (see ChangeLog)
 * Updated DPI classification:
   - Added SSL/TLS
   - Improved IMAP classification
   - Heuristics for identification of eMule/ED2K obfuscate TCP connections 
     and eMule/KAD obfuscate UDP flows 
 * New format for subnet file (-N)
-* Changed bitrate RRDs from kbit/s to bit/s
+* Changed bitrate RRDs and histograms from kbit/s to bit/s
+* Improved detection of duplicated TCP/UDP segments 
+* Improved identification of MPLS packets when using libpcap
+* Included a MySQL db scheme and a few Perl scripts for Tstat Log analysis 
+  (in scripts/MySQL/)
 
 News in 2.0
 -------------

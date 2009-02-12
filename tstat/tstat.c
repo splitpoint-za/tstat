@@ -1006,12 +1006,14 @@ ip_header_stat (int phystype,
     }
 
 
+#ifndef TSTAT_RUNASLIB
   /* install signal handler */
   if ((*fpnum) == 1)
     {
       signal (SIGINT, QuitSig);
       signal (SIGUSR1, Usr1Sig);
     }
+#endif
 
 #ifndef TSTAT_RUNASLIB
   /* progress counters */
@@ -1336,6 +1338,7 @@ static int ProcessPacket(struct timeval *pckt_time,
 
 void ProcessFileCompleted(Bool last) {
     tstat_report report;
+#ifndef TSTAT_RUNASLIB
     /* set ^C back to the default */
     /* (so we can kill the output if needed) */
     {
@@ -1347,6 +1350,7 @@ void ProcessFileCompleted(Bool last) {
         sigprocmask (SIG_UNBLOCK, &mask, NULL);
         signal (SIGINT, SIG_DFL);
     }
+#endif
 
     /* statistics dumping modified for -c option*/
     stat_dumping_old_style ();
