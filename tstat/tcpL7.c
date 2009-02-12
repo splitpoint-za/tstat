@@ -192,7 +192,7 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
         ptp->s2c.msn.MSN_VER_count = 1;
 	
 	   /* try to find MSN Protocol version negoziated */
-	if ((char *) pdata + 6 <= (char *) plast)
+	if ((char *) pdata + 13 <= (char *) plast)
 	 {
 	   pMSNP_ver = (char *) pdata + 6;
 	   sscanf ((char *) (pMSNP_ver), "%7s", MSNP_ver);
