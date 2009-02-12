@@ -151,7 +151,7 @@ typedef struct msn_stat
   unsigned MSN_QRY_count;
 
   int MFT;			/* Msn Flow Type */
-  char MSNPversion[7];
+  char MSNPversion[8];
 
 } msn_stat;
 #endif

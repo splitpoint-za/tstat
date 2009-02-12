@@ -174,7 +174,7 @@ void ed2k_obfuscate_check(tcp_pair *ptp,int payload_len)
 #ifdef MSN_CLASSIFIER
 void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pdata, void *plast)
 {
-  char MSNP_ver[7] = "?\0";
+  char MSNP_ver[8] = "?\0";
   char *pMSNP_ver;
 
   if (http_tunneling == 1)
