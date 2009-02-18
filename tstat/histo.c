@@ -1907,7 +1907,7 @@ create_all_histo (void)
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
   chat_flow_num =
-    create_histo ("chat_flow_num", "Number of tracked MSN flow", 0,
+    create_histo ("chat_flow_num", "Number of tracked IM flow", 0,
                    MAX_CHAT_FLOW_NUM, 1);
 #endif
 
