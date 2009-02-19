@@ -675,6 +675,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        break;
 	    }
 	 }
+	break;
 #endif     
      case SSL_HANDSHAKE:
         if (dir == S2C && ((char *) pdata + 6 <= (char *) plast) &&
