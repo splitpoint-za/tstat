@@ -53,6 +53,7 @@ segmentes are observed since UDP_IDLE_TIME */
 /* 200s */
 #define UDP_IDLE_TIME 200000000   /* 200 s */
 //#define UDP_IDLE_TIME 10000000 /* 10s */
+#define UDP_IDLE_SINGLETON 10000000   /* 10 s */
 
 //5min = 5 * 60 sec
 #define RUNTIME_CONFIG_IDLE 300

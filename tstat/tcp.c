@@ -1424,8 +1424,17 @@ trace_done_periodic ()
 
       /* If no packets have been received in the last UDP_IDLE_TIME period,
          close the flow */
+#ifdef WIPE_UDP_SINGLETONS
+      if (( (pup->packets == 1) && 
+	    (elapsed (pup->last_time, current_time) > UDP_IDLE_SINGLETON)
+	  )
+	  ||
+          (elapsed (pup->last_time, current_time) > UDP_IDLE_TIME))
+	close_udp_flow (pup, ix, dir);
+#else
       if ((elapsed (pup->last_time, current_time) > UDP_IDLE_TIME))
 	close_udp_flow (pup, ix, dir);
+#endif
 
     }
   if (printticks && debug > 1)

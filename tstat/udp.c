@@ -205,7 +205,11 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 a new one */
 
   // we fire it at DOUBLE rate, but actually clean only those > UDP_IDLE_TIME
+#ifdef WIPE_UDP_SINGLETONS
+  if (elapsed (last_cleaned, current_time) > UDP_IDLE_SINGLETON / 2)
+#else
   if (elapsed (last_cleaned, current_time) > UDP_IDLE_TIME / 2)
+#endif
     {
       if (threaded)
 	{
@@ -687,8 +691,6 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
 	  if ((utp[ix] == NULL))
 	    continue;
 
-	  /* If no packets have been received in the last UDP_IDLE_TIME period,
-	     close the flow */
 	  if (SameConn (&pup->addr_pair, &utp[ix]->addr_pair, &dir))
 	    {
 	      break;
