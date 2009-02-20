@@ -465,7 +465,11 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
     }
 
   // we fire it at DOUBLE rate, but actually clean only those > TCP_IDLE_TIME
+#ifdef WIPE_TCP_SINGLETONS
+  if (elapsed (last_cleaned, current_time) > TCP_SINGLETON_TIME / 2)
+#else
   if (elapsed (last_cleaned, current_time) > TCP_IDLE_TIME / 2)
+#endif
     {
       if (threaded)
 	{
@@ -1307,8 +1311,29 @@ trace_done_periodic ()
 
       /* If no packets have been received in the last IDLE_TIME period,
          close the flow */
+#ifdef WIPE_TCP_SINGLETONS
+      if (( (
+             (
+	      (ptp->c2s.syn_count>0 && ptp->s2c.syn_count==0)
+              ||
+	      (ptp->c2s.syn_count==0 && ptp->s2c.syn_count>0)
+	     ) 
+	     &&
+	     (
+	      ptp->packets == (ptp->c2s.syn_count+ptp->s2c.syn_count)
+	     )
+	    )
+            && 
+	    (elapsed (ptp->last_time, current_time) > TCP_SINGLETON_TIME)
+	  )
+	  ||
+          (elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
+	{
+          printf ("TCP Singleton!\n");
+#else
       if ((elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
 	{
+#endif
 	  if (threaded)
 	    {
 #ifdef DEBUG_THREAD
@@ -1324,9 +1349,18 @@ trace_done_periodic ()
 		  pthread_mutex_unlock (&ttp_lock_mutex);
 		  continue;
 		}
+#ifdef WIPE_TCP_SINGLETONS
+             /* Not sure this is the correct test when managing
+	        singletons and normal times together
+	     */
+	      if ((elapsed (ptp->last_time, current_time) <= TCP_SINGLETON_TIME)
+		  || (ptp->last_time.tv_sec == 0
+		      && ptp->last_time.tv_usec == 0))
+#else
 	      if ((elapsed (ptp->last_time, current_time) <= TCP_IDLE_TIME)
 		  || (ptp->last_time.tv_sec == 0
 		      && ptp->last_time.tv_usec == 0))
+#endif
 		{
 		  /* someonelse already cleaned this ptp */
 		  pthread_mutex_unlock (&ttp_lock_mutex);
@@ -1426,7 +1460,7 @@ trace_done_periodic ()
          close the flow */
 #ifdef WIPE_UDP_SINGLETONS
       if (( (pup->packets == 1) && 
-	    (elapsed (pup->last_time, current_time) > UDP_IDLE_SINGLETON)
+	    (elapsed (pup->last_time, current_time) > UDP_SINGLETON_TIME)
 	  )
 	  ||
           (elapsed (pup->last_time, current_time) > UDP_IDLE_TIME))

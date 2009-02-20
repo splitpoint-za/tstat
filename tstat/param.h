@@ -42,18 +42,30 @@
 
 
 /* TCP_IDLE_TIME in microseconds: timeout to consider a TCP flow closed if no
-segmentes are observed since TCP_IDLE_TIME */
+segments are observed since TCP_IDLE_TIME */
 /* 5 min */
 #define TCP_IDLE_TIME 300000000
 /* 10 min */
 /*#define TCP_IDLE_TIME 600000000 */
 
 /* UDP_IDLE_TIME in microseconds: timeout to consider a UDP flow closed if no
-segmentes are observed since UDP_IDLE_TIME */
+segments are observed since UDP_IDLE_TIME */
 /* 200s */
 #define UDP_IDLE_TIME 200000000   /* 200 s */
 //#define UDP_IDLE_TIME 10000000 /* 10s */
-#define UDP_IDLE_SINGLETON 10000000   /* 10 s */
+
+
+/* TCP_SINGLETON_TIME in microseconds: timeout to consider a TCP flow closed if 
+no segments are observed for TCP_SINGLETON_TIME after the initial SYN segment 
+Used only if WIPE_TCP_SINGLETON is defined
+*/
+#define TCP_SINGLETON_TIME 10000000   /* 10 s */
+
+/* UDP_SINGLETON_TIME in microseconds: timeout to consider a UDP flow closed if
+no segments are observed for UDP_SINGLETON_TIME after the first segment
+Used only if WIPE_TCP_SINGLETON is defined
+*/
+#define UDP_SINGLETON_TIME 10000000   /* 10 s */
 
 //5min = 5 * 60 sec
 #define RUNTIME_CONFIG_IDLE 300

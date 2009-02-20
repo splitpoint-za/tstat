@@ -206,7 +206,7 @@ a new one */
 
   // we fire it at DOUBLE rate, but actually clean only those > UDP_IDLE_TIME
 #ifdef WIPE_UDP_SINGLETONS
-  if (elapsed (last_cleaned, current_time) > UDP_IDLE_SINGLETON / 2)
+  if (elapsed (last_cleaned, current_time) > UDP_SINGLETON_TIME / 2)
 #else
   if (elapsed (last_cleaned, current_time) > UDP_IDLE_TIME / 2)
 #endif
