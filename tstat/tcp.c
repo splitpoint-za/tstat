@@ -1328,12 +1328,10 @@ trace_done_periodic ()
 	  )
 	  ||
           (elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
-	{
-          printf ("TCP Singleton!\n");
 #else
       if ((elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
-	{
 #endif
+	{
 	  if (threaded)
 	    {
 #ifdef DEBUG_THREAD
