@@ -355,8 +355,8 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               if (ptp->p2p_type != 0
 		  && (ptp->p2p_type / 100) != (return_code / 100))
 		{
-		  fprintf(fp_stdout, 
-		    "Warning: multiple P2P type matching: Old %d - New %d\n",
+		  if (P2P_DEBUG)
+		    fprintf(fp_stdout,"Warning: multiple P2P type matching: Old %d - New %d\n",
 		    ptp->p2p_type, return_code);
 		}
 	      else if (ptp->p2p_type != 0 && ptp->p2p_type != return_code)
