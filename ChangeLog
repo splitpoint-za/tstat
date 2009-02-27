@@ -1,4 +1,4 @@
-03/02/09 -MMM & Finamore
+27/02/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:
   * added snap_len option in dump engine and fixed bug in skype runtime engine
   * added TODO
@@ -26,8 +26,9 @@
     not both
   * Use snprintf() to reduce problems with random stack overflows
   * Bug: wrong stop time in log.txt due to ctime() called twice in a row
-  * MSN Chat bugfixes and paranoic string size checking
+  * Several MSN Chat bugfixes and paranoic string size checking
   * Added support for MPLS over ETH and MPLS over VLAN
+  * Optional early closure for singleton TCP/UDP flows (SYN or UDP flooding)
 
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made

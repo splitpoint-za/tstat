@@ -275,7 +275,7 @@ classify_msn_flow (tcp_pair * ptp, int dir)
 
   if (*MFT == MFT_UNKNOWN || *MFT == MSN_LOGIN || *MFT == MSN_HTTP_TUNNELING)
     {
-      if (tcp_stats->msn.MSN_MSG_count)
+      if (tcp_stats->msn.MSN_MSG_count && *MFT != MSN_LOGIN )
 	{
 	  /* *MFT = MSN_CHAT; force both to be the same */
 	  ptp->c2s.msn.MFT = ptp->s2c.msn.MFT = MSN_CHAT;
