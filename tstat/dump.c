@@ -199,11 +199,36 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
 }
 
+/*
+ * This is a timeval as stored in a savefile.
+ * It has to use the same types everywhere, independent of the actual
+ * `struct timeval'; `struct timeval' has 32-bit tv_sec values on some
+ * platforms and 64-bit tv_sec values on other platforms, and writing
+ * out native `struct timeval' values would mean files could only be
+ * read on systems with the same tv_sec size as the system on which
+ * the file was written.
+ */
+
+
+
+struct pcap_timeval {
+    bpf_int32 tv_sec;           /* seconds */
+    bpf_int32 tv_usec;          /* microseconds */
+};
+
+struct pcap_sf_pkthdr {
+    struct pcap_timeval ts;     /* time stamp */
+    bpf_u_int32 caplen;         /* length of portion present */
+    bpf_u_int32 len;            /* length this packet (off wire) */
+};
+
+
+
 void dump_packet(FILE *fp,
                  void *pip, 
                  void *plast)
 {
-    struct pcap_pkthdr phdr;
+    struct pcap_sf_pkthdr phdr;
     long cap_bytes;
     
     cap_bytes = (char *) plast - (char *) pip + 1;
@@ -217,7 +242,7 @@ void dump_packet(FILE *fp,
     phdr.caplen = cap_bytes;
     phdr.caplen += sizeof(struct ether_header); /* add in the ether header */
     phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));	
-    fwrite(&phdr, sizeof(struct pcap_pkthdr), 1, fp);
+    fwrite(&phdr, sizeof(struct pcap_sf_pkthdr), 1, fp);
 
     // write a (bogus) ethernet header
     memset(&eth_header, 0, sizeof(struct ether_header));
