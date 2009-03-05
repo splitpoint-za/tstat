@@ -1,5 +1,6 @@
 27/02/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:
+  * Libtstat: Changed the API for tstat_next_pckt()
   * added snap_len option in dump engine and fixed bug in skype runtime engine
   * added TODO
   * updated ChangeLog and NEWS.in

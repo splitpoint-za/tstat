@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 
     do {
         // 4) elaborate current packet
-        res = tstat_next_pckt(&current_time, pip, plast, tlen);
+        res = tstat_next_pckt(&current_time, pip, plast, tlen, 0);
 
         // 5) read the next packet
         //    res == 0  : no more packets

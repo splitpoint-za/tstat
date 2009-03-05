@@ -817,3 +817,11 @@ typedef struct win_stat
   double tot;			/* Integral of n(t) */
 
 } win_stat;
+
+enum ip_direction {
+ DEFAULT_NET     = 0,
+ SRC_IN_DST_IN   = 1,
+ SRC_IN_DST_OUT  = 2,
+ SRC_OUT_DST_IN  = 3,
+ SRC_OUT_DST_OUT = 4
+};

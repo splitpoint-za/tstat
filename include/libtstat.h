@@ -32,7 +32,7 @@ typedef struct {
 
 int tstat_init (char *config_fname);
 void tstat_new_logdir (char *filename, struct timeval *pckt_time);
-int tstat_next_pckt (struct timeval *pckt_time, void *ip_hdr, void *last_ip_byte, int tlen); 
+int tstat_next_pckt (struct timeval *pckt_time, void *ip_hdr, void *last_ip_byte, int tlen, int ip_direction); 
 void tstat_print_report (tstat_report *report, FILE *file);
 tstat_report *tstat_close (tstat_report *report);
 #endif

@@ -1,6 +1,6 @@
 Install
 =======
-First of all, we need to download the last (>=2.0.0) release of 
+First of all, you need to download the last (>=2.0.0) release of 
 Tstat from its official site:
 
     http://tstat.polito.it/
@@ -21,9 +21,9 @@ and type:
 Link to libtstat
 ================
 Libtstat, as Tstat, need libm, and libpthread.
-Libpcap is also needed (because FOR NOW is still present the libpcap
-support in the library).
-If Librrd is finded at configuration time, is automatically added at 
+Libpcap is also needed (because IN THE CURRENT VERSION the libpcap support 
+in the library is still present).
+If Librrd is found at configuration time, is automatically added at 
 building time.
 
 The library is provided with pkg-config support so, if it is
@@ -33,7 +33,7 @@ installed in the system, so
 
 return the CFLAGS and LIBS list used at building time.
 
-Installing the library in the system, will be printed the following message
+Installing the library in the system, the following message will be printed 
 
 ----------------------------------------------------------------------
 Libraries have been installed in:
@@ -90,13 +90,27 @@ void tstat_new_logdir (char *filename,
 int tstat_next_pckt (struct timeval *pckt_time, 
                      void *ip_hdr, 
                      void *last_ip_byte, 
-                     int tlen)
+                     int tlen,
+		     int ip_direction)
     This function enable the processing of a new packet.
     - pckt_time     the timestamp of the packet
     - ip_hdr        a pointer to the first ip byte 
     - last_ip_byte  a pointer to the last ip byte
     - tlen          number of total bytes (captured)
-            
+    - ip_direction  packet direction (in/out)
+    ip_direction indicates if the packet is incoming or outgoing. Possible
+    values :
+      - 0  use the address based classification provided 
+           by the -N option
+      - 1  packet if treated as having internal source and 
+           internal destination (local packet)
+      - 2  packet is treated as having internal source and 
+           external destination (outgoing packet) 	     
+      - 3  packet is treated as having external source and
+	   internal destination (incoming packet)
+      - 4  packet is treated as having external source and
+           external destination (external packet, will be ignored)	      
+
 tstat_report *tstat_close (tstat_report *report)
     This function flush to file all the pending statistics
     and fill a tstat_report structure with some general

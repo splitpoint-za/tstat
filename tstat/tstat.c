@@ -61,7 +61,8 @@ static Bool internal_ip_string (char *adx);
 
 static int ip_header_stat (int phystype, struct ip *pip, u_long * fpnum,
 			   u_long * pcount, int file_count, char *filename,
-			   long int location, int tlen, void *plast);
+			   long int location, int tlen, void *plast,
+			   int ip_direction);
 
 void stat_dumping_old_style ();
 static void flush_histo_engine(void);
@@ -900,7 +901,8 @@ ip_header_stat (int phystype,
                 char *filename, 
                 long int location, 
                 int tlen,
-		        void *plast)
+		void *plast,
+		int ip_direction)
 {
   /* another sanity check, only understand ETHERNET right now */
 
@@ -941,8 +943,30 @@ ip_header_stat (int phystype,
 	}
       else
 	{
-	  internal_src = internal_ip (pip->ip_src);
-	  internal_dst = internal_ip (pip->ip_dst);
+	 switch(ip_direction)
+	  {
+           case SRC_IN_DST_IN:
+   	    internal_src = 1;
+	    internal_dst = 1;
+	    break;
+           case SRC_IN_DST_OUT:
+   	    internal_src = 1;
+	    internal_dst = 0;
+	    break;
+           case SRC_OUT_DST_IN:
+   	    internal_src = 0;
+	    internal_dst = 1;
+	    break;
+           case SRC_OUT_DST_OUT:
+   	    internal_src = 0;
+	    internal_dst = 0;
+	    break;
+           case DEFAULT_NET:
+           default:
+   	    internal_src = internal_ip (pip->ip_src);
+	    internal_dst = internal_ip (pip->ip_dst);
+	    break;
+	  }
 	}
 
       /* .a.c. */
@@ -1151,7 +1175,8 @@ static int ProcessPacket(struct timeval *pckt_time,
                          u_long *pcount, 
                          int file_count, 
                          char *filename, 
-                         long int location)
+                         long int location,
+			 int ip_direction)
 {
     struct tcphdr *ptcp = NULL;
     int flow_stat_code;
@@ -1198,7 +1223,7 @@ static int ProcessPacket(struct timeval *pckt_time,
     /* Statistics from IP HEADER */
     if (ip_header_stat
             (phystype, pip, fpnum, pcount, file_count, filename, location,
-             tlen, plast) == 0)
+             tlen, plast, ip_direction) == 0)
         return 0;
 
 /*
@@ -1434,12 +1459,14 @@ void tstat_new_logdir(char *filename,
 int tstat_next_pckt(struct timeval *pckt_time, 
                     void *ip_hdr, 
                     void *last_ip_byte,
-                    int tlen) 
+                    int tlen,
+		    int ip_direction) 
 {
 #ifdef TSTAT_RUNASLIB
     //use some fake parameter
     return ProcessPacket(pckt_time, (struct ip*)ip_hdr, last_ip_byte, tlen, 
-                         PHYS_ETHER, &fpnum, &pcount, 1, cur_filename, 0);
+                         PHYS_ETHER, &fpnum, &pcount, 1, cur_filename, 0,
+			 ip_direction);
 #else
     return 0;
 #endif
@@ -1694,7 +1721,7 @@ ProcessFile (char *filename, Bool last)
   do
     {
         ProcessPacket(&current_time, pip, plast, tlen, phystype, &fpnum, &pcount, 
-                      file_count, cur_filename, location);
+                      file_count, cur_filename, location, DEFAULT_NET);
 
     }
   while ((ret =
