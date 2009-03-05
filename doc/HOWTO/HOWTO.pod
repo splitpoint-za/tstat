@@ -1416,11 +1416,36 @@ and allow to generate the output directory using this hierarchy:
         |__<pckt_time>.out
 
 
-=item int tstat_next_pckt (struct timeval *pckt_time, void *ip_hdr, void *last_ip_byte, int tlen)
+=item int tstat_next_pckt (struct timeval *pckt_time, void *ip_hdr, void *last_ip_byte, int tlen, ip_direction)
 
 This function enable the processing of a new packet.
 C<pckt_time>  is the timestamp of the packet, C<ip_hdr> is a pointer to the first ip byte,
 C<last_ip_byte> is a pointer to the last ip byte, and C<tlen> is the number of total bytes (captured).
+Insted C<ip_direction> indicates if the packet is incoming or outgoing. Possible values :
+
+=over 2
+
+=item 
+
+0: use the address based classification provided by the -N option
+
+=item 
+
+1: packet if treated as having internal source and internal destination (local packet)
+
+=item 
+
+2: packet is treated as having internal source and external destination (outgoing packet) 	     
+
+=item
+
+3: packet is treated as having external source and internal destination (incoming packet)
+
+=item
+
+4: packet is treated as having external source and external destination (external packet, will be ignored)
+
+=back
             
 
 =item tstat_report *tstat_close (tstat_report *report)
