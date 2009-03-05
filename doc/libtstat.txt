@@ -102,7 +102,7 @@ int tstat_next_pckt (struct timeval *pckt_time,
     values :
       - 0  use the address based classification provided 
            by the -N option
-      - 1  packet if treated as having internal source and 
+      - 1  packet is treated as having internal source and 
            internal destination (local packet)
       - 2  packet is treated as having internal source and 
            external destination (outgoing packet) 	     

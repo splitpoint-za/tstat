@@ -1431,7 +1431,7 @@ Insted C<ip_direction> indicates if the packet is incoming or outgoing. Possible
 
 =item 
 
-1: packet if treated as having internal source and internal destination (local packet)
+1: packet is treated as having internal source and internal destination (local packet)
 
 =item 
 
