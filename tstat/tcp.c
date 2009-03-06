@@ -1980,8 +1980,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   Bool local;
   double etime;
   FILE *fp;
-  char loglinec2s[500] = "";
-  char loglines2c[500] = "";
   tcb *pab, *pba;
 
   /* Statistichs about CHAT flows */
@@ -2567,7 +2565,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	  return;
   if (fp_logc != NULL)
     {
-      sprintf (loglinec2s,
+      fprintf (fp, 
 	       "%s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
 	       HostName (ptp_save->addr_pair.a_address),
 	       ServiceName (ptp_save->addr_pair.a_port),
@@ -2581,8 +2579,31 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	       pab->win_min, pab->win_zero_ct, pab->cwin_max, pab->cwin_min,
 	       pab->initialwin_bytes);
 
-      sprintf (loglines2c,
-	       "%s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
+      fprintf (fp, " %f %f %f %f %u %u %u",
+	       (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
+		1000.0),
+	       (ptp_save->c2s.rtt_min / 1000.0),
+               (ptp_save->c2s.rtt_max / 1000.0),
+	       (Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
+		      ptp_save->c2s.rtt_count) / 1000.0),
+		ptp_save->c2s.rtt_count,
+                ptp_save->c2s.ttl_min,
+                ptp_save->c2s.ttl_max);
+
+      fprintf (fp, " %u %u %u %u %u %u %u %u",
+	       ptp_save->c2s.rtx_RTO,
+	       ptp_save->c2s.rtx_FR,
+	       ptp_save->c2s.reordering,
+	       ptp_save->c2s.net_dup,
+	       ptp_save->c2s.unknown,
+	       ptp_save->c2s.flow_control,
+	       ptp_save->c2s.unnecessary_rtx_RTO,
+	       ptp_save->c2s.unnecessary_rtx_FR);
+      /* Bad behaviour */
+      fprintf (fp, " %d", ptp_save->c2s.bad_behavior);
+
+      fprintf (fp,
+	       " %s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
 	       HostName (ptp_save->addr_pair.b_address),
 	       ServiceName (ptp_save->addr_pair.b_port),
 	       pba->packets,
@@ -2610,47 +2631,18 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	       pba->win_zero_ct,
 	       pba->cwin_max, pba->cwin_min, pba->initialwin_bytes);
 
-      sprintf (loglinec2s, "%s %f", loglinec2s,
-	       (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
-		1000.0));
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f %f %f %f %u %u %u",
 	       (Average (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) /
-		1000.0));
-      sprintf (loglinec2s, "%s %f", loglinec2s,
-	       (ptp_save->c2s.rtt_min / 1000.0));
-      sprintf (loglines2c, "%s %f", loglines2c,
-	       (ptp_save->s2c.rtt_min / 1000.0));
-      sprintf (loglinec2s, "%s %f", loglinec2s,
-	       (ptp_save->c2s.rtt_max / 1000.0));
-      sprintf (loglines2c, "%s %f", loglines2c,
-	       (ptp_save->s2c.rtt_max / 1000.0));
-      sprintf (loglinec2s, "%s %f", loglinec2s,
-	       Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
-		      ptp_save->c2s.rtt_count) / 1000.0);
-      sprintf (loglines2c, "%s %f", loglines2c,
-	       Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
-		      ptp_save->s2c.rtt_count) / 1000.0);
+		1000.0),
+	       (ptp_save->s2c.rtt_min / 1000.0),
+               (ptp_save->s2c.rtt_max / 1000.0),
+	       (Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
+		      ptp_save->s2c.rtt_count) / 1000.0),
+		ptp_save->s2c.rtt_count,
+                ptp_save->s2c.ttl_min,
+                ptp_save->s2c.ttl_max);
 
-      sprintf (loglinec2s, "%s %u", loglinec2s, ptp_save->c2s.rtt_count);
-      sprintf (loglines2c, "%s %u", loglines2c, ptp_save->s2c.rtt_count);
-
-      sprintf (loglinec2s, "%s %u", loglinec2s, ptp_save->c2s.ttl_min);
-      sprintf (loglines2c, "%s %u", loglines2c, ptp_save->s2c.ttl_min);
-      sprintf (loglinec2s, "%s %u", loglinec2s, ptp_save->c2s.ttl_max);
-      sprintf (loglines2c, "%s %u", loglines2c, ptp_save->s2c.ttl_max);
-
-
-      sprintf (loglinec2s, "%s %u %u %u %u %u %u %u %u", loglinec2s,
-	       ptp_save->c2s.rtx_RTO,
-	       ptp_save->c2s.rtx_FR,
-	       ptp_save->c2s.reordering,
-	       ptp_save->c2s.net_dup,
-	       ptp_save->c2s.unknown,
-	       ptp_save->c2s.flow_control,
-	       ptp_save->c2s.unnecessary_rtx_RTO,
-	       ptp_save->c2s.unnecessary_rtx_FR);
-
-      sprintf (loglines2c, "%s %u %u %u %u %u %u %u %u", loglines2c,
+      fprintf (fp, " %u %u %u %u %u %u %u %u",
 	       ptp_save->s2c.rtx_RTO,
 	       ptp_save->s2c.rtx_FR,
 	       ptp_save->s2c.reordering,
@@ -2659,58 +2651,56 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	       ptp_save->s2c.flow_control,
 	       ptp_save->s2c.unnecessary_rtx_RTO,
 	       ptp_save->s2c.unnecessary_rtx_FR);
-
-      /* Bad beahaviour */
-      sprintf (loglinec2s, "%s %d", loglinec2s, ptp_save->c2s.bad_behavior);
-      sprintf (loglines2c, "%s %d", loglines2c, ptp_save->s2c.bad_behavior);
+      /* Bad behaviour */
+      fprintf (fp, " %d", ptp_save->s2c.bad_behavior);
 
 /* elapsed time */
-      sprintf (loglines2c, "%s %f", loglines2c, etime);
+      fprintf (fp, " %f", etime);
 
 /* first pkt time */
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (first_packet, ptp_save->first_time) / 1000.0);
 /* last pkt time */
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (first_packet, ptp_save->last_time) / 1000.0);
 
 /* first DATA pkt time */
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (ptp_save->first_time,
 			pab->payload_start_time) / 1000.0);
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (ptp_save->first_time,
 			pba->payload_start_time) / 1000.0);
 
 /* last DATA pkt time */
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (ptp_save->first_time,
 			pab->payload_end_time) / 1000.0);
-      sprintf (loglines2c, "%s %f", loglines2c,
+      fprintf (fp, " %f",
 	       elapsed (ptp_save->first_time,
 			pba->payload_end_time) / 1000.0);
 
       /* printing boolean flag if this is considered internal or not */
-      sprintf (loglines2c, "%s %d", loglines2c, ptp_save->internal_src);
+      fprintf (fp, " %d", ptp_save->internal_src);
 
       /* TOPIX: added 97th colon: connection type */
-      sprintf (loglines2c, "%s %d", loglines2c, ptp_save->con_type);
+      fprintf (fp, " %d", ptp_save->con_type);
 
       /* P2P: added 98-99th colon: p2p protocol / p2p message type /  */
-      sprintf (loglines2c, "%s %d %d", loglines2c, ptp_save->p2p_type / 100,
+      fprintf (fp, " %d %d", ptp_save->p2p_type / 100,
 	       ptp_save->p2p_type % 100);
 
       /* P2P: added 100-103th colon: p2p data mesg. / p2p signalling msg.   */
       /*      currently only for ED2K-TCP - MMM 7/3/08*/
-      sprintf (loglines2c, "%s %d %d %d %d", loglines2c, ptp_save->p2p_data_count,
+      fprintf (fp, " %d %d %d %d", ptp_save->p2p_data_count,
 	       ptp_save->p2p_sig_count,ptp_save->p2p_c2s_count,ptp_save->p2p_c2c_count);
 
       /* P2P: added 104th colon: p2p chat mesg. count */
       /*      currently only for ED2K-TCP - MMM 5/6/08*/
-      sprintf (loglines2c, "%s %d", loglines2c, ptp_save->p2p_msg_count);
+      fprintf (fp, " %d", ptp_save->p2p_msg_count);
 
       /* write to log file */
-      fprintf (fp, "%s %s\n", loglinec2s, loglines2c);
+      fprintf (fp, "\n");
 
    }
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
@@ -2725,19 +2715,18 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 void
 update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 {
-  char logline[1024] = "";
   double etime;
 
   etime = elapsed (ptp_save->first_time, ptp_save->last_time);
 
 /* A --> B */
-  sprintf (logline, "%d %d %s %s",
+  fprintf (fp_rtp_logc, "%d %d %s %s",
 	   PROTOCOL_TCP,
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.a_address),
 	   ServiceName (ptp_save->addr_pair.a_port));
 
-  sprintf (logline, "%s %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g", logline, 
+  fprintf (fp_rtp_logc, " %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
            HostName (ptp_save->addr_pair.b_address), 
 	   ServiceName (ptp_save->addr_pair.b_port), 
 	   pab->packets,
@@ -2771,13 +2760,13 @@ update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 		    pab->u_protocols.f_icy) / 1000.0);
 
 /* B --> A */
-  sprintf (logline, "%s %d %d %s %s", logline,
+  fprintf (fp_rtp_logc, " %d %d %s %s",
 	   PROTOCOL_TCP,
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.b_address),
 	   ServiceName (ptp_save->addr_pair.b_port));
 
-  sprintf (logline, "%s %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g", logline, 
+  fprintf (fp_rtp_logc, " %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
            HostName (ptp_save->addr_pair.a_address), 
 	   ServiceName (ptp_save->addr_pair.a_port), 
 	   pba->packets,
@@ -2810,19 +2799,18 @@ update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 	   elapsed (ptp_save->first_time,
 		    pba->u_protocols.f_icy) / 1000.0);
 
-  fprintf (fp_rtp_logc, "%s\n", logline);
+  fprintf (fp_rtp_logc, "\n");
 }
 
 void
 update_conn_log_mm_v2(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 {
-  char logline[1024] = "";
   double etime;
 
   etime = elapsed (ptp_save->first_time, ptp_save->last_time);
 
 /* A --> B */
-  sprintf (logline, "%d %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
+  fprintf (fp_rtp_logc, "%d %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
 	   PROTOCOL_TCP,
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.a_address),
@@ -2856,7 +2844,7 @@ update_conn_log_mm_v2(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 		    pab->u_protocols.f_icy) / 1000.0);
 
 /* B --> A */
-  sprintf (logline, "%s %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g", logline,
+  fprintf (fp_rtp_logc, " %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.b_address),
 	   ServiceName (ptp_save->addr_pair.b_port),
@@ -2888,7 +2876,7 @@ update_conn_log_mm_v2(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 	   elapsed (ptp_save->first_time,
 		    pba->u_protocols.f_icy) / 1000.0);
   
-  fprintf (fp_rtp_logc, "%s\n", logline);
+  fprintf (fp_rtp_logc, "\n");
 }
 
 void

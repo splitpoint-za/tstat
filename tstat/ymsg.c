@@ -183,7 +183,6 @@ void
 print_ymsg_conn_stats (tcp_pair *ptp)
 {
   tcb *thisTdir;
-  char logline[300] = "";
   struct ymsg_stat *pymsg;
 
   /* C2S */
@@ -210,18 +209,18 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     1   Client IP Address
   //     2   Client Port
 
-  sprintf (logline, "%s %s", HostName (ptp->addr_pair.a_address),
+  fprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
 	   ServiceName (ptp->addr_pair.a_port));
 
   //     3   Flow Size [Bytes] 
   /*                            sum of TCP payload length excluding SYN/FIN and rexmits */
-  sprintf (logline, "%s %lu", logline, thisTdir->unique_bytes);
+  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     4   No. of Total flow packets
-  sprintf (logline, "%s %ld", logline, thisTdir->packets);
+  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //     5   No. of total messages
-  sprintf (logline, "%s %d", logline, pymsg->YMSG_MESSAGE_count);
+  fprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
 
 
   /* S2C */
@@ -231,47 +230,45 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     6   Server IP Address
   //     7   Server Port
 
-  sprintf (logline, "%s %s %s", logline, HostName (ptp->addr_pair.b_address),
+  fprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
 	   ServiceName (ptp->addr_pair.b_port));
 
   //     8   Flow Size [Bytes] 
   //                            sum of IP packets length (Hdr IP + Payload IP) 
-  //sprintf (logline, "%s %lu", logline, thisTdir->ip_bytes);
+  //fprintf (fp_chat_logc, " %lu", thisTdir->ip_bytes);
 
   //                            sum of TCP payload length excluding SYN/FIN and rexmits
-  sprintf (logline, "%s %lu", logline, thisTdir->unique_bytes);
+  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     9   No. of Total flow packets
-  sprintf (logline, "%s %ld", logline, thisTdir->packets);
+  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //    10   No. of total messages
-  sprintf (logline, "%s %d", logline, pymsg->YMSG_MESSAGE_count);
+  fprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
 
   //    11   Flow Start Time
   //    12   Flow End Time
 
-  sprintf (logline,
-	   "%s %f %.3f",
-	   logline,
+  fprintf (fp_chat_logc, " %f %.3f",
 	   1e-6 * time2double (ptp->first_time),
 	   elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
 
   //    13   YMSG Flow Type
-  sprintf (logline, "%s %d", logline, pymsg->YFT);
+  fprintf (fp_chat_logc, " %d", pymsg->YFT);
 
   //    14   YMSG Protocol Version
-  sprintf (logline, "%s %d", logline, pymsg->YMSGPversion);
+  fprintf (fp_chat_logc, " %d", pymsg->YMSGPversion);
 
   //    15  Client address is internal ? (0=no, 1=yes)
   //    16  TCP Flow ID Number
   //    17  T     [label to state a TCP flow]
   //    18  Type of Upper level Protocol        
 
-  sprintf (logline, "%s %d %ld T %d", logline, ptp->internal_dst,
+  fprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
 	   ptp->id_number, ptp->con_type);
 
 //  if (debug > 2)
-//    sprintf (logline, "%s %d %d", logline, pymsg->arrived, pymsg->departed);
+//    fprintf (fp_chat_logc, " %d %d", pymsg->arrived, pymsg->departed);
 
 #ifdef YMSG_DEBUG
 
@@ -281,17 +278,14 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //    14  YMSG_NOTIFY
   //    15  YMSG_MESSAGE
 
-  sprintf
-    (logline,
-     "%s AUTH_RESP: %d LIST: %d SKINNAME: %d NOTIFY: %d MESSAGE: %d",
-     logline,
+  fprintf (fp_chat_logc, " AUTH_RESP: %d LIST: %d SKINNAME: %d NOTIFY: %d MESSAGE: %d",
      pymsg->YMSG_AUTH_RESP_count,
      pymsg->YMSG_LIST_count,
      pymsg->YMSG_SKINNAME_count,
      pymsg->YMSG_NOTIFY_count, pymsg->YMSG_MESSAGE_count);
 #endif
 
-  fprintf (fp_chat_logc, "%s\n", logline);
+  fprintf (fp_chat_logc, "\n");
 
 }
 

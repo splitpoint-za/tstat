@@ -116,7 +116,6 @@ void
 print_jabber_conn_stats (tcp_pair *ptp)
 {
   tcb *thisTdir;
-  char logline[300] = "";
   struct jabber_stat *pjabber;
 
   /* C2S */
@@ -142,19 +141,19 @@ print_jabber_conn_stats (tcp_pair *ptp)
   //     1   Client IP Address
   //     2   Client Port
 
-  sprintf (logline, "%s %s", HostName (ptp->addr_pair.a_address),
+  fprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
 	   ServiceName (ptp->addr_pair.a_port));
 
   //     3   Flow Size [Bytes] 
   /*                            sum of TCP payload length excluding SYN/FIN and rexmits */
-  sprintf (logline, "%s %lu", logline, thisTdir->unique_bytes);
+  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     4   No. of Total flow packets
-  sprintf (logline, "%s %ld", logline, thisTdir->packets);
+  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //     5   No. of total messages
 
-  sprintf (logline, "%s %d", logline, pjabber->MESSAGE_count);
+  fprintf (fp_chat_logc, " %d", pjabber->MESSAGE_count);
 
   /* S2C */
   thisTdir = &(ptp->s2c);
@@ -163,59 +162,55 @@ print_jabber_conn_stats (tcp_pair *ptp)
   //     6   Server IP Address
   //     7   Server Port
 
-  sprintf (logline, "%s %s %s", logline, HostName (ptp->addr_pair.b_address),
+  fprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
 	   ServiceName (ptp->addr_pair.b_port));
 
   //     8   Flow Size [Bytes] 
   /*                            sum of TCP payload length excluding SYN/FIN and rexmits */
-  sprintf (logline, "%s %lu", logline, thisTdir->unique_bytes);
+  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     9   No. of Total flow packets
-  sprintf (logline, "%s %ld", logline, thisTdir->packets);
+  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //    10   No. of total messages
 
-  sprintf (logline, "%s %d", logline, pjabber->MESSAGE_count);
+  fprintf (fp_chat_logc, " %d", pjabber->MESSAGE_count);
 
   //    11   Flow Start Time
   //    12   Flow End Time
 
-  sprintf (logline,
-	   "%s %f %.3f",
-	   logline,
+  fprintf (fp_chat_logc, " %f %.3f",
 	   1e-6 * time2double (ptp->first_time),
 	   elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
 
   //    13   Jabber Flow Type
-  sprintf (logline, "%s %d", logline, pjabber->JFT);
+  fprintf (fp_chat_logc, " %d", pjabber->JFT);
 
   //    14   Jabber Protocol Version
-  sprintf (logline, "%s %s", logline, "UNK");
+  fprintf (fp_chat_logc, " %s", "UNK");
 
   //    15  Client address is internal ? (0=no, 1=yes)
   //    16  TCP Flow ID Number
   //    17  T     [label to state a TCP flow]
   //    18  Type of Upper level Protocol
 
-  sprintf (logline, "%s %d %ld T %d", logline, ptp->internal_dst,
+  fprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
 	   ptp->id_number, ptp->con_type);
 
 
 //  if (debug > 2)
-//    sprintf (logline, "%s %d %d", logline, pjabber->arrived, pjabber->departed);
+//    fprintf (fp_chat_logc, " %d %d", pjabber->arrived, pjabber->departed);
 
 #ifdef XMPP_DEBUG
 
   //    11  PRESENCE
   //    12  MESSAGE
 
-  sprintf
-    (logline,
-     "%s PRESENCE: %d MESSAGE: %d",
-     logline, pjabber->PRESENCE_count, pjabber->MESSAGE_count);
+  fprintf (fp_chat_logc, " PRESENCE: %d MESSAGE: %d",
+     pjabber->PRESENCE_count, pjabber->MESSAGE_count);
 #endif
 
-  fprintf (fp_chat_logc, "%s\n", logline);
+  fprintf (fp_chat_logc, "\n");
 
 }
 

@@ -527,7 +527,6 @@ void
 make_p2p_conn_stats (void * flow, int tproto)
 {
   ucb *thisUdir,*thisC2S,*thisS2C;
-  char logline[500];
   udp_pair *pup;
   udp_pair * thisflow = (udp_pair *)flow;
   
@@ -592,32 +591,31 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     1   Source Address
   //     2   Source Port
 
-  sprintf (logline, "%s %s",
+  fprintf (fp_udp_logc, "%s %s",
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
 
   //     3   Flow Start Time
   //     4   Flow Elapsed Time [s]
   //     5   Flow Size [Bytes]
-  sprintf (logline,
-	   "%s %f %.6f %llu",
-	   logline,
+  fprintf (fp_udp_logc,
+	   " %f %.6f %llu",
 //	   1e-6 * time2double ((thisUdir->first_pkt_time)), 
            elapsed (first_packet,thisUdir->first_pkt_time)/1000,
 	   elapsed (thisUdir->first_pkt_time, thisUdir->last_pkt_time) /
 	   1000.0 / 1000.0, thisUdir->data_bytes);
 
   //     6   No. of Total flow packets
-  sprintf (logline, "%s %lld", logline, thisUdir->packets);
+  fprintf (fp_udp_logc, " %lld", thisUdir->packets);
 
   // 7 internal address
   // 8 udp_type
 
-  sprintf (logline, "%s %d %d",
-	   logline, thisflow->internal_src,  UDP_p2p_to_logtype(thisUdir));
+  fprintf (fp_udp_logc, " %d %d",
+	   thisflow->internal_src,  UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
-  sprintf (logline, "%s %d %d %d %d %d %d %d %d %d %d",
+  fprintf (fp_udp_logc, " %d %d %d %d %d %d %d %d %d %d",
   //  9
   //  10 Emule-EDK
   //  11 Emule-KAD
@@ -629,7 +627,7 @@ make_p2p_conn_stats (void * flow, int tproto)
   //  17 PPLive
   //  18 SopCast
   //  19 TVAnts
-           logline, thisUdir->p2p.total_pkt,
+           thisUdir->p2p.total_pkt,
 	   thisUdir->p2p.pkt_type_num[0],
 	   thisUdir->p2p.pkt_type_num[1],
 	   thisUdir->p2p.pkt_type_num[2],
@@ -650,33 +648,31 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     9   Source Address
   //     10   Source Port
 
-  sprintf (logline, "%s %s %s",
-               logline,
+  fprintf (fp_udp_logc, " %s %s",
 	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
 
   //     11   Flow Start Time
   //     12   Flow Elapsed Time [s]
   //     13   Flow Size [Bytes]
-  sprintf (logline,
-	   "%s %f %.6f %llu",
-	   logline,
+  fprintf (fp_udp_logc,
+	   " %f %.6f %llu",
 //	   1e-6 * time2double ((thisUdir->first_pkt_time)), 
            elapsed (first_packet,thisUdir->first_pkt_time)/1000,
 	   elapsed (thisUdir->first_pkt_time, thisUdir->last_pkt_time) /
 	   1000.0 / 1000.0, thisUdir->data_bytes);
 
   //     14   No. of Total flow packets
-  sprintf (logline, "%s %lld", logline, thisUdir->packets);
+  fprintf (fp_udp_logc, " %lld", thisUdir->packets);
 
   // 15 internal address
   // 16 udp_type
 
-  sprintf (logline, "%s %d %d",
-	   logline, thisflow->internal_dst, UDP_p2p_to_logtype(thisUdir));
+  fprintf (fp_udp_logc, " %d %d",
+	   thisflow->internal_dst, UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
-  sprintf (logline, "%s %d %d %d %d %d %d",
+  fprintf (fp_udp_logc, " %d %d %d %d %d %d",
   //  9
   //  10 Emule-EDK
   //  11 Emule-KAD
@@ -701,7 +697,7 @@ make_p2p_conn_stats (void * flow, int tproto)
 	   thisUdir->p2p.pkt_type_num[9]);
 #endif
 
-  fprintf (fp_udp_logc, "%s\n", logline);
+  fprintf (fp_udp_logc, "\n");
 
   return;
 }

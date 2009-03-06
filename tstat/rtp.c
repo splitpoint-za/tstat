@@ -1433,13 +1433,12 @@ make_rtp_conn_stats (void * thisflow, int tproto)
 void
 update_conn_log_v2(udp_pair *flow)
 {
-  char logline[1024] = "";
   if (flow->c2s.type != RTP && flow->c2s.type != RTCP &&
       flow->s2c.type != RTP && flow->s2c.type != RTCP)
 	  return;
 
   /* Request C-->S */
-  sprintf(logline,"%d %d %s %s %u",
+  fprintf (fp_rtp_logc, "%d %d %s %s %u",
           PROTOCOL_UDP,
 	  flow->c2s.type,
 	  HostName (flow->addr_pair.a_address),
@@ -1455,8 +1454,8 @@ update_conn_log_v2(udp_pair *flow)
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
      
      /* Stats */
-     sprintf (logline, "%s %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0", logline, 
-	      /* Comon stats */
+     fprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
 	      f_rtp->jitter, 
@@ -1498,7 +1497,7 @@ update_conn_log_v2(udp_pair *flow)
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
      
-     sprintf (logline, "%s %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0", logline, 
+     fprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -1533,12 +1532,12 @@ update_conn_log_v2(udp_pair *flow)
   else
   {
      /* we miss the request */
-     sprintf (logline, "%s 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0", logline);
+     fprintf (fp_rtp_logc, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
 
   }
 	
   /* Answer C<--S */
-  sprintf(logline, "%s %d %s %s %u", logline,
+  fprintf (fp_rtp_logc, " %d %s %s %u",
 	  flow->s2c.type,
 	  HostName (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
@@ -1553,8 +1552,8 @@ update_conn_log_v2(udp_pair *flow)
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
      
      /* Stats */
-     sprintf (logline, "%s %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0", logline, 
-	      /* Comon stats */
+     fprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
 	      f_rtp->jitter, 
@@ -1596,7 +1595,7 @@ update_conn_log_v2(udp_pair *flow)
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
      
-     sprintf (logline, "%s %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0", logline, 
+     fprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -1631,10 +1630,10 @@ update_conn_log_v2(udp_pair *flow)
   else
   {
      /* we miss the answer */
-     sprintf (logline, "%s 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0", logline);
+     fprintf (fp_rtp_logc, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
   }
   /* write stat to file */
-  fprintf (fp_rtp_logc, "%s\n", logline);
+  fprintf (fp_rtp_logc, "\n");
 }
 
 void
@@ -1964,7 +1963,6 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 void
 update_rtp_conn_log_v1 (ucb * thisdir, int dir)
 {
-  char logline[300]="";
   struct sudp_pair *pup;
   struct rtp *f_rtp;
   double etime;
@@ -1977,42 +1975,40 @@ update_rtp_conn_log_v1 (ucb * thisdir, int dir)
   
   if (dir == C2S)
     {
-      sprintf (logline, "%d %d %s %s",
+      fprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTP_PROTOCOL,
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
-      sprintf (logline,
-	       "%s %s %s",
-	       logline, HostName (pup->addr_pair.b_address),
+      fprintf (fp_rtp_logc, " %s %s",
+	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
     }
   else
     {
-      sprintf (logline, "%d %d %s %s",
+      fprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTP_PROTOCOL,
 	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
-      sprintf (logline,
-	       "%s %s %s",
-	       logline, HostName (pup->addr_pair.a_address),
+      fprintf (fp_rtp_logc, " %s %s",
+	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
     }
 
 
-  sprintf (logline, "%s %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", logline, f_rtp->pnum, (f_rtp->sum_delta_t / f_rtp->n_delta_t), f_rtp->jitter, f_rtp->jitter_max, f_rtp->jitter_min == MAXFLOAT ? 0 : f_rtp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtp->first_time.tv_sec + (double) f_rtp->first_time.tv_usec / 1000000.0, etime / 1000.0,	/* [s] */
+  fprintf (fp_rtp_logc, " %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", f_rtp->pnum, (f_rtp->sum_delta_t / f_rtp->n_delta_t), f_rtp->jitter, f_rtp->jitter_max, f_rtp->jitter_min == MAXFLOAT ? 0 : f_rtp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtp->first_time.tv_sec + (double) f_rtp->first_time.tv_usec / 1000000.0, etime / 1000.0,	/* [s] */
 	   f_rtp->data_bytes,
 	   (double) f_rtp->data_bytes / (etime / 1000.0) * 8);
 
 
-  sprintf (logline, "%s %u %ld %ld %ld %ld %u %d", logline,
+  fprintf (fp_rtp_logc, " %u %ld %ld %ld %ld %u %d",
 	   f_rtp->ssrc, f_rtp->n_lost,
 	   f_rtp->n_out_of_sequence, f_rtp->n_dup, f_rtp->n_late,
 	   f_rtp->pt, f_rtp->bogus_reset_during_flow);
 
   /* write stat to file */
-  fprintf (fp_rtp_logc, "%s\n", logline);
+  fprintf (fp_rtp_logc, "\n");
 }
 
 
@@ -2106,7 +2102,6 @@ update_rtcp_conn_log_v1 (ucb * thisdir, int dir)
 {
   struct sudp_pair *pup;
   struct rtcp *f_rtcp;
-  char logline[300] = "";
   double etime;
   uint64_t data_bytes;
   
@@ -2120,34 +2115,32 @@ update_rtcp_conn_log_v1 (ucb * thisdir, int dir)
 
   if (dir == C2S)
     {
-      sprintf (logline, "%d %d %s %s",
+      fprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTCP_PROTOCOL,
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
-      sprintf (logline,
-	       "%s %s %s",
-	       logline, HostName (pup->addr_pair.b_address),
+      fprintf (fp_rtp_logc, " %s %s",
+	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
     }
   else
     {
-      sprintf (logline, "%d %d %s %s",
+      fprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTCP_PROTOCOL,
 	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
-      sprintf (logline,
-	       "%s %s %s",
-	       logline, HostName (pup->addr_pair.a_address),
+      fprintf (fp_rtp_logc, " %s %s",
+	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
     }
 
-  sprintf (logline, "%s %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", logline, f_rtcp->pnum, (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples, f_rtcp->jitter_max, f_rtcp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtcp->first_time.tv_sec + (double) f_rtcp->first_time.tv_usec / 1000000.0, etime,	/* [s] */
+  fprintf (fp_rtp_logc, " %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", f_rtcp->pnum, (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples, f_rtcp->jitter_max, f_rtcp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtcp->first_time.tv_sec + (double) f_rtcp->first_time.tv_usec / 1000000.0, etime,	/* [s] */
 	   data_bytes, (double) data_bytes / etime * 8);
 
 
-  sprintf (logline, "%s %u %d %g %u %u %g %g %g %u %u", logline,
+  fprintf (fp_rtp_logc, " %u %d %g %u %u %g %g %g %u %u",
 	   f_rtcp->ssrc,
 	   f_rtcp->c_lost,
 	   (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, f_rtcp->tx_p, f_rtcp->tx_b,
@@ -2156,7 +2149,7 @@ update_rtcp_conn_log_v1 (ucb * thisdir, int dir)
 	   f_rtcp->rtcp_header_error);
 
   /* write stat to file*/
-  fprintf (fp_rtp_logc, "%s\n", logline);
+  fprintf (fp_rtp_logc, "\n");
 }
 
 
