@@ -27,11 +27,10 @@ u_int32_t
 FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 		void *plast, int dir)
 {
-  int i = 0;
   char type = '?';
   void *pdata;			/* start of payload */
-  char *MSG_type;
   int msg_len;
+  char buffer[20];              /* buffer for the MSG header analysis*/
 #ifdef MSN_OTHER_COMMANDS
   char new_comm[4];
 #endif
@@ -123,23 +122,35 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
     case MSG:
       tcp_stats->msn.MSN_MSG_count++;
 
-      if ((char *) pdata + 6 > (char *) plast)
-	return MSG;
+      char *msg_base = (char *) pdata + 4;
+      int available_payload = (char *) plast - (char *)msg_base;
 
-      MSG_type = (char *) pdata + 6;
+      if (available_payload < 1)
+         return MSG;
 
-      for (i = 0; i < MAX_COUNTER_NAME && type == '?'; i++)
-	if ((char *) MSG_type + i <= (char *) plast)
-	  {
-	    type = find_MSG_type ((MSG_type + i), tcp_stats);
-	  }
+      memset(buffer,0,sizeof(buffer));   
+      memcpy(buffer,msg_base,(size_t)min(available_payload,19));
+ 
+      if ( strlen(buffer)>=3 )
+       {
+         int trID,mresult,mlen;
+         char mtype;
+         mresult = sscanf(buffer,"%d %c %d",&trID,&mtype,&mlen);
+         
+         if (mresult>1)
+          {
+            type = find_MSG_type (&mtype, tcp_stats);
+          }
 
-      if (dir == C2S)
-	{			/* convert the lenght */
-	  sscanf ((char *) (MSG_type + i + 1), "%d", &msg_len);
-	}
+         if (dir==C2S && type!='?' && mresult==3)
+          {
+            msg_len = mlen;
+          }
+         else
+            msg_len = -1;
+       }
       else
-	msg_len = -1;
+        msg_len = -1;
 
       if (log_engine && fp_chat_log_msg != NULL)
 	{
