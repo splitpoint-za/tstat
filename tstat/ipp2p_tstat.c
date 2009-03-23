@@ -567,6 +567,7 @@ udp_search_pplive (unsigned char *haystack, const int packet_len,
     //byte19    (26): 0x00 (not always)
     //byte20    (27): 0x00 (not always)
     
+    int res = 0;
     if (get_u8(haystack, 8) != 0xe9 ||
         get_u8(haystack, 9) != 0x03 ||
         get_u8(haystack, 12) != 0x98 ||
@@ -579,10 +580,42 @@ udp_search_pplive (unsigned char *haystack, const int packet_len,
         //get_u8(haystack, 23) != 0x00 ||
         //get_u8(haystack, 26) != 0x00 ||
         //get_u8(haystack, 27) != 0x00)
-        )
-        return 0;
+        ) {
+		// the match is based on 5 bytes
+		// - the first three bytes
+		// - other two consecutives bytes at ((((x1 & 0x0f) % 8) // 2) * 2 + 5)
+		//
+		//                         xa xb   xa xb   xa  xb    xa  xb
+		//   [x1 : (x2:x3) (x4:x5) (x6:x7) (x8:x9) (x10:x11) (x12:x13)]
+		//                          ^       ^       ^         ^
+		//    x1 & 0x0f = 0,1,8,9___|       |       |         |
+		//    x1 & 0x0f = 2,3,10,11_________|       |         |
+		//    x1 & 0x0f = 4,5,12,13_________________|         |
+		//    x1 & 0x0f = 6,7,14,15___________________________|
+		//
+		// the target is the comparison between (x2:x3) and the other group of bytes (xa:xb)
+		// - xa == x2
+		// - x3 % 2 == 0 --> xb == x3+1
+		// - x3 % 2 != 0 --> xb == x3-1
+		// - xb == x3
+		// - x1 != 0, x2 != 0, x3 != 0 (just to encrease the strength!)
+		unsigned int ind = ((get_u8(haystack, 8) & 0x0F) % 8 / 2)*2 + 5;
+		unsigned int val1 = get_u8(haystack, 10);
+		unsigned int val2 = get_u8(haystack, 8 + ind + 1);
+		if (get_u8(haystack, 8) != 0 &&
+		    get_u8(haystack, 9) != 0 &&
+		    get_u8(haystack, 10) != 0) {
+			if (get_u8(haystack,9) == get_u8(haystack, 8 + ind)) {
+				if ((val1 % 2 == 0 && val2 == val1 + 1) || val2 == val1 - 1 || val1 == val2) {
+					res = IPP2P_PPLIVE * 100 + 0;
+				}
+			}
+		}
+	}
+    else 
+        res = IPP2P_PPLIVE * 100 + 0;
  
-    return (IPP2P_PPLIVE * 100 + 0);
+    return res;
 }
 
 int
