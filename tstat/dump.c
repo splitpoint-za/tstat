@@ -188,6 +188,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_EDK, "udp_edk");
     dump_reset_dump_file(proto2dump, P2P_KAD, "udp_kad");
     dump_reset_dump_file(proto2dump, P2P_KADU, "udp_kadu");
+    dump_reset_dump_file(proto2dump, P2P_OKAD, "udp_okad");
     dump_reset_dump_file(proto2dump, P2P_GNU, "udp_gnutella");
     dump_reset_dump_file(proto2dump, P2P_BT, "udp_bittorrent");
     dump_reset_dump_file(proto2dump, P2P_DC, "udp_dc");
@@ -290,6 +291,8 @@ void dump_flow_stat (struct ip *pip,
                      void *hdr, 
                      void *plast) 
 {
+    int ucb_type;
+
     if (!dump_engine)
         return;
 
@@ -298,9 +301,12 @@ void dump_flow_stat (struct ip *pip,
             dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
     }
     else {
+        //specific controls to find kad obfuscated...
+        ucb_type = UDP_p2p_to_logtype(pdir);
+
         //dump to a DPI file
-        if (proto2dump[((ucb *)pdir)->type].enabled) {
-            dump_to_file(&proto2dump[((ucb *)pdir)->type], pip, plast);
+        if (proto2dump[ucb_type].enabled) {
+            dump_to_file(&proto2dump[ucb_type], pip, plast);
         }
         //dumo to unknown
         else if (proto2dump[UDP_UNKNOWN].enabled) {

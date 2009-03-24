@@ -1079,6 +1079,7 @@ The configuration file has an C<ini> file syntax:
     udp_edk = 0
     udp_kad = 0
     udp_kadu = 0
+    udp_okad = 0
     udp_gnutella = 0
     udp_bittorrent = 0
     udp_dc = 0
