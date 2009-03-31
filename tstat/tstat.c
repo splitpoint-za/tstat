@@ -1378,10 +1378,10 @@ void ProcessFileCompleted(Bool last) {
 #endif
 
     /* statistics dumping modified for -c option*/
-    stat_dumping_old_style ();
 
     if (con_cat == TRUE && last == FALSE)
     {
+        stat_dumping_old_style ();
         flush_histo_engine();
     }
     else
@@ -1412,7 +1412,7 @@ void ProcessFileCompleted(Bool last) {
 
 
             /* update average histos */
-
+            update_fake_histos ();
 
             /* swap since the frozen ones are printed out */
             swap_adx ();

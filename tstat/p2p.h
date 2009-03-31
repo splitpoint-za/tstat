@@ -15,4 +15,9 @@
  * Shawn Ostermann for the development of TCPTRACE.
  *
 */
+#ifndef _P2P_H_
+#define _P2P_H_
 int UDP_p2p_to_L7type (ucb *thisflow);
+int UDP_p2p_to_logtype(ucb *thisflow);
+
+#endif
