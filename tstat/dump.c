@@ -67,6 +67,8 @@ static int dir_counter = 0;
 static int snap_len = 0;
 Bool dump_engine = FALSE;
 
+extern int UDP_p2p_to_logtype(ucb *);
+
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
     int i = 0;
     for (i = 0; i < DUMP_PROTOS; i++) {
