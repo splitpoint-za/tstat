@@ -558,11 +558,6 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       exit (1);
     }
 
-
-  if (!log_engine || fp_skype_logc == NULL)
-    return;
-
-
   /* first check if there is at least a skype pkt */
 
   tot_skype = 0;
@@ -600,6 +595,10 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
   	  case P2P_PPLIVE:
   	  case P2P_SOPCAST:
   	  case P2P_TVANTS:
+  	  case P2P_EDK:  /* Skype could be matched by generic Emule/Kad rules */
+  	  case P2P_KAD:
+  	  case P2P_KADU:
+  	  case P2P_OKAD:
   	      break;
 
   	  case SKYPE_E2E:
@@ -613,10 +612,6 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 
   	  case FIRST_RTP:
   	  case FIRST_RTCP:
-  	  case P2P_EDK:  /* Skype could be matched by generic Emule/Kad rules */
-  	  case P2P_KAD:
-  	  case P2P_KADU:
-  	  case P2P_OKAD:
   	  case UDP_UNKNOWN:
   	  default: 
   	      if ((pskype->pkt_type_num[SKYPE_E2E_DATA] > MIN_SKYPE_E2E_NUM) &&
@@ -1114,9 +1109,10 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   if (C2S_is_Skype || 
       ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
 	   b_avgipg && b_pktsize && CSFT != NOT_SKYPE))
-
-    fprintf (fp_skype_logc, "%s U\n", logline);
-
+  {
+     if (log_engine && fp_skype_logc != NULL)
+       fprintf (fp_skype_logc, "%s U\n", logline);
+  } 
 #else
   //     
   //     #   Field Meaning
@@ -1298,7 +1294,8 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   strcat(logline,buffer);
 
 
-  fprintf (fp_skype_logc, "%s", logline);
+  if (log_engine && fp_skype_logc != NULL)
+     fprintf (fp_skype_logc, "%s", logline);
 
   //    29->44   Chi-square values
 
@@ -1321,10 +1318,12 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    (pskype->random.rnd_bit_histo[i][j] - expected_num);
 	}
       chi_square[j] /= expected_num;
-      fprintf (fp_skype_logc, " %.3f", chi_square[j]);
+      if (log_engine && fp_skype_logc != NULL)
+          fprintf (fp_skype_logc, " %.3f", chi_square[j]);
     }
 
-  fprintf (fp_skype_logc, "\n");
+  if (log_engine && fp_skype_logc != NULL)
+     fprintf (fp_skype_logc, "\n");
 
 #endif
 
@@ -1729,8 +1728,10 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 
   /* log flow if at least one of two dir is SKYPE */
   if (C2S_is_Skype || ((b_avgipg && b_pktsize) && CSFT != NOT_SKYPE))
-
-    fprintf (fp_skype_logc, "%s T\n", logline);
+  {
+     if (log_engine && fp_skype_logc != NULL)
+       fprintf (fp_skype_logc, "%s T\n", logline);
+  }
 
 #else
   //     #   Field Meaning
@@ -1914,7 +1915,10 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 
   /* discard flow when all are negative */
   if (b_avgipg || b_pktsize || CSFT != 0)
-    fprintf (fp_skype_logc, "%s\n", logline);
+  {
+     if (log_engine && fp_skype_logc != NULL)
+       fprintf (fp_skype_logc, "%s\n", logline);
+  }
 #endif
 
 /* add this flow to the skype one */
