@@ -650,10 +650,8 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
   		  }
   	      }
 
-  	      #ifdef ONELINE_LOG_FORMAT
-  		if (dir == C2S)
+  	      if (dir == C2S)
   		  return;
-  	      #endif
 
   	      print_skype_conn_stats_UDP (thisUdir, dir);    /* thisUdir */
 
@@ -662,10 +660,9 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
    }
   else
    { /* Protocol_TCP */
-#ifdef ONELINE_LOG_FORMAT
      if (dir == C2S)
        return;
-#endif
+
      print_skype_conn_stats_TCP (thisTdir, dir);       /* thisTdir */
    }  
 }
@@ -720,7 +717,6 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
     (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
      10) ? TRUE : FALSE;
 
-#ifdef ONELINE_LOG_FORMAT
   thisUdir = &(pup->c2s);
   pskype = &thisUdir->skype;
   
@@ -1113,219 +1109,6 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
      if (log_engine && fp_skype_logc != NULL)
        fprintf (fp_skype_logc, "%s U\n", logline);
   } 
-#else
-  //     
-  //     #   Field Meaning
-  //    --------------------------------------
-  //     1   Source Address
-  //     2   Source Port
-  //     3   Destination Address
-  //     4   Destination Port
-
-  strcpy(logline,"");
-
-  if (dir == S2C)
-    {
-      sprintf (buffer, "%s %s ",
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      strcat(logline,buffer);
-      sprintf (buffer, " %s %s ",
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      strcat(logline,buffer);
-    }
-  else
-    {
-      sprintf (buffer, "%s %s ",
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      strcat(logline,buffer);
-      sprintf (buffer, " %s %s ",
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      strcat(logline,buffer);
-    }
-
-
-
-
-  //     5   Flow Start Time
-  //     6   Flow End Time
-  //     7   Flow Size [Bytes]
-  sprintf (buffer,
-	   " %.2f %.2f %llu",
-	   elapsed (first_packet, pup->first_time) / 1000.0 / 1000.0,
-	   elapsed (first_packet, pup->last_time) / 1000.0 / 1000.0,
-	   thisUdir->data_bytes);
-  strcat(logline,buffer);
-
-
-
-  //     8   No. of Total flow packets
-  //     9   No. of End-2-End  packets
-  //    10   No. of Skypeout   packets
-  //    11   No. of Signaling  packets
-  //    12   No. of Unknown    packets
-  //    13   No. of audio or audio+video  packets
-  //    14   No. of video only packets
-  sprintf (buffer,
-	   " %lld %d %d %d %d",
-	   thisUdir->packets,
-	   pskype->pkt_type_num[SKYPE_E2E_DATA],
-	   pskype->pkt_type_num[SKYPE_OUT_DATA],
-	   pskype->pkt_type_num[SKYPE_NAK] +
-	   pskype->pkt_type_num[SKYPE_FUN2] +
-	   pskype->pkt_type_num[SKYPE_FUN3],
-	   pskype->pkt_type_num[NOT_SKYPE],
-	   pskype->audiovideo_pkts, pskype->video_pkts);
-  strcat(logline,buffer);
-
-
-
-  //    15   Average Pktsize
-  //    16   Packet Size: Max Mean Belief
-  //    17   Packet Size: Validity Percentage
-  //    18   Packet Size: Above Threshold Percentage
-  //    19   Packet Size: Codec type (Argmax)
-  Bool b_pktsize;
-
-  if (bayes_engine)
-    {
-      if (dir == S2C)
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   (double) thisUdir->data_bytes / (double) thisUdir->packets,
-		   pup->s2c.bc_pktsize->mean_max_belief,
-		   pup->s2c.bc_pktsize->valid_percentage,
-		   pup->s2c.bc_pktsize->aboveth_percentage,
-		   pup->s2c.bc_pktsize->argmax);
-          strcat(logline,buffer);
-
-	  b_pktsize = (pup->s2c.bc_pktsize->mean_max_belief >=
-		       pup->s2c.bc_pktsize->settings->avg_threshold);
-
-
-	}
-      else
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   logline,
-		   (double) thisUdir->data_bytes / (double) thisUdir->packets,
-		   pup->c2s.bc_pktsize->mean_max_belief,
-		   pup->c2s.bc_pktsize->valid_percentage,
-		   pup->c2s.bc_pktsize->aboveth_percentage,
-		   pup->c2s.bc_pktsize->argmax);
-          strcat(logline,buffer);
-
-	  b_pktsize = (pup->c2s.bc_pktsize->mean_max_belief >=
-		       pup->c2s.bc_pktsize->settings->avg_threshold);
-	}
-    }
-
-  //    20   Average Inter-packet Gap
-  //    21   Average Inter-packet Gap (End-2-end)
-  //    22   Average Inter-packet Gap (Skypeout)
-  //    23   Average IPG: Max Mean Belief
-  //    24   Average IPG: Validity Percentage
-  //    25   Average IPG: Above Threshold Percentage
-  //    26   Average IPG: Codec type (Argmax)
-  Bool b_avgipg;
-
-#define SKYPE_DELTA(x)  ((x==-1000.0) ? -1.0 : x)
-
-  if (bayes_engine)
-    {
-      if (dir == S2C)
-	{
-	  sprintf (buffer,
-		   " %f %f %f %.3f %.3f %.3f %d",
-		   (double) elapsed (pup->first_time,
-				     pup->last_time) / 1000.0 /
-		   (double) thisUdir->packets,
-		   SKYPE_DELTA (get_average_delta_t
-				(&pskype->stat[SKYPE_E2E_DATA])),
-		   SKYPE_DELTA (get_average_delta_t
-				(&pskype->stat[SKYPE_OUT_DATA])),
-		   pup->s2c.bc_avgipg->mean_max_belief,
-		   pup->s2c.bc_avgipg->valid_percentage,
-		   pup->s2c.bc_avgipg->aboveth_percentage,
-		   pup->s2c.bc_avgipg->argmax);
-          strcat(logline,buffer);
-
-	  b_avgipg = (pup->s2c.bc_avgipg->mean_max_belief >=
-		      pup->s2c.bc_avgipg->settings->avg_threshold);
-
-	}
-      else
-	{
-	  sprintf (buffer,
-		   "%s %f %f %f %.3f %.3f %.3f %d",
-		   (double) elapsed (pup->first_time,
-				     pup->last_time) / 1000.0 /
-		   (double) thisUdir->packets,
-		   SKYPE_DELTA (get_average_delta_t
-				(&pskype->stat[SKYPE_E2E_DATA])),
-		   SKYPE_DELTA (get_average_delta_t
-				(&pskype->stat[SKYPE_OUT_DATA])),
-		   pup->c2s.bc_avgipg->mean_max_belief,
-		   pup->c2s.bc_avgipg->valid_percentage,
-		   pup->c2s.bc_avgipg->aboveth_percentage,
-		   pup->c2s.bc_avgipg->argmax);
-          strcat(logline,buffer);
-
-	  b_avgipg = (pup->c2s.bc_avgipg->mean_max_belief >=
-		      pup->c2s.bc_avgipg->settings->avg_threshold);
-	}
-    }
-
-  //    27   Deterministic Flow Type
-  //    28   Bayesian Flow Type
-
-  sprintf (buffer,
-	   " %d %d",
-	   thisUdir->type,
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255);
-  strcat(logline,buffer);
-
-
-  if (log_engine && fp_skype_logc != NULL)
-     fprintf (fp_skype_logc, "%s", logline);
-
-  //    29->44   Chi-square values
-
-  /* evaluate the chi_square as
-     (x_i - E_i)^2
-     sum -----------
-     E_i
-   */
-
-  /* start with the skype hdr of e2e messages */
-  expected_num = (double) thisUdir->packets * E2E_EXPECTED_PROB;
-
-  for (j = 0; j < N_BLOCK; j++)
-    {
-      chi_square[j] = 0;
-      for (i = 0; i < N_RANDOM_BIT_VALUES; i++)
-	{
-	  chi_square[j] +=
-	    (pskype->random.rnd_bit_histo[i][j] - expected_num) *
-	    (pskype->random.rnd_bit_histo[i][j] - expected_num);
-	}
-      chi_square[j] /= expected_num;
-      if (log_engine && fp_skype_logc != NULL)
-          fprintf (fp_skype_logc, " %.3f", chi_square[j]);
-    }
-
-  if (log_engine && fp_skype_logc != NULL)
-     fprintf (fp_skype_logc, "\n");
-
-#endif
 
 /* add this flow to the skype one */
   if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
@@ -1427,7 +1210,6 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
     (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
      10) ? TRUE : FALSE;
 
-#ifdef ONELINE_LOG_FORMAT
   thisTdir = &(ptp->c2s);
   pskype = &thisTdir->skype;
   
@@ -1733,193 +1515,6 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
        fprintf (fp_skype_logc, "%s T\n", logline);
   }
 
-#else
-  //     #   Field Meaning
-  //    --------------------------------------
-  //     1   Source Address
-  //     2   Source Port
-  //     3   Destination Address
-  //     4   Destination Port
-
-  strcpy(logline,"");
-
-  if (dir == S2C)
-    {
-      sprintf (buffer, "%s %s ",
-	       HostName (ptp->addr_pair.b_address),
-	       ServiceName (ptp->addr_pair.b_port));
-      strcat(logline,buffer);
-      sprintf (buffer, " %s %s ",
-	       HostName (ptp->addr_pair.a_address),
-	       ServiceName (ptp->addr_pair.a_port));
-      strcat(logline,buffer);
-    }
-  else
-    {
-      sprintf (buffer, "%s %s ",
-	       HostName (ptp->addr_pair.a_address),
-	       ServiceName (ptp->addr_pair.a_port));
-      strcat(logline,buffer);
-      sprintf (buffer, " %s %s ",
-	       HostName (ptp->addr_pair.b_address),
-	       ServiceName (ptp->addr_pair.b_port));
-      strcat(logline,buffer);
-    }
-
-  //     5   Flow Start Time
-  //     6   Flow End Time
-  //     7   Flow Size [Bytes]
-  sprintf (buffer,
-	   " %.2f %.2f %lu",
-	   elapsed (first_packet, ptp->first_time) / 1000.0 / 1000.0,
-	   elapsed (first_packet, ptp->last_time) / 1000.0 / 1000.0,
-	   thisTdir->unique_bytes);
-  strcat(logline,buffer);
-
-
-  //     8   No. of Total flow packets
-  //     9   No. of Total flow packets - audio or audio+video
-  //     10  No. of Total flow packets - video only
-
-  sprintf (buffer, " %lu", thisTdir->packets);
-  strcat(logline,buffer);
-
-
-  //    11   Average Pktsize
-  //    12   Packet Size: Max Mean Belief
-  //    13   Packet Size: Validity Percentage
-  //    14   Packet Size: Above Threshold Percentage
-  //    15   Packet Size: Codec type (Argmax)
-
-  Bool b_pktsize;
-
-  if (bayes_engine)
-    {
-      if (dir == S2C)
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   (double) thisTdir->unique_bytes / (double)
-		   thisTdir->data_pkts,
-		   ptp->s2c.bc_pktsize->mean_max_belief,
-		   ptp->s2c.bc_pktsize->valid_percentage,
-		   ptp->s2c.bc_pktsize->aboveth_percentage,
-		   ptp->s2c.bc_pktsize->argmax);
-          strcat(logline,buffer);
-
-	  b_pktsize = (ptp->s2c.bc_pktsize->mean_max_belief >=
-		       ptp->s2c.bc_pktsize->settings->avg_threshold);
-
-	}
-      else
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   (double) thisTdir->unique_bytes / (double)
-		   thisTdir->data_pkts,
-		   ptp->c2s.bc_pktsize->mean_max_belief,
-		   ptp->c2s.bc_pktsize->valid_percentage,
-		   ptp->c2s.bc_pktsize->aboveth_percentage,
-		   ptp->c2s.bc_pktsize->argmax);
-          strcat(logline,buffer);
-
-	  b_pktsize = (ptp->c2s.bc_pktsize->mean_max_belief >=
-		       ptp->c2s.bc_pktsize->settings->avg_threshold);
-	}
-    }
-
-  //    16   Average Inter-packet Gap
-  //    17   Average IPG: Max Mean Belief
-  //    18   Average IPG: Validity Percentage
-  //    19   Average IPG: Above Threshold Percentage
-  //    20   Average IPG: Codec type (Argmax)
-
-  Bool b_avgipg;
-
-
-  if (bayes_engine)
-    {
-      if (dir == S2C)
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   (double) elapsed (ptp->first_time,
-				     ptp->last_time) / 1000.0 /
-		   (double) thisTdir->data_pkts,
-		   ptp->s2c.bc_avgipg->mean_max_belief,
-		   ptp->s2c.bc_avgipg->valid_percentage,
-		   ptp->s2c.bc_avgipg->aboveth_percentage,
-		   ptp->s2c.bc_avgipg->argmax);
-          strcat(logline,buffer);
-
-	  b_avgipg = (ptp->s2c.bc_avgipg->mean_max_belief >=
-		      ptp->s2c.bc_avgipg->settings->avg_threshold);
-
-	}
-      else
-	{
-	  sprintf (buffer,
-		   " %f %.3f %.3f %.3f %d",
-		   (double) elapsed (ptp->first_time,
-				     ptp->last_time) / 1000.0 /
-		   (double) thisTdir->data_pkts,
-		   ptp->c2s.bc_avgipg->mean_max_belief,
-		   ptp->c2s.bc_avgipg->valid_percentage,
-		   ptp->c2s.bc_avgipg->aboveth_percentage,
-		   ptp->c2s.bc_avgipg->argmax);
-          strcat(logline,buffer);
-
-	  b_avgipg = (ptp->c2s.bc_avgipg->mean_max_belief >=
-		      ptp->c2s.bc_avgipg->settings->avg_threshold);
-	}
-    }
-
-  //    21   Bayesian Flow Type
-
-  sprintf (buffer,
-	   " %d",
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255);
-  strcat(logline,buffer);
-
-  /* do the same for payload bytes after the 4th bytes */
-  expected_num = (double) pskype->random.rnd_n_samples * OUT_EXPECTED_PROB;
-//  expected_num = (double)thisTdir->packets*E2E_EXPECTED_PROB;
-
-  //    22->36   Chi-square values
-
-  for (j = 0; j < N_BLOCK; j++)
-    {
-      chi_square[j] = 0.0;
-      for (i = 0; i < N_RANDOM_BIT_VALUES; i++)
-	{
-	  chi_square[j] +=
-	    (pskype->random.rnd_bit_histo[i][j] - expected_num) *
-	    (pskype->random.rnd_bit_histo[i][j] - expected_num);
-	}
-
-      chi_square[j] /= expected_num;
-
-      sprintf (buffer, " %.3f", chi_square[j]);
-      strcat(logline,buffer);
-    }
-
-  /*   36   Random samples for the Chi-square evaluation
-
-     sprintf (buffer, " %d", pskype->random.rnd_n_samples);
-     strcat(logline,buffer);
-
-   */
-
-  /* discard flow when all are negative */
-  if (b_avgipg || b_pktsize || CSFT != 0)
-  {
-     if (log_engine && fp_skype_logc != NULL)
-       fprintf (fp_skype_logc, "%s\n", logline);
-  }
-#endif
 
 /* add this flow to the skype one */
 /* decide if it is entering or going out */

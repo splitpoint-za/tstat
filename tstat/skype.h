@@ -16,8 +16,6 @@
  *
 */
 
-#define ONELINE_LOG_FORMAT
-
 
 #define NOT_SKYPE 0
 #define SKYPE_NAK 1
