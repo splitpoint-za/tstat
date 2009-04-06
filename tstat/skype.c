@@ -671,21 +671,27 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 void
 print_skype_conn_stats_UDP (void *thisdir, int dir)
 {
-  int i, j, CSFT = -1;
+  int i, j; 
+  int C2S_CSFT = -1;
+  int S2C_CSFT = -1;
   int C2S_is_Skype = 0;
+  int S2C_is_Skype = 0;
   struct ucb *thisUdir;
-  char buffer[100];
-  char logline[400];
   struct skype_stat *pskype;
   struct sudp_pair *pup;
   double chi_square[N_BLOCK];
   double expected_num;
   Bool video_present;
+  double c2s_minCHI_E2O_HDR, c2s_maxCHI_E2E_HDR,
+         c2s_minCHI_E2E_HDR, c2s_maxCHI_PAY;
+  double s2c_minCHI_E2O_HDR, s2c_maxCHI_E2E_HDR,
+         s2c_minCHI_E2E_HDR, s2c_maxCHI_PAY;
+  Bool b_pktsize_c2s, b_avgipg_c2s, b_pktsize_s2c, b_avgipg_s2c;
+
   thisUdir = (ucb *) thisdir;
   pup = thisUdir->pup;
   pskype = &thisUdir->skype;
-  double minCHI_E2O_HDR, maxCHI_E2E_HDR, minCHI_E2E_HDR, maxCHI_PAY;
-
+  
   if (bayes_engine)
     {
       if (pup->s2c.bc_pktsize->mean_max_belief == 0)
@@ -713,92 +719,20 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 
   // was video present? yes if video only pkts are larger than 10%
 
-  video_present =
-    (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
-     10) ? TRUE : FALSE;
-
   thisUdir = &(pup->c2s);
   pskype = &thisUdir->skype;
+
+  b_pktsize_c2s = 0;
+  b_avgipg_c2s = 0;
   
-  //     #   Field Meaning
-  //    --------------------------------------
-  //     1   Client IP Address
-  //     2   Client Port
-  //     3   Internal address (0=no, 1=yes)
-
-  strcpy(logline,"");
-
-  sprintf (buffer, "%s %s %d",
-	   HostName (pup->addr_pair.a_address),
-	   ServiceName (pup->addr_pair.a_port), pup->internal_src);
-  strcat(logline,buffer);
-
-  //     4   Flow Size [Bytes]
-  sprintf (buffer, " %llu", thisUdir->data_bytes);
-  strcat(logline,buffer);
-
-  //     5   No. of Total flow packets
-  //     6   No. of End-2-End  packets
-  //     7   No. of Skypeout   packets
-  //     8   No. of Signaling  packets
-  //     9   No. of Unknown    packets
-  //    10   No. of audio or audio+video packets
-  //    11   No. of video only   packets
-  sprintf (buffer,
-	   " %lld %d %d %d %d %d %d",
-	   thisUdir->packets,
-	   pskype->pkt_type_num[SKYPE_E2E_DATA],
-	   pskype->pkt_type_num[SKYPE_OUT_DATA],
-	   pskype->pkt_type_num[SKYPE_NAK] +
-	   pskype->pkt_type_num[SKYPE_FUN2] +
-	   pskype->pkt_type_num[SKYPE_FUN3],
-	   pskype->pkt_type_num[NOT_SKYPE],
-	   pskype->audiovideo_pkts, pskype->video_pkts);
-  strcat(logline,buffer);
-
-  //    12   Average Pktsize
-  //    13   Packet Size: Max Mean Belief
-
-  Bool b_pktsize = 0;
-
   if (bayes_engine)
     {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) thisUdir->data_bytes / (double) thisUdir->packets,
-	       pup->c2s.bc_pktsize->mean_max_belief);
-      strcat(logline,buffer);
 
-      b_pktsize = (pup->c2s.bc_pktsize->mean_max_belief >=
+      b_pktsize_c2s = (pup->c2s.bc_pktsize->mean_max_belief >=
 		   pup->c2s.bc_pktsize->settings->avg_threshold);
-    }
-
-
-  //    14   Average Inter-packet Gap
-  //    15   Average IPG: Max Mean Belief
-
-  Bool b_avgipg = 0;
-
-
-  if (bayes_engine)
-    {
-
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) elapsed (pup->first_time,
-				 pup->last_time) / 1000.0 /
-	       (double) thisUdir->packets,
-	       pup->c2s.bc_avgipg->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_avgipg = (pup->c2s.bc_avgipg->mean_max_belief >=
+      b_avgipg_c2s = (pup->c2s.bc_avgipg->mean_max_belief >=
 		  pup->c2s.bc_avgipg->settings->avg_threshold);
     }
-
-//    16  Chi-square: min E2O Header
-//    17  Chi-square: max E2E Header
-//    18  Chi-square: min E2E Header
-//    19  Chi-square: max Payload
 
   /* evaluate the chi_square as
      (x_i - E_i)^2
@@ -820,72 +754,52 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	}
       chi_square[j] /= expected_num;
     }
-  maxCHI_E2E_HDR = chi_square[0];
+  c2s_maxCHI_E2E_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
     {
       if (i == 4 || i == 5)	/* 5 e 6 CHI deterministico */
 	i = 6;			/* salta non calcola il max */
-      if (maxCHI_E2E_HDR < chi_square[i])
-	maxCHI_E2E_HDR = chi_square[i];
+      if (c2s_maxCHI_E2E_HDR < chi_square[i])
+	c2s_maxCHI_E2E_HDR = chi_square[i];
     }
-  minCHI_E2E_HDR = chi_square[4];	/* 5 e 6 CHI deterministico */
-  if (minCHI_E2E_HDR > chi_square[5])	/* calcola il min tra i due */
-    minCHI_E2E_HDR = chi_square[5];
+  c2s_minCHI_E2E_HDR = chi_square[4];	/* 5 e 6 CHI deterministico */
+  if (c2s_minCHI_E2E_HDR > chi_square[5])	/* calcola il min tra i due */
+    c2s_minCHI_E2E_HDR = chi_square[5];
 
-  maxCHI_PAY = chi_square[8];
+  c2s_maxCHI_PAY = chi_square[8];
   for (i = 9; i < N_BLOCK; i++)
-    if (maxCHI_PAY < chi_square[i])
-      maxCHI_PAY = chi_square[i];
+    if (c2s_maxCHI_PAY < chi_square[i])
+      c2s_maxCHI_PAY = chi_square[i];
 
-  minCHI_E2O_HDR = chi_square[0];
+  c2s_minCHI_E2O_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
-    if (minCHI_E2O_HDR > chi_square[i])
-      minCHI_E2O_HDR = chi_square[i];
+    if (c2s_minCHI_E2O_HDR > chi_square[i])
+      c2s_minCHI_E2O_HDR = chi_square[i];
 
-  sprintf (buffer,
-	   " %.3f %.3f %.3f %.3f",
-	   minCHI_E2O_HDR, maxCHI_E2E_HDR, minCHI_E2E_HDR, maxCHI_PAY);
-  strcat(logline,buffer);
-
-
-  //    20   Deterministic Flow Type
-  //    21   Bayesian Flow Type
-  //    22   Chi-square Flow Type
-  //    23   Video present flag (0=no, 1=yes)
-
-  if (minCHI_E2O_HDR >= 150 && maxCHI_PAY < 150)
-    CSFT = L7_FLOW_SKYPE_E2O;	/* SKYPE E2O */
+  if (c2s_minCHI_E2O_HDR >= 150 && c2s_maxCHI_PAY < 150)
+    C2S_CSFT = L7_FLOW_SKYPE_E2O;	/* SKYPE E2O */
   else
     {
-      if (maxCHI_E2E_HDR < 150 && chi_square[4] >= 150
-	  && chi_square[5] >= 100 && maxCHI_PAY < 150)
-	CSFT = L7_FLOW_SKYPE_E2E;	/* SKYPE E2E */
+      if (c2s_maxCHI_E2E_HDR < 150 && chi_square[4] >= 150
+	  && chi_square[5] >= 100 && c2s_maxCHI_PAY < 150)
+	C2S_CSFT = L7_FLOW_SKYPE_E2E;	/* SKYPE E2E */
       else
-	CSFT = NOT_SKYPE;
+	C2S_CSFT = NOT_SKYPE;
     }
 
-  sprintf (buffer,
-	   " %d %d %d %d",
-	   thisUdir->type,
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255, CSFT, video_present);
-  strcat(logline,buffer);
-
   if ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
-      b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
+      b_avgipg_c2s && b_pktsize_c2s && C2S_CSFT != NOT_SKYPE)
     C2S_is_Skype = 1;
  
 
 /* add this flow to the skype one */
-  if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
+  if (b_avgipg_c2s && b_pktsize_c2s && C2S_CSFT != NOT_SKYPE)
     {
-      pskype->skype_type = CSFT;
+      pskype->skype_type = C2S_CSFT;
       switch ((in_out_loc (pup->internal_src, pup->internal_dst, dir)))
 	{
 	case OUT_FLOW:
-	  switch (CSFT)
+	  switch (C2S_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
@@ -899,7 +813,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  break;
 
 	case IN_FLOW:
-	  switch (CSFT)
+	  switch (C2S_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
@@ -912,7 +826,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    }
 	  break;
 	case LOC_FLOW:
-	  switch (CSFT)
+	  switch (C2S_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
@@ -932,91 +846,16 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   thisUdir = &(pup->s2c);
   pskype = &thisUdir->skype;
 
-
-  // was video present? yes if video only pkts are larger than 10%
-
-  video_present =
-    (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
-     10) ? TRUE : FALSE;
-
-  //     #   Field Meaning
-  //    --------------------------------------
-  //    24   Server IP Address
-  //    25   Server Port
-  //    26   Internal address (0=no, 1=yes)
-
-  sprintf (buffer, " %s %s %d",
-	   HostName (pup->addr_pair.b_address),
-	   ServiceName (pup->addr_pair.b_port), pup->internal_dst);
-  strcat(logline,buffer);
-
-  //    27    Flow Size [Bytes]
-  sprintf (buffer, " %llu", thisUdir->data_bytes);
-  strcat(logline,buffer);
-
-  //    28   No. of Total flow packets
-  //    29   No. of End-2-End  packets
-  //    30   No. of Skypeout   packets
-  //    31   No. of Signaling  packets
-  //    32   No. of Unknown    packets
-  //    33   No. of audio or audio+video packets
-  //    34   No. of video only   packets
-  sprintf (buffer,
-	   " %lld %d %d %d %d %d %d",
-	   thisUdir->packets,
-	   pskype->pkt_type_num[SKYPE_E2E_DATA],
-	   pskype->pkt_type_num[SKYPE_OUT_DATA],
-	   pskype->pkt_type_num[SKYPE_NAK] +
-	   pskype->pkt_type_num[SKYPE_FUN2] +
-	   pskype->pkt_type_num[SKYPE_FUN3],
-	   pskype->pkt_type_num[NOT_SKYPE],
-	   pskype->audiovideo_pkts, pskype->video_pkts);
-  strcat(logline,buffer);
-
-  //    35   Average Pktsize
-  //    36   Packet Size: Max Mean Belief
-
-  b_pktsize = 0;
+  b_pktsize_s2c = 0;
+  b_avgipg_s2c = 0;
 
   if (bayes_engine)
     {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) thisUdir->data_bytes / (double) thisUdir->packets,
-	       pup->s2c.bc_pktsize->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_pktsize = (pup->s2c.bc_pktsize->mean_max_belief >=
+      b_pktsize_s2c = (pup->s2c.bc_pktsize->mean_max_belief >=
 		   pup->s2c.bc_pktsize->settings->avg_threshold);
-
-    }
-
-
-  //    37   Average Inter-packet Gap
-  //    38   Average IPG: Max Mean Belief
-
-  b_avgipg = 0;
-
-
-  if (bayes_engine)
-    {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) elapsed (pup->first_time,
-				 pup->last_time) / 1000.0 /
-	       (double) thisUdir->packets,
-	       pup->s2c.bc_avgipg->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_avgipg = (pup->s2c.bc_avgipg->mean_max_belief >=
+      b_avgipg_s2c = (pup->s2c.bc_avgipg->mean_max_belief >=
 		  pup->s2c.bc_avgipg->settings->avg_threshold);
-
     }
-
-  //    39  Chi-square: min E2O Header
-  //    40  Chi-square: max E2E Header
-  //    41  Chi-square: min E2E Header
-  //    42  Chi-square: max Payload
 
   /* evaluate the chi_square as
      (x_i - E_i)^2
@@ -1038,86 +877,51 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	}
       chi_square[j] /= expected_num;
     }
-  maxCHI_E2E_HDR = chi_square[0];
+  s2c_maxCHI_E2E_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
     {
       if (i == 4 || i == 5)	/* 5 e 6 CHI deterministico */
 	i = 6;			/* salta non calcola il max */
-      if (maxCHI_E2E_HDR < chi_square[i])
-	maxCHI_E2E_HDR = chi_square[i];
+      if (s2c_maxCHI_E2E_HDR < chi_square[i])
+	s2c_maxCHI_E2E_HDR = chi_square[i];
     }
-  minCHI_E2E_HDR = chi_square[4];	/* 5 e 6 CHI deterministico */
-  if (minCHI_E2E_HDR > chi_square[5])	/* calcola il min tra i due */
-    minCHI_E2E_HDR = chi_square[5];
+  s2c_minCHI_E2E_HDR = chi_square[4];	/* 5 e 6 CHI deterministico */
+  if (s2c_minCHI_E2E_HDR > chi_square[5])	/* calcola il min tra i due */
+    s2c_minCHI_E2E_HDR = chi_square[5];
 
-  maxCHI_PAY = chi_square[8];
+  s2c_maxCHI_PAY = chi_square[8];
   for (i = 9; i < N_BLOCK; i++)
-    if (maxCHI_PAY < chi_square[i])
-      maxCHI_PAY = chi_square[i];
+    if (s2c_maxCHI_PAY < chi_square[i])
+      s2c_maxCHI_PAY = chi_square[i];
 
-  minCHI_E2O_HDR = chi_square[0];
+  s2c_minCHI_E2O_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
-    if (minCHI_E2O_HDR > chi_square[i])
-      minCHI_E2O_HDR = chi_square[i];
+    if (s2c_minCHI_E2O_HDR > chi_square[i])
+      s2c_minCHI_E2O_HDR = chi_square[i];
 
-  sprintf (buffer,
-	   " %.3f %.3f %.3f %.3f",
-	   minCHI_E2O_HDR, maxCHI_E2E_HDR, minCHI_E2E_HDR, maxCHI_PAY);
-  strcat(logline,buffer);
-
-
-  //    43   Deterministic Flow Type
-  //    44   Bayesian Flow Type
-  //    45   Chi-square Flow Type
-  //    46   Video present flag (0=no, 1=yes)
-
-  if (minCHI_E2O_HDR >= 150 && maxCHI_PAY < 150)
-    CSFT = L7_FLOW_SKYPE_E2O;	/* SKYPE E2O */
+  if (s2c_minCHI_E2O_HDR >= 150 && s2c_maxCHI_PAY < 150)
+    S2C_CSFT = L7_FLOW_SKYPE_E2O;	/* SKYPE E2O */
   else
     {
-      if (maxCHI_E2E_HDR < 150 && chi_square[4] >= 150
-	  && chi_square[5] >= 100 && maxCHI_PAY < 150)
-	CSFT = L7_FLOW_SKYPE_E2E;	/* SKYPE E2E */
+      if (s2c_maxCHI_E2E_HDR < 150 && chi_square[4] >= 150
+	  && chi_square[5] >= 100 && s2c_maxCHI_PAY < 150)
+	S2C_CSFT = L7_FLOW_SKYPE_E2E;	/* SKYPE E2E */
       else
-	CSFT = NOT_SKYPE;
+	S2C_CSFT = NOT_SKYPE;
     }
 
-  sprintf (buffer,
-	   " %d %d %d %d",
-	   thisUdir->type,
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255, CSFT, video_present);
-  strcat(logline,buffer);
-
-
-  //    47   Flow Start Time [in Unix time]
-  //    48   Flow Elapsed Time [s]
-
-  sprintf (buffer,
-	   " %f %.3f",
-	   1e-6 * time2double (pup->first_time),
-	   elapsed (pup->first_time, pup->last_time) / 1000.0 / 1000.0);
-  strcat(logline,buffer);
-
-  /* log flow if at least one of two dir is SKYPE */
-  if (C2S_is_Skype || 
-      ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
-	   b_avgipg && b_pktsize && CSFT != NOT_SKYPE))
-  {
-     if (log_engine && fp_skype_logc != NULL)
-       fprintf (fp_skype_logc, "%s U\n", logline);
-  } 
+  if ((thisUdir->type == SKYPE_E2E || thisUdir->type == SKYPE_OUT) &&
+      b_avgipg_s2c && b_pktsize_s2c && S2C_CSFT != NOT_SKYPE)
+    S2C_is_Skype = 1;
 
 /* add this flow to the skype one */
-  if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
+  if (b_avgipg_s2c && b_pktsize_s2c && S2C_CSFT != NOT_SKYPE)
     {
-      pskype->skype_type = CSFT;
+      pskype->skype_type = S2C_CSFT;
       switch ((in_out_loc (pup->internal_src, pup->internal_dst, dir)))
 	{
 	case OUT_FLOW:
-	  switch (CSFT)
+	  switch (S2C_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
@@ -1131,7 +935,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  break;
 
 	case IN_FLOW:
-	  switch (CSFT)
+	  switch (S2C_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
@@ -1144,7 +948,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    }
 	  break;
 	case LOC_FLOW:
-	  switch (CSFT)
+	  switch (S2C_CSFT)
 	    {
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_loc, L7_FLOW_SKYPE_E2E);
@@ -1158,27 +962,213 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	  break;
 	}
     }
+
+  /* log flow if at least one of two dir is SKYPE */
+
+  if ( (C2S_is_Skype || S2C_is_Skype) && 
+       log_engine && fp_skype_logc != NULL  )
+  {
+    thisUdir = &(pup->c2s);
+    pskype = &thisUdir->skype;
+ 
+    video_present =
+      (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
+       10) ? TRUE : FALSE;
+
+    //     #   Field Meaning
+    //    --------------------------------------
+    //     1   Client IP Address
+    //     2   Client Port
+    //     3   Internal address (0=no, 1=yes)
+
+    fprintf (fp_skype_logc,"%s %s %d",
+  	     HostName (pup->addr_pair.a_address),
+  	     ServiceName (pup->addr_pair.a_port), pup->internal_src);
+
+    //     4   Flow Size [Bytes]
+    fprintf (fp_skype_logc, " %llu", thisUdir->data_bytes);
+
+    //     5   No. of Total flow packets
+    //     6   No. of End-2-End  packets
+    //     7   No. of Skypeout   packets
+    //     8   No. of Signaling  packets
+    //     9   No. of Unknown	 packets
+    //    10   No. of audio or audio+video packets
+    //    11   No. of video only   packets
+    fprintf (fp_skype_logc,
+  	     " %lld %d %d %d %d %d %d",
+  	     thisUdir->packets,
+  	     pskype->pkt_type_num[SKYPE_E2E_DATA],
+  	     pskype->pkt_type_num[SKYPE_OUT_DATA],
+  	     pskype->pkt_type_num[SKYPE_NAK] +
+  	     pskype->pkt_type_num[SKYPE_FUN2] +
+  	     pskype->pkt_type_num[SKYPE_FUN3],
+  	     pskype->pkt_type_num[NOT_SKYPE],
+  	     pskype->audiovideo_pkts, pskype->video_pkts);
+
+    //    12   Average Pktsize
+    //    13   Packet Size: Max Mean Belief
+    //    14   Average Inter-packet Gap
+    //    15   Average IPG: Max Mean Belief
+    if (bayes_engine)
+      {
+  	fprintf (fp_skype_logc,
+  		 " %f %.3f",
+  		 (double) thisUdir->data_bytes / (double) thisUdir->packets,
+  		 pup->c2s.bc_pktsize->mean_max_belief);
+  	fprintf (fp_skype_logc,
+  		 " %f %.3f",
+  		 (double) elapsed (pup->first_time,
+  				   pup->last_time) / 1000.0 /
+  		 (double) thisUdir->packets,
+  		 pup->c2s.bc_avgipg->mean_max_belief);
+      }
+
+  //	16  Chi-square: min E2O Header
+  //	17  Chi-square: max E2E Header
+  //	18  Chi-square: min E2E Header
+  //	19  Chi-square: max Payload
+
+    fprintf (fp_skype_logc,
+  	     " %.3f %.3f %.3f %.3f",
+  	     c2s_minCHI_E2O_HDR, c2s_maxCHI_E2E_HDR, c2s_minCHI_E2E_HDR, c2s_maxCHI_PAY);
+
+    //    20   Deterministic Flow Type
+    //    21   Bayesian Flow Type
+    //    22   Chi-square Flow Type
+    //    23   Video present flag (0=no, 1=yes)
+
+    fprintf (fp_skype_logc,
+  	     " %d %d %d %d",
+  	     thisUdir->type,
+  	     b_avgipg_c2s && b_pktsize_c2s ? 1 :
+  	     (!b_avgipg_c2s && !b_pktsize_c2s) ? 0 :
+  	     (!b_avgipg_c2s && b_pktsize_c2s) ? -1 :
+  	     (b_avgipg_c2s && !b_pktsize_c2s) ? -2 : -255, C2S_CSFT, video_present);
+
+  /*S2C*/
+
+    thisUdir = &(pup->s2c);
+    pskype = &thisUdir->skype;
+
+
+    // was video present? yes if video only pkts are larger than 10%
+
+    video_present =
+      (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
+       10) ? TRUE : FALSE;
+
+    //     #   Field Meaning
+    //    --------------------------------------
+    //    24   Server IP Address
+    //    25   Server Port
+    //    26   Internal address (0=no, 1=yes)
+
+    fprintf (fp_skype_logc, " %s %s %d",
+  	     HostName (pup->addr_pair.b_address),
+  	     ServiceName (pup->addr_pair.b_port), pup->internal_dst);
+
+    //    27	Flow Size [Bytes]
+    fprintf (fp_skype_logc, " %llu", thisUdir->data_bytes);
+
+    //    28   No. of Total flow packets
+    //    29   No. of End-2-End  packets
+    //    30   No. of Skypeout   packets
+    //    31   No. of Signaling  packets
+    //    32   No. of Unknown	 packets
+    //    33   No. of audio or audio+video packets
+    //    34   No. of video only   packets
+    fprintf (fp_skype_logc,
+  	     " %lld %d %d %d %d %d %d",
+  	     thisUdir->packets,
+  	     pskype->pkt_type_num[SKYPE_E2E_DATA],
+  	     pskype->pkt_type_num[SKYPE_OUT_DATA],
+  	     pskype->pkt_type_num[SKYPE_NAK] +
+  	     pskype->pkt_type_num[SKYPE_FUN2] +
+  	     pskype->pkt_type_num[SKYPE_FUN3],
+  	     pskype->pkt_type_num[NOT_SKYPE],
+  	     pskype->audiovideo_pkts, pskype->video_pkts);
+
+    //    35   Average Pktsize
+    //    36   Packet Size: Max Mean Belief
+    //    37   Average Inter-packet Gap
+    //    38   Average IPG: Max Mean Belief
+
+    if (bayes_engine)
+      {
+  	fprintf (fp_skype_logc,
+  		 " %f %.3f",
+  		 (double) thisUdir->data_bytes / (double) thisUdir->packets,
+  		 pup->s2c.bc_pktsize->mean_max_belief);
+  	fprintf (fp_skype_logc,
+  		 " %f %.3f",
+  		 (double) elapsed (pup->first_time,
+  				   pup->last_time) / 1000.0 /
+  		 (double) thisUdir->packets,
+  		 pup->s2c.bc_avgipg->mean_max_belief);
+      }
+
+    //    39  Chi-square: min E2O Header
+    //    40  Chi-square: max E2E Header
+    //    41  Chi-square: min E2E Header
+    //    42  Chi-square: max Payload
+
+    fprintf (fp_skype_logc,
+  	     " %.3f %.3f %.3f %.3f",
+  	     s2c_minCHI_E2O_HDR, s2c_maxCHI_E2E_HDR, s2c_minCHI_E2E_HDR, s2c_maxCHI_PAY);
+
+
+    //    43   Deterministic Flow Type
+    //    44   Bayesian Flow Type
+    //    45   Chi-square Flow Type
+    //    46   Video present flag (0=no, 1=yes)
+
+    fprintf (fp_skype_logc,
+  	     " %d %d %d %d",
+  	     thisUdir->type,
+  	     b_avgipg_s2c && b_pktsize_s2c ? 1 :
+  	     (!b_avgipg_s2c && !b_pktsize_s2c) ? 0 :
+  	     (!b_avgipg_s2c && b_pktsize_s2c) ? -1 :
+  	     (b_avgipg_s2c && !b_pktsize_s2c) ? -2 : -255, S2C_CSFT, video_present);
+
+
+    //    47   Flow Start Time [in Unix time]
+    //    48   Flow Elapsed Time [s]
+
+    fprintf (fp_skype_logc,
+  	     " %f %.3f",
+  	     1e-6 * time2double (pup->first_time),
+  	     elapsed (pup->first_time, pup->last_time) / 1000.0 / 1000.0);
+
+    fprintf (fp_skype_logc, " U\n");
+
+  } 
+
 }
 
 void
 print_skype_conn_stats_TCP (void *thisdir, int dir)
 {
-
   double chi_square[N_BLOCK];
   double expected_num;
-  int i, j, CSFT = -1;
+  int i, j;
+  int C2S_CSFT = -1;
+  int S2C_CSFT = -1;
   int C2S_is_Skype = 0;
+  int S2C_is_Skype = 0;
   struct tcb *thisTdir;
-  char buffer[100];
-  char logline[300] = "";
   Bool video_present;
+  float c2s_maxCHI_HDR, c2s_maxCHI_PAY;
+  float s2c_maxCHI_HDR, s2c_maxCHI_PAY;
+
+  Bool b_pktsize_c2s, b_avgipg_c2s;
+  Bool b_pktsize_s2c, b_avgipg_s2c;
 
   struct skype_stat *pskype;
   struct stcp_pair *ptp;
   thisTdir = (tcb *) thisdir;
   ptp = thisTdir->ptp;
   pskype = &thisTdir->skype;
-  float maxCHI_HDR, maxCHI_PAY;
 
   if (bayes_engine)
     {
@@ -1206,82 +1196,19 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
     }
   // was video present? yes if video only pkts are larger than 10%
 
-  video_present =
-    (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
-     10) ? TRUE : FALSE;
-
   thisTdir = &(ptp->c2s);
   pskype = &thisTdir->skype;
-  
-  strcpy(logline,"");
 
-  //     #   Field Meaning
-  //    --------------------------------------
-  //     1   Client IP Address
-  //     2   Client Port
-  //     3   Internal address (0=no, 1=yes)
-
-  sprintf (buffer, "%s %s %d",
-	   HostName (ptp->addr_pair.a_address),
-	   ServiceName (ptp->addr_pair.a_port), ptp->internal_src);
-  strcat(logline,buffer);
-  
-  //     4   Flow Size [Bytes]
-
-  sprintf (buffer, " %lu", thisTdir->unique_bytes);
-  strcat(logline,buffer);
-
-  //     5   No. of Total flow packets
-  //     6   No. of Total audio or audio+video packets
-  //     7   No. of Total video only packets
-
-  sprintf (buffer, " %ld %d %d", thisTdir->packets,
-	   pskype->audiovideo_pkts, pskype->video_pkts);
-  strcat(logline,buffer);
-
-  //     8   Average Pktsize
-  //     9   Packet Size: Max Mean Belief
-
-  Bool b_pktsize = 0;
+  b_pktsize_c2s = 0;
+  b_avgipg_c2s = 0;
 
   if (bayes_engine)
     {
-
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) thisTdir->unique_bytes / (double)
-	       thisTdir->data_pkts, ptp->c2s.bc_pktsize->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_pktsize = (ptp->c2s.bc_pktsize->mean_max_belief >=
+      b_pktsize_c2s = (ptp->c2s.bc_pktsize->mean_max_belief >=
 		   ptp->c2s.bc_pktsize->settings->avg_threshold);
-
-    }
-
-
-  //    10   Average Inter-packet Gap
-  //    11   Average IPG: Max Mean Belief
-
-  Bool b_avgipg = 0;
-
-  if (bayes_engine)
-    {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) elapsed (ptp->first_time,
-				 ptp->last_time) / 1000.0 /
-	       (double) thisTdir->data_pkts,
-	       ptp->c2s.bc_avgipg->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_avgipg = (ptp->c2s.bc_avgipg->mean_max_belief >=
+      b_avgipg_c2s = (ptp->c2s.bc_avgipg->mean_max_belief >=
 		  ptp->c2s.bc_avgipg->settings->avg_threshold);
-
     }
-
-
-//    12  Chi-square: max Header
-//    13  Chi-square: max Payload
 
   /* evaluate the chi_square as
      (x_i - E_i)^2
@@ -1305,53 +1232,37 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
       chi_square[j] /= expected_num;
     }
 
-  maxCHI_HDR = chi_square[0];
+  c2s_maxCHI_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
     {
-      if (maxCHI_HDR < chi_square[i])
-	maxCHI_HDR = chi_square[i];
+      if (c2s_maxCHI_HDR < chi_square[i])
+	c2s_maxCHI_HDR = chi_square[i];
     }
 
-  maxCHI_PAY = chi_square[8];
+  c2s_maxCHI_PAY = chi_square[8];
   for (i = 9; i < N_BLOCK; i++)
     {
-      if (maxCHI_PAY < chi_square[i])
-	maxCHI_PAY = chi_square[i];
+      if (c2s_maxCHI_PAY < chi_square[i])
+	c2s_maxCHI_PAY = chi_square[i];
     }
 
-  sprintf (buffer, " %.3f %.3f", maxCHI_HDR, maxCHI_PAY);
-  strcat(logline,buffer);
-
-
-  //    16   Bayesian Flow Type
-  //    17   Chi-square Flow Type
-  //    18   Video present flag (0=no, 1=yes)
-
-  if (maxCHI_HDR < 150 && maxCHI_PAY < 150)
-    CSFT = L7_FLOW_SKYPE_TCP;	/* SKYPE senza distinzione E2E/E2O */
+  if (c2s_maxCHI_HDR < 150 && c2s_maxCHI_PAY < 150)
+    C2S_CSFT = L7_FLOW_SKYPE_TCP;	/* SKYPE senza distinzione E2E/E2O */
   else
-    CSFT = NOT_SKYPE;
+    C2S_CSFT = NOT_SKYPE;
 
-  sprintf (buffer,
-	   " %d %d %d",
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255, CSFT, video_present);
-  strcat(logline,buffer);
-
-  if ((b_avgipg && b_pktsize) && CSFT != NOT_SKYPE)
+  if ((b_avgipg_c2s && b_pktsize_c2s) && C2S_CSFT != NOT_SKYPE)
     C2S_is_Skype = 1;
 
 /* add this flow to the skype one */
 /* decide if it is entering or going out */
 
-  if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
+  if (b_avgipg_c2s && b_pktsize_c2s && C2S_CSFT != NOT_SKYPE)
     {
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
       ptp->con_type &= ~OBF_PROTOCOL;
-      pskype->skype_type = CSFT;
+      pskype->skype_type = C2S_CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))
 	{
@@ -1371,76 +1282,16 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
   thisTdir = &(ptp->s2c);
   pskype = &thisTdir->skype;
 
-  // was video present? yes if video only pkts are larger than 10%
-
-  video_present =
-    (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
-     10) ? TRUE : FALSE;
-
-  //     #   Field Meaning
-  //    --------------------------------------
-  //    14   Server IP Address
-  //    15   Server Port
-  //    16   Internal address (0=no, 1=yes)
-
-  sprintf (buffer, " %s %s %d",
-	   HostName (ptp->addr_pair.b_address),
-	   ServiceName (ptp->addr_pair.b_port), ptp->internal_dst);
-  strcat(logline,buffer);
-
-  //    17   Flow Size [Bytes]
-
-  sprintf (buffer, " %lu", thisTdir->unique_bytes);
-  strcat(logline,buffer);
-
-  //    18   No. of Total flow packets
-  //    19   No. of Total audio or audio+video packets
-  //    20   No. of Total video only packets
-
-  sprintf (buffer, " %ld %d %d", thisTdir->packets,
-	   pskype->audiovideo_pkts, pskype->video_pkts);
-  strcat(logline,buffer);
-
-  //    21   Average Pktsize
-  //    22   Packet Size: Max Mean Belief
-
-  b_pktsize = 0;
+  b_pktsize_s2c = 0;
+  b_avgipg_s2c = 0;
 
   if (bayes_engine)
     {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) thisTdir->unique_bytes / (double)
-	       thisTdir->data_pkts, ptp->s2c.bc_pktsize->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_pktsize = (ptp->s2c.bc_pktsize->mean_max_belief >=
+      b_pktsize_s2c = (ptp->s2c.bc_pktsize->mean_max_belief >=
 		   ptp->s2c.bc_pktsize->settings->avg_threshold);
-
-    }
-
-  //    23   Average Inter-packet Gap
-  //    24   Average IPG: Max Mean Belief
-
-  b_avgipg = 0;
-
-  if (bayes_engine)
-    {
-      sprintf (buffer,
-	       " %f %.3f",
-	       (double) elapsed (ptp->first_time,
-				 ptp->last_time) / 1000.0 /
-	       (double) thisTdir->packets,
-	       ptp->s2c.bc_avgipg->mean_max_belief);
-      strcat(logline,buffer);
-
-      b_avgipg = (ptp->s2c.bc_avgipg->mean_max_belief >=
+      b_avgipg_s2c = (ptp->s2c.bc_avgipg->mean_max_belief >=
 		  ptp->s2c.bc_avgipg->settings->avg_threshold);
     }
-
-
-  //    25  Chi-square: max Header
-  //    26  Chi-square: max Payload
 
   /* evaluate the chi_square as
      (x_i - E_i)^2
@@ -1465,66 +1316,37 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
       chi_square[j] /= expected_num;
     }
 
-  maxCHI_HDR = chi_square[0];
+  s2c_maxCHI_HDR = chi_square[0];
   for (i = 1; i < N_BLOCK / 2; i++)
     {
-      if (maxCHI_HDR < chi_square[i])
-	maxCHI_HDR = chi_square[i];
+      if (s2c_maxCHI_HDR < chi_square[i])
+	s2c_maxCHI_HDR = chi_square[i];
     }
 
-  maxCHI_PAY = chi_square[8];
+  s2c_maxCHI_PAY = chi_square[8];
   for (i = 9; i < N_BLOCK; i++)
     {
-      if (maxCHI_PAY < chi_square[i])
-	maxCHI_PAY = chi_square[i];
+      if (s2c_maxCHI_PAY < chi_square[i])
+	s2c_maxCHI_PAY = chi_square[i];
     }
 
-  sprintf (buffer, " %.3f %.3f", maxCHI_HDR, maxCHI_PAY);
-  strcat(logline,buffer);
-
-
-  //    27   Bayesian Flow Type
-  //    28   Chi-square Flow Type
-  //    29   Video present flag (0=no, 1=yes)
-
-  if (maxCHI_HDR < 150 && maxCHI_PAY < 150)
-    CSFT = L7_FLOW_SKYPE_TCP;	/* SKYPE senza distinzione E2E/E2O */
+  if (s2c_maxCHI_HDR < 150 && s2c_maxCHI_PAY < 150)
+    S2C_CSFT = L7_FLOW_SKYPE_TCP;	/* SKYPE senza distinzione E2E/E2O */
   else
-    CSFT = NOT_SKYPE;
+    S2C_CSFT = NOT_SKYPE;
 
-  sprintf (buffer,
-	   " %d %d %d",
-	   b_avgipg && b_pktsize ? 1 :
-	   (!b_avgipg && !b_pktsize) ? 0 :
-	   (!b_avgipg && b_pktsize) ? -1 :
-	   (b_avgipg && !b_pktsize) ? -2 : -255, CSFT, video_present);
-  strcat(logline,buffer);
-
-  //    30   Flow Start Time [in Unix time]
-  //    31   Flow Elapsed Time [s]
-
-  sprintf (buffer, " %f %.3f",
-	   1e-6 * time2double (ptp->first_time),
-	   elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
-  strcat(logline,buffer);
-
-  /* log flow if at least one of two dir is SKYPE */
-  if (C2S_is_Skype || ((b_avgipg && b_pktsize) && CSFT != NOT_SKYPE))
-  {
-     if (log_engine && fp_skype_logc != NULL)
-       fprintf (fp_skype_logc, "%s T\n", logline);
-  }
-
+  if ((b_avgipg_s2c && b_pktsize_s2c) && S2C_CSFT != NOT_SKYPE)
+    S2C_is_Skype = 1;
 
 /* add this flow to the skype one */
 /* decide if it is entering or going out */
 
-  if (b_avgipg && b_pktsize && CSFT != NOT_SKYPE)
+  if (b_avgipg_s2c && b_pktsize_s2c && S2C_CSFT != NOT_SKYPE)
     {
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
       ptp->con_type &= ~OBF_PROTOCOL;
-      pskype->skype_type = CSFT;
+      pskype->skype_type = S2C_CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))
 	{
@@ -1539,4 +1361,152 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 	  break;
 	}
     }
+
+  /* log flow if at least one of two dir is SKYPE */
+
+  if ((C2S_is_Skype || S2C_is_Skype) &&
+       log_engine && fp_skype_logc != NULL)
+   {
+     thisTdir = &(ptp->c2s);
+     pskype = &thisTdir->skype;
+ 
+     video_present =
+       (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
+   	10) ? TRUE : FALSE;
+
+     //     #	Field Meaning
+     //    --------------------------------------
+     //     1	Client IP Address
+     //     2	Client Port
+     //     3	Internal address (0=no, 1=yes)
+
+     fprintf (fp_skype_logc, "%s %s %d",
+   	      HostName (ptp->addr_pair.a_address),
+   	      ServiceName (ptp->addr_pair.a_port), ptp->internal_src);
+ 
+     //     4	Flow Size [Bytes]
+
+     fprintf (fp_skype_logc, " %lu", thisTdir->unique_bytes);
+
+     //     5	No. of Total flow packets
+     //     6	No. of Total audio or audio+video packets
+     //     7	No. of Total video only packets
+
+     fprintf (fp_skype_logc, " %ld %d %d", thisTdir->packets,
+   	      pskype->audiovideo_pkts, pskype->video_pkts);
+
+     //     8	Average Pktsize
+     //     9	Packet Size: Max Mean Belief
+     //    10	Average Inter-packet Gap
+     //    11	Average IPG: Max Mean Belief
+
+     if (bayes_engine)
+       {
+
+   	 fprintf (fp_skype_logc,
+   		  " %f %.3f",
+   		  (double) thisTdir->unique_bytes / (double)
+   		  thisTdir->data_pkts, ptp->c2s.bc_pktsize->mean_max_belief);
+   	 fprintf (fp_skype_logc,
+   		  " %f %.3f",
+   		  (double) elapsed (ptp->first_time,
+   				    ptp->last_time) / 1000.0 /
+   		  (double) thisTdir->data_pkts,
+   		  ptp->c2s.bc_avgipg->mean_max_belief);
+       }
+
+   //	 12  Chi-square: max Header
+   //	 13  Chi-square: max Payload
+
+     fprintf (fp_skype_logc, " %.3f %.3f", c2s_maxCHI_HDR, c2s_maxCHI_PAY);
+
+     //    16	Bayesian Flow Type
+     //    17	Chi-square Flow Type
+     //    18	Video present flag (0=no, 1=yes)
+
+     fprintf (fp_skype_logc,
+   	      " %d %d %d",
+   	      b_avgipg_c2s && b_pktsize_c2s ? 1 :
+   	      (!b_avgipg_c2s && !b_pktsize_c2s) ? 0 :
+   	      (!b_avgipg_c2s && b_pktsize_c2s) ? -1 :
+   	      (b_avgipg_c2s && !b_pktsize_c2s) ? -2 : -255, C2S_CSFT, video_present);
+
+   /*S2C*/
+     thisTdir = &(ptp->s2c);
+     pskype = &thisTdir->skype;
+
+     // was video present? yes if video only pkts are larger than 10%
+
+     video_present =
+       (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
+   	10) ? TRUE : FALSE;
+
+     //     #	Field Meaning
+     //    --------------------------------------
+     //    14	Server IP Address
+     //    15	Server Port
+     //    16	Internal address (0=no, 1=yes)
+
+     fprintf (fp_skype_logc, " %s %s %d",
+   	      HostName (ptp->addr_pair.b_address),
+   	      ServiceName (ptp->addr_pair.b_port), ptp->internal_dst);
+
+     //    17	Flow Size [Bytes]
+
+     fprintf (fp_skype_logc, " %lu", thisTdir->unique_bytes);
+
+     //    18	No. of Total flow packets
+     //    19	No. of Total audio or audio+video packets
+     //    20	No. of Total video only packets
+
+     fprintf (fp_skype_logc, " %ld %d %d", thisTdir->packets,
+   	      pskype->audiovideo_pkts, pskype->video_pkts);
+
+     //    21	Average Pktsize
+     //    22	Packet Size: Max Mean Belief
+     //    23	Average Inter-packet Gap
+     //    24	Average IPG: Max Mean Belief
+
+     if (bayes_engine)
+       {
+   	 fprintf (fp_skype_logc,
+   		  " %f %.3f",
+   		  (double) thisTdir->unique_bytes / (double)
+   		  thisTdir->data_pkts, ptp->s2c.bc_pktsize->mean_max_belief);
+   	 fprintf (fp_skype_logc,
+   		  " %f %.3f",
+   		  (double) elapsed (ptp->first_time,
+   				    ptp->last_time) / 1000.0 /
+   		  (double) thisTdir->packets,
+   		  ptp->s2c.bc_avgipg->mean_max_belief);
+       }
+
+     //    25  Chi-square: max Header
+     //    26  Chi-square: max Payload
+
+     fprintf (fp_skype_logc, " %.3f %.3f", s2c_maxCHI_HDR, s2c_maxCHI_PAY);
+
+
+     //    27	Bayesian Flow Type
+     //    28	Chi-square Flow Type
+     //    29	Video present flag (0=no, 1=yes)
+
+     fprintf (fp_skype_logc,
+   	      " %d %d %d",
+   	      b_avgipg_s2c && b_pktsize_s2c ? 1 :
+   	      (!b_avgipg_s2c && !b_pktsize_s2c) ? 0 :
+   	      (!b_avgipg_s2c && b_pktsize_s2c) ? -1 :
+   	      (b_avgipg_s2c && !b_pktsize_s2c) ? -2 : -255, S2C_CSFT, video_present);
+
+     //    30	Flow Start Time [in Unix time]
+     //    31	Flow Elapsed Time [s]
+
+     fprintf (fp_skype_logc, " %f %.3f",
+   	      1e-6 * time2double (ptp->first_time),
+   	      elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
+
+     fprintf (fp_skype_logc, " T\n");
+
+   }
+
 }
