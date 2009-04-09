@@ -716,8 +716,10 @@ int UDP_p2p_to_logtype(ucb *thisflow)
           case OUDP_SIZE_IN_46_57:
           case OUDP_SIZEX_22:
           case OUDP_SIZEX_52:
-	    if (thisflow->pup->addr_pair.b_port!=53 &&
-	        thisflow->pup->addr_pair.b_port!=123)
+	    if (thisflow->pup->addr_pair.a_port != 53 &&
+            thisflow->pup->addr_pair.a_port != 123 &&
+            thisflow->pup->addr_pair.b_port != 53 &&
+	        thisflow->pup->addr_pair.b_port != 123)
 	        return P2P_OKAD;
 	    else
 	        return thisflow->type;
@@ -789,8 +791,10 @@ int UDP_p2p_to_L7type (ucb *thisflow)
           case OUDP_SIZE_IN_46_57:
           case OUDP_SIZEX_22:
           case OUDP_SIZEX_52:
-	    if (thisflow->pup->addr_pair.b_port!=53 &&
-	        thisflow->pup->addr_pair.b_port!=123)
+	    if (thisflow->pup->addr_pair.a_port != 53 &&
+	        thisflow->pup->addr_pair.a_port != 123 &&
+            thisflow->pup->addr_pair.b_port != 53 &&
+	        thisflow->pup->addr_pair.b_port != 123)
 	        return L7_FLOW_OBF_KAD;
 	    else
 	        return L7_FLOW_UNKNOWN;
