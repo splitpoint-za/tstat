@@ -67,5 +67,5 @@
 #define L7_FLOW_OBF_KAD		34
 #define L7_FLOW_UNKNOWN         35
 
-#define L7_FLOW_TOT             36
-
+#define L7_FLOW_TOT             50    /* Large to leave space for future */
+				      /* protocol types */
