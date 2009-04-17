@@ -285,7 +285,8 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               udir->type = P2P_KAZAA;
 	      break;
 	    case IPP2P_PPLIVE:
-	      udir->type = P2P_PPLIVE;
+	      if (udir->pup->addr_pair.a_port != 53 && udir->pup->addr_pair.b_port != 53)
+	          udir->type = P2P_PPLIVE;
 	      break;
 	    case IPP2P_SOPCAST:
 	      udir->type = P2P_SOPCAST;
