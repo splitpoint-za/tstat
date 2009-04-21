@@ -49,7 +49,7 @@ parameters that have to be integrated into a RR-database; each
 line allows to specify which statistical properties of the variable	  
 has to be tracked as follows:			   
 
-	  tstat_var1 avg min max stdev var val:a,b,c,d idx:e,f,g,h prc:i,j,k	  
+	  tstat_var1 avg min max stdev var idx:e,f,g,h prc:i,j,k	  
 
 where [avg,min,max,stdev,var,idx,prc] are keywords;
 the list of indexes (e.g., TCP ports), values (e.g., packet size)
@@ -57,9 +57,9 @@ and percentiles are comma separated. The following is a short example:
 
 	  #This file is Tstat's rrdconf 
 	  #inspect packet size averge, stdev, specific values and 95th percentile 		   
-	  ip_len_usc avg stdev val:46,512,1500 prc:95
+	  ip_len_usc avg stdev idx:46,512,1500 prc:95
 	  #		   
-	  #inspect tcp port of index 25 and 80; you could use val:25,80 as well	   
+	  #inspect tcp port of index 25 and 80	   
 	  tcp_port_syn_src_ent idx:25,80
 	  #		   
 	  #best approximation of rtt distribution		   

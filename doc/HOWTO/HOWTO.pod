@@ -904,10 +904,10 @@ specify which statistical properties of the variable has to be tracked,
 as follows:
 
 
-          tstat_var1 avg min max stdev var val:a,b,c,d idx:e,f,g,h,other prc:i,j,k
+          tstat_var1 avg min max stdev var idx:e,f,g,h,other prc:i,j,k
 
 
-where C<avg,min,max,stdev,var,idx,prc,other> are keywords, whereas C<a,b,c,d,i,j,k> 
+where C<avg,min,max,stdev,var,idx,prc,other> are keywords, whereas C<i,j,k> 
 are floating point numbers and C<e,f,g,h> integer values; note that
 the list of indexes (e.g., TCP ports), values (e.g., packet size)
 and percentiles are comma separated. The name of the variables are
@@ -951,14 +951,13 @@ will be created.
 For example, consider that the generic configuration line:
 
 
-          tstat_var avg min max stdev var val:a,b,c,d idx:e,f,g,h,other prc:i,j,k
+          tstat_var avg min max stdev var idx:e,f,g,h,other prc:i,j,k
 
 
-will produce the following files (17 in total):
+will produce the following files (13 in total):
 
 
           tstat_var.{avg,min,max,stdev,var}.rrd
-          tstat_var.val{a,b,c,d}.rrd
           tstat_var.idx{e,f,g,h,oth}.rrd
           tstat_var.prc{i,j,k}.rrd
 
