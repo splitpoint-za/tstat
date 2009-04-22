@@ -19,7 +19,7 @@
 
 /* the snaplen of the captured packet. Make large enough to keep all
 options */
-#define SNAPLEN 80
+#define SNAPLEN 160
 
 #define	SWAPLONG(y) \
 ((((y)&0xff)<<24) | (((y)&0xff00)<<8) | (((y)&0xff0000)>>8) | (((y)>>24)&0xff))
