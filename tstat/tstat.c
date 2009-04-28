@@ -1254,7 +1254,11 @@ static int ProcessPacket(struct timeval *pckt_time,
     }
 */
 
+    /* create a dump file at ip level */
+    dump_ip(pip, plast);
+
     /* Statistics from LAYER 4 (TCP/UDP) HEADER */
+
 
     flow_stat_code = FLOW_STAT_NONE;  /* No flow (and dup) check done yet */
 

@@ -31,15 +31,15 @@
 /* Note: 
  * is NOT possible to use libpcap writing functions because 
  * they use opaque structures that are availables only compiling
- * library sources. To bypass the problem, files are generated
+ * library sources. To bypass this problem, files are generated
  * using fwrite() and respecting pcap file format deduced from 
  * library sources.
  */
 
-#define DUMP_UDP_COMPLETE LAST_UDP_PROTOCOL
-#define DUMP_TCP_COMPLETE LAST_UDP_PROTOCOL + 1
-#define DUMP_PROTOS       DUMP_TCP_COMPLETE + 1
-
+/* DUMP_WINDOW_SIZE control the traffic splitting of each application traffic
+* creating a new dump file if between the current and the previous packet are
+* elapsed more than the specifed value of usec
+*/
 //60min = 60 * 60 * 1000000usec
 #define DUMP_WINDOW_SIZE 3600000000UL
 
@@ -53,6 +53,16 @@ struct dump_file {
     Bool            enabled;
     int             type;
     int             seq_num;
+};
+
+enum dump_proto_index{
+    /* all indexes lower than LAST_UDP_PROTOCOL are UDP_XXX types 
+       to add a new protocol simply add a new label before DUMP_PROTOS
+    */
+    DUMP_IP_COMPLETE = LAST_UDP_PROTOCOL,
+    DUMP_UDP_COMPLETE,
+    DUMP_TCP_COMPLETE,
+    DUMP_PROTOS
 };
 struct dump_file proto2dump[DUMP_PROTOS];
 
@@ -196,6 +206,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_PPLIVE, "udp_pplive");
     dump_reset_dump_file(proto2dump, P2P_SOPCAST, "udp_sopcast");
     dump_reset_dump_file(proto2dump, P2P_TVANTS, "udp_tvants");
+    dump_reset_dump_file(proto2dump, DUMP_IP_COMPLETE, "ip_complete");
     dump_reset_dump_file(proto2dump, DUMP_UDP_COMPLETE, "udp_complete");
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
 }
@@ -281,6 +292,11 @@ void dump_to_file(struct dump_file *dump_file,
     last_dump_tm = current_time;
     if (first_dump_tm.tv_sec == -1) 
         first_dump_tm = current_time;
+}
+
+void dump_ip(void *pip, void *plast) {
+    if (dump_engine && proto2dump[DUMP_IP_COMPLETE].enabled)
+        dump_to_file(&proto2dump[DUMP_IP_COMPLETE], pip, plast);
 }
 
 void dump_flow_stat (struct ip *pip, 

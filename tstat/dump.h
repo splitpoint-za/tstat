@@ -27,7 +27,7 @@ void dump_create_outdir (char * basedir);
 void dump_parse_ini_arg (char *param_name, int param_value);
 void dump_ini_start_section (void);
 void dump_ini_end_section (void);
-
+void dump_ip(void *pip, void *plast);
 
 extern Bool dump_engine;
 #endif
