@@ -41,7 +41,8 @@
 * elapsed more than the specifed value of usec
 */
 //60min = 60 * 60 * 1000000usec
-#define DUMP_WINDOW_SIZE 3600000000UL
+//#define DUMP_WINDOW_SIZE 3600000000UL
+#define DUMP_WINDOW_SIZE -1
 
 #define DUMP_DIR_BASENAME "traces"
 #define DUMP_LOG_FNAME "log.txt"
@@ -49,7 +50,7 @@
 struct dump_file {
     FILE            *fp;
     char            *protoname;
-    struct timeval  lasttime;
+    struct timeval  win_start;
     Bool            enabled;
     int             type;
     int             seq_num;
@@ -74,7 +75,12 @@ static FILE *fp_log;
 static timeval first_dump_tm;
 static timeval last_dump_tm;
 static int dir_counter = 0;
-static int snap_len = 0;
+static int snap_len = 0;    //snapshot length of the packet to dump
+                            //0 == the complete packet
+static long slice_win = 0;   //each trace generated contains packet 
+                            //in a time window (in sec) as big as the specified value
+                            
+
 Bool dump_engine = FALSE;
 
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
@@ -88,12 +94,18 @@ int search_dump_file(char *protoname, struct dump_file *proto2dump) {
 }
 
 
-FILE * new_dump_file(char * protoname, int sequence_number) {
+FILE * new_dump_file(struct dump_file *dump_file) {
     FILE *fp;
     struct pcap_file_header hdr;
 
-    sprintf(dump_filename, "%s/%s%02d.pcap", 
-        outdir, protoname, sequence_number);     
+    if (slice_win != 0)
+        //XXX need to be fixed!!!
+        sprintf(dump_filename, "%s/%s%02d.pcap", 
+            outdir, dump_file->protoname, dump_file->seq_num);     
+    else
+        sprintf(dump_filename, "%s/%s.pcap", 
+            outdir, dump_file->protoname);     
+
     fp = fopen(dump_filename, "w");
     if (fp == NULL) {
         fprintf(fp_stderr, "dump engine: unable to create '%s'\n", dump_filename);
@@ -135,8 +147,8 @@ void print_proto2dump(void) {
 void dump_reset_dump_file(struct dump_file *proto2dump, int type, char *protoname) {
     proto2dump[type].fp = NULL;
     proto2dump[type].protoname = protoname;
-    proto2dump[type].lasttime.tv_sec = -1;
-    proto2dump[type].lasttime.tv_usec = -1;
+    proto2dump[type].win_start.tv_sec = -1;
+    proto2dump[type].win_start.tv_usec = -1;
     proto2dump[type].enabled = FALSE;
     proto2dump[type].type = type;
     proto2dump[type].seq_num = 0;
@@ -144,7 +156,6 @@ void dump_reset_dump_file(struct dump_file *proto2dump, int type, char *protonam
 
 void dump_parse_ini_arg(char *param_name, int param_value) {
     int pos;
-
 
     //check protocol name 
     pos = search_dump_file(param_name, proto2dump);
@@ -170,6 +181,14 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
             exit(1);
         }
         snap_len = param_value;
+    }
+    else if (strcmp(param_name, "slice_win") == 0) {
+        if (param_value < 0) {
+            fprintf(fp_stderr, "dump_engine: '%s = %d' syntax error in config file\n",
+                param_name, param_value);
+            exit(1);
+        }
+        slice_win = param_value;
     }
     else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
@@ -270,19 +289,29 @@ void dump_to_file(struct dump_file *dump_file,
                   void *plast)
 {
     //open a new dump file
-    if (dump_file->lasttime.tv_sec == -1 &&
-        dump_file->lasttime.tv_usec == -1) {
-        dump_file->fp = new_dump_file(dump_file->protoname, dump_file->seq_num);
+    if (dump_file->win_start.tv_sec == -1 &&
+        dump_file->win_start.tv_usec == -1) {
+        dump_file->fp = new_dump_file(dump_file);
+        dump_file->win_start.tv_sec = current_time.tv_sec;
+        dump_file->win_start.tv_usec = current_time.tv_usec;
     }
-    else if (elapsed(current_time, dump_file->lasttime) >= DUMP_WINDOW_SIZE) {
-        fflush(dump_file->fp);
-        fclose(dump_file->fp);
-        dump_file->seq_num++;
-        dump_file->fp = new_dump_file(dump_file->protoname, dump_file->seq_num);
+    else if (slice_win > 0) {
+        //check if current dump window is ended
+        double diff = elapsed(dump_file->win_start, current_time) / 1000000;
+        if (diff >= slice_win) {
+            fflush(dump_file->fp);
+            fclose(dump_file->fp);
+            dump_file->seq_num++;
+
+            // compute the current timestamp of dumping window
+            // considering that there can be windows without traffic
+            // associated
+            dump_file->win_start.tv_sec += 
+                ((long)diff / slice_win) * slice_win;
+            dump_file->fp = new_dump_file(dump_file);
+        }
     }
-    //update timestamp
-    dump_file->lasttime.tv_sec = current_time.tv_sec;
-    dump_file->lasttime.tv_usec = current_time.tv_usec;
+
     //dump current packet
     dump_packet(dump_file->fp, pip, plast);
 
@@ -349,8 +378,8 @@ void dump_flush(Bool trace_completed) {
             fflush(proto2dump[i].fp);
             fclose(proto2dump[i].fp);
             proto2dump[i].fp = NULL;
-            proto2dump[i].lasttime.tv_sec = -1;
-            proto2dump[i].lasttime.tv_usec = -1;
+            proto2dump[i].win_start.tv_sec = -1;
+            proto2dump[i].win_start.tv_usec = -1;
         }
     }
 
