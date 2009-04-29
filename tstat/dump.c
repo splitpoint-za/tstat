@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include "p2p.h"
+#include "names.h"
 
 
 /* Note: 
@@ -67,9 +68,8 @@ enum dump_proto_index{
 };
 struct dump_file proto2dump[DUMP_PROTOS];
 
-static char dump_filename[200];
 static struct ether_header eth_header;
-static char outdir[100];
+static char *outdir;
 static char *log_basedir = NULL;
 static FILE *fp_log;
 static timeval first_dump_tm;
@@ -97,18 +97,27 @@ int search_dump_file(char *protoname, struct dump_file *proto2dump) {
 FILE * new_dump_file(struct dump_file *dump_file) {
     FILE *fp;
     struct pcap_file_header hdr;
+    char *fname;
 
-    if (slice_win != 0)
-        //XXX need to be fixed!!!
-        sprintf(dump_filename, "%s/%s%02d.pcap", 
-            outdir, dump_file->protoname, dump_file->seq_num);     
+    /* three possible format names are defined:
+    * no slice_window :   udp_XXX.pcap
+    * slice_window 1  :   udp_XXX"%02d".pcap  try to have ordered list of files
+    * slice_window 2  :   udp_XXX"%d".pcap    
+    */
+    if (slice_win != 0) {
+        if (dump_file->seq_num < 100)
+            fname = sprintf_safe("%s/%s%02d.pcap", outdir, 
+                dump_file->protoname, dump_file->seq_num);     
+        else
+            fname = sprintf_safe("%s/%s%d.pcap", outdir, 
+                dump_file->protoname, dump_file->seq_num);     
+    }
     else
-        sprintf(dump_filename, "%s/%s.pcap", 
-            outdir, dump_file->protoname);     
+        fname = sprintf_safe("%s/%s.pcap", outdir, dump_file->protoname);     
 
-    fp = fopen(dump_filename, "w");
+    fp = fopen(fname, "w");
     if (fp == NULL) {
-        fprintf(fp_stderr, "dump engine: unable to create '%s'\n", dump_filename);
+        fprintf(fp_stderr, "dump engine: unable to create '%s'\n", fname);
         exit(1);
     }
 
@@ -410,28 +419,29 @@ void dump_flush(Bool trace_completed) {
 }
 
 void dump_create_outdir(char * basedir) {
-    int tot;
-    char *fname;
+    char *buf;
 
     if (!dump_engine)
         return;
 
+    // store basedir to check when a new output directory is created
     if (log_basedir && strcmp(log_basedir, basedir) != 0) {
         dump_flush(TRUE);
         dir_counter = 0;
     }
     log_basedir = strdup(basedir);
+
     first_dump_tm.tv_sec = -1;
     first_dump_tm.tv_usec = -1;
     last_dump_tm.tv_sec = -1;
     last_dump_tm.tv_usec = -1;
 
-    tot = strlen(basedir) + strlen(DUMP_DIR_BASENAME) + 4;
-    if (tot > (sizeof(outdir) / sizeof(char))) {
-        fprintf(fp_stderr, "dump engine err: directory name too long!!!");
-        exit(1);
-    }
-    sprintf(outdir, "%s/%s%02d", basedir, DUMP_DIR_BASENAME, dir_counter);
+    // compose the name of the directory...
+    buf = sprintf_safe("%s/%s%02d", basedir, DUMP_DIR_BASENAME, dir_counter);
+    if (outdir)
+        free(outdir);
+    outdir = MMmalloc(strlen(buf), "dump_create_outdir");
+    memcpy(outdir, buf, strlen(buf));
 
     if (mkdir(outdir, 0777) != 0) {
         fprintf(fp_stderr, "dump engine err: error creating '%s'\n", outdir);
@@ -439,15 +449,13 @@ void dump_create_outdir(char * basedir) {
     }
     fprintf(fp_stdout, "(%s) Creating output dir %s\n", Timestamp(), outdir);
 
-    tot += strlen(DUMP_LOG_FNAME);
-    fname = malloc(sizeof(char) * tot + 1);
-    sprintf(fname, "%s/%s", outdir, DUMP_LOG_FNAME);
-    fp_log = fopen(fname, "w");
+    // ... and dumping log file
+    buf = sprintf_safe("%s/%s", outdir, DUMP_LOG_FNAME);
+    fp_log = fopen(buf, "w");
     if (fp_log == NULL) {
-        fprintf(fp_stderr, "dump engine: error creating '%s'\n", fname);
+        fprintf(fp_stderr, "dump engine: error creating '%s'\n", buf);
         exit(1);
     }
-    free(fname);
 
     dir_counter++;
 }

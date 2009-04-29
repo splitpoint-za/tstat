@@ -85,6 +85,7 @@
 #include "protocol.h"
 #include "dump.h"
 #include "inireader.h"
+#include "names.h"
 #include "../include/libtstat.h"
 
 #include "ipp2p_tstat.h"

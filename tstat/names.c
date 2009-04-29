@@ -25,6 +25,7 @@
  */
 
 #include "tstat.h"
+#include <stdarg.h>
 
 
 /* local routines */
@@ -91,4 +92,40 @@ Timestamp (void) {
         last_time_string[strlen(last_time_string) - 1] = '\0';
     }
     return last_time_string;
+}
+
+static char *buf = NULL;
+static int buf_size = 0;
+#define BUFFER_SIZE 10
+
+char * sprintf_safe(const char *format, ...) {
+    va_list ap;
+    int n;
+
+    //first allocation
+    if (!buf) {
+        buf_size += BUFFER_SIZE;
+        buf = MMmalloc(buf_size * sizeof(char), "sprintf_safe");
+    }
+
+    while(1) {
+        buf[0] = '\0';
+
+        // write into the buffer safely
+        va_start(ap, format);
+        n = vsnprintf(buf, buf_size, format, ap);
+        va_end(ap);
+        if (n < buf_size) 
+            break;
+        
+        // if the buffer is full (because there isn't enough space
+        // or is dimension is exactly the same as required) 
+        // the buffer is exanded and a rewrited
+        free(buf);
+        buf_size += BUFFER_SIZE;
+        buf = MMmalloc(buf_size * sizeof(char), "sprintf_safe");
+        //printf("realloc: %d\n", buf_size);
+    }
+    //printf("%s\n", buf);
+    return buf;
 }
