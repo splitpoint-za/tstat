@@ -101,7 +101,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
     {
       if (warn_MAX_)
 	{
-	  fprintf (fp_stdout, 
+	  fprintf (fp_stderr, 
         "\nooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n"
 	    "you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n"
 	    "or possibly with a larger 'MAX_UDP_PAIRS' defined!\n");
@@ -575,10 +575,10 @@ make_udp_conn_stats (udp_pair * pup_save, Bool complete)
 	{
 	  if (warn_IN_OUT)
 	    {
-	      fprintf (fp_stdout, 
+	      fprintf (fp_stderr, 
             "\nWARN: This udp flow is neither incoming nor outgoing: src - %s;",
 		    HostName (pup_save->addr_pair.a_address));
-	      fprintf (fp_stdout, " dst - %s!\n",
+	      fprintf (fp_stderr, " dst - %s!\n",
 		      HostName (pup_save->addr_pair.b_address));
 	      warn_IN_OUT = FALSE;
 	    }

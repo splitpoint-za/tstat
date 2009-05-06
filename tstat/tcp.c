@@ -304,7 +304,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
     {
       if (warn_MAX_)
 	{
-	  fprintf (fp_stdout, "\n" 
+	  fprintf (fp_stderr, "\n" 
 	    "ooopsss: number of simultaneous connection opened is greater then the maximum supported number!\n"
 	    "you have to rebuild the source with a larger LIST_SEARCH_DEPT defined!\n"
 	    "or possibly with a larger MAX_TCP_PAIRS defined!\n");
@@ -1301,7 +1301,7 @@ trace_done_periodic ()
 
   /* complete the "idle time" calculations using NOW */
   if (printticks && debug > 1)
-    fprintf (fp_stderr, "\nStart cleaning TCP flows\n");
+    fprintf (fp_stdout, "\nStart cleaning TCP flows\n");
   for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
     {
       ptp = ttp[ix];
@@ -1434,7 +1434,7 @@ trace_done_periodic ()
     }
 
   if (printticks && debug > 1)
-    fprintf (fp_stderr,
+    fprintf (fp_stdout,
 	     "\rCleaned %d/(%ld) TCP flows\n", cleaned, init_tot_conn);
 
   if (do_udp == FALSE)
@@ -1443,7 +1443,7 @@ trace_done_periodic ()
 
 
   if (printticks && debug > 1)
-    fprintf (fp_stderr, "Start cleaning UDP flows\n");
+    fprintf (fp_stdout, "Start cleaning UDP flows\n");
 
   cleaned = 0;
   init_tot_conn = tot_conn_UDP;
@@ -1470,7 +1470,7 @@ trace_done_periodic ()
 
     }
   if (printticks && debug > 1)
-    fprintf (fp_stderr,
+    fprintf (fp_stdout,
 	     "\rCleaned %d/(%ld) UDP flows\n", cleaned, init_tot_conn);
 }
 
@@ -2039,10 +2039,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     {
       if (warn_IN_OUT)
 	{
-	  fprintf (fp_stdout, 
+	  fprintf (fp_stderr, 
         "\nWARN: This flow is neither incoming nor outgoing: src - %s;",
 	     HostName (ptp_save->addr_pair.a_address));
-	  fprintf (fp_stdout, " dst - %s!\n", HostName (ptp_save->addr_pair.b_address));
+	  fprintf (fp_stderr, " dst - %s!\n", HostName (ptp_save->addr_pair.b_address));
 	  warn_IN_OUT = FALSE;
 	}
 #ifndef LOG_UNKNOWN
@@ -2517,10 +2517,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	{
 	  if (warn_IN_OUT)
 	    {
-	      fprintf (fp_stdout, 
+	      fprintf (fp_stderr, 
             "\nWARN: This stream is neither incoming nor outgoing: src - %s;",
 		    HostName (ptp_save->addr_pair.a_address));
-	      fprintf (fp_stdout, " dst - %s!\n",
+	      fprintf (fp_stderr, " dst - %s!\n",
 		      HostName (ptp_save->addr_pair.b_address));
 	      warn_IN_OUT = FALSE;
 	    }

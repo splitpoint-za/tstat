@@ -1055,38 +1055,38 @@ ip_header_stat (int phystype,
 	  unsigned frac;
 
 	  if (debug)
-	    fprintf(fp_stderr, "%s: ", cur_filename);
-	  fprintf(fp_stderr, "Tp= %lu Tf=%lu ", (*fpnum), fcount);
+	    fprintf(fp_stdout, "%s: ", cur_filename);
+	  fprintf(fp_stdout, "Tp= %lu Tf=%lu ", (*fpnum), fcount);
 	  if (CompIsCompressed ())
 	    {
 	      frac = location / filesize * 100;
 	      if (frac <= 100)
-		fprintf(fp_stderr, "~%u%% (compressed)", frac);
+		fprintf(fp_stdout, "~%u%% (compressed)", frac);
 	      else
-		fprintf(fp_stderr, "~100%% + %u%% (compressed)", frac - 100);
+		fprintf(fp_stdout, "~100%% + %u%% (compressed)", frac - 100);
 	    }
 	  else if (!is_stdin)
 	    {
 	      location = ftell (stdin);
 	      frac = location / filesize * 100;
-	      fprintf(fp_stderr, "%u%%", frac);
+	      fprintf(fp_stdout, "%u%%", frac);
 	    }
 	  /* print elapsed time */
 	  {
 	    double etime = elapsed (first_packet, last_packet);
-	    fprintf(fp_stderr, " (%s)", elapsed2str (etime));
+	    fprintf(fp_stdout, " (%s)", elapsed2str (etime));
 	  }
 	  /* print number of opened flow */
 	  {
-	    fprintf(fp_stderr, " Nf(TCP)=%lu Nf(UDP)=%lu", tot_conn_TCP,
+	    fprintf(fp_stdout, " Nf(TCP)=%lu Nf(UDP)=%lu", tot_conn_TCP,
 		     tot_conn_UDP);
-	    fprintf(fp_stderr, " Ntrash=%lu", not_id_p);
+	    fprintf(fp_stdout, " Ntrash=%lu", not_id_p);
 	  }
 
 	  /* carriage return (but not newline) */
-	  fprintf(fp_stderr, "\r");
+	  fprintf(fp_stdout, "\r");
 	}
-      fflush(fp_stderr);
+      fflush(fp_stdout);
     }
 #endif //TSTAT_RUNASLIB
 
