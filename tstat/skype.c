@@ -217,6 +217,9 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   ptcp = (tcphdr *) hdr;
   ucb *thisdir, *otherdir;
 
+  if (!bayes_engine)
+      return;
+
   thisdir = (ucb *)pdir;
   otherdir = (dir == C2S) ? &(thisdir->pup->s2c) : &(thisdir->pup->c2s);
 
