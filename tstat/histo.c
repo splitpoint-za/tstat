@@ -246,7 +246,8 @@ __add_histo (struct double_histo_list *p, double val)
       p->current_data[i]++;
 
       /* count the total number of hits */
-      p->current_data[(int) ((p->max - p->min) / p->bin_size + 2)]++;
+      p->current_data[BIN_SAMPLE_COUNT (p)]++;
+      // p->current_data[(int) ((p->max - p->min) / p->bin_size + 2)]++;
 #endif
     }
 }

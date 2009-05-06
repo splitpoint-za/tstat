@@ -18,7 +18,7 @@
 
 
 #include "tstat.h"
-static void tv_sub (struct timeval *plhs, struct timeval rhs);
+static inline void tv_sub (struct timeval *plhs, struct timeval rhs);
 void tv_add (struct timeval *plhs, struct timeval rhs);
 Bool tv_same (struct timeval lhs, struct timeval rhs);
 
@@ -53,6 +53,9 @@ Stdev (double sum, double sum2, int n)
   return (retval);
 }
 
+/* Possibly use this macro instead of tv_lt() ?*/
+#define tv_lessthen(lhs,rhs) (((lhs).tv_sec<(rhs).tv_sec)||(((lhs).tv_sec==(rhs).tv_sec)&&((lhs).tv_usec<(rhs).tv_usec)))
+
 /* return elapsed time in microseconds */
 /* (time2 - time1) */
 double
@@ -75,19 +78,9 @@ elapsed (struct timeval time1, struct timeval time2)
 
 
 /* subtract the rhs from the lhs, result in lhs */
-void
+inline void
 tv_sub (struct timeval *plhs, struct timeval rhs)
 {
-  /* sanity check, lhs MUST BE more than rhs */
-  if (tv_lt (*plhs, rhs))
-    {
-      fprintf (fp_stderr, "tvsub(%s,", ts2ascii (plhs));
-      fprintf (fp_stderr, "%s) bad timestamp order!\n", ts2ascii (&rhs));
-/* 	exit(-1); */
-      plhs->tv_sec = plhs->tv_usec = 0;
-      return;
-    }
-
   if (plhs->tv_usec >= rhs.tv_usec)
     {
       plhs->tv_usec -= rhs.tv_usec;
