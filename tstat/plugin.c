@@ -37,7 +37,7 @@
 #define PROTO_DEBUG_LEVEL 2
 #define PROTO_DEBUG (PROTO_DEBUG_LEVEL>0 && debug>=PROTO_DEBUG_LEVEL)
 extern int debug;
-extern Bool runtime_engine;
+extern Bool runtime_engine,bayes_engine;
 
 /* chain of protocol analyzer */
 struct proto *proto_list_head;
@@ -92,11 +92,14 @@ proto_init ()
 #endif
 
 #ifdef SKYPE_CLASSIFIER
-  proto_register (PROTOCOL_BOTH, "SKYPE", "Skype",
+   if (bayes_engine)
+    {
+      proto_register (PROTOCOL_BOTH, "SKYPE", "Skype",
 		  (void *) getSkype,
 		  (void *) skype_flow_stat,
 		  (void *) skype_init, 
           (void *) make_skype_conn_stats);
+    }
 #endif
 
 
