@@ -747,15 +747,17 @@ create_new_outfiles (char *filename)
 
 #ifdef SKYPE_CLASSIFIER
       /* skype log */
-
-      sprintf (logfile, "%s/%s", basename, "log_skype_complete");
-      if (fp_skype_logc != NULL)
-	fclose (fp_skype_logc);
-      fp_skype_logc = fopen (logfile, "w");
-      if (fp_skype_logc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      if (bayes_engine)
+       {
+      	 sprintf (logfile, "%s/%s", basename, "log_skype_complete");
+      	 if (fp_skype_logc != NULL)
+	   fclose (fp_skype_logc);
+      	 fp_skype_logc = fopen (logfile, "w");
+      	 if (fp_skype_logc == NULL)
+	   {
+	     fprintf (fp_stderr, "Could not open file %s\n", logfile);
+	   }
+       }
 #endif
 
 #ifdef P2P_CLASSIFIER
