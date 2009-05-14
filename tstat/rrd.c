@@ -336,13 +336,15 @@ rrdtool_update_all ()
 {
   struct double_histo_list *temphp;
 
+  rrd.time_update = (unsigned long) current_time.tv_sec;
+
   temphp = first_histo_list ();
   while (temphp != NULL)
     {
       rrdtool_update (temphp);
       temphp = temphp->next;
     }
-  rrd.time_update += (long) MAX_TIME_STEP / 1000000;
+
 }
 
 void
