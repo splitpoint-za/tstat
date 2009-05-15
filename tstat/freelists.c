@@ -117,6 +117,8 @@ tp_alloc (void)
 	  ptp_temp->c2s.bc_pktsize = bayes_new (bayes_settings_pktsize);
 	  ptp_temp->s2c.bc_avgipg = bayes_new (bayes_settings_avgipg);
 	  ptp_temp->s2c.bc_pktsize = bayes_new (bayes_settings_pktsize);
+          ptp_temp->c2s.skype = (skype_stat *) MallocZ (sizeof (skype_stat));
+          ptp_temp->s2c.skype = (skype_stat *) MallocZ (sizeof (skype_stat));
 	}
 
       return ptp_temp;
@@ -136,6 +138,7 @@ tp_release (tcp_pair * relesased_tcp_pair)
 {
   struct tp_list_elem *new_tplist_elem;
   seqspace *sstemp1, *sstemp2;
+  struct skype_stat *skypetemp1, *skypetemp2;
   struct bayes_classifier *bctemp1, *bctemp2, *bctemp3, *bctemp4;
 
 #ifdef MEMDEBUG
@@ -147,6 +150,22 @@ tp_release (tcp_pair * relesased_tcp_pair)
   sstemp1 = relesased_tcp_pair->c2s.ss;
   sstemp2 = relesased_tcp_pair->s2c.ss;
 
+  if (relesased_tcp_pair->c2s.skype!=NULL)
+   {
+     memset (relesased_tcp_pair->c2s.skype, 0, sizeof (skype_stat));
+     skypetemp1 = relesased_tcp_pair->c2s.skype;
+   }
+  else 
+    skypetemp1 = NULL;
+   
+  if (relesased_tcp_pair->s2c.skype!=NULL)
+   {
+     memset (relesased_tcp_pair->s2c.skype, 0, sizeof (skype_stat));
+     skypetemp2 = relesased_tcp_pair->s2c.skype;
+   }
+  else 
+    skypetemp2 = NULL;
+   
   bayes_reset0 (bctemp1 = relesased_tcp_pair->c2s.bc_pktsize);
   bayes_reset0 (bctemp2 = relesased_tcp_pair->s2c.bc_pktsize);
   bayes_reset0 (bctemp3 = relesased_tcp_pair->c2s.bc_avgipg);
@@ -154,6 +173,8 @@ tp_release (tcp_pair * relesased_tcp_pair)
 
   memset (relesased_tcp_pair, 0, sizeof (tcp_pair));
 
+  relesased_tcp_pair->c2s.skype = skypetemp1;
+  relesased_tcp_pair->s2c.skype = skypetemp2;
   relesased_tcp_pair->c2s.ss = sstemp1;
   relesased_tcp_pair->s2c.ss = sstemp2;
   relesased_tcp_pair->c2s.bc_pktsize = bctemp1;
@@ -404,6 +425,8 @@ utp_alloc (void)
 	  pud->c2s.bc_pktsize = bayes_new (bayes_settings_pktsize);
 	  pud->s2c.bc_avgipg = bayes_new (bayes_settings_avgipg);
 	  pud->s2c.bc_pktsize = bayes_new (bayes_settings_pktsize);
+          pud->c2s.skype = (skype_stat *) MallocZ (sizeof (skype_stat));
+          pud->s2c.skype = (skype_stat *) MallocZ (sizeof (skype_stat));
 	}
 
 #ifdef MEMDEBUG
@@ -424,10 +447,27 @@ void
 utp_release (udp_pair * rel_udp_pair)
 {
   struct bayes_classifier *bctemp1, *bctemp2, *bctemp3, *bctemp4;
+  struct skype_stat *skypetemp1, *skypetemp2;
 
 #ifdef MEMDEBUG
   IN_USE_UDP_PAIR--;
 #endif
+
+  if (rel_udp_pair->c2s.skype!=NULL)
+   {
+     memset (rel_udp_pair->c2s.skype, 0, sizeof (skype_stat));
+     skypetemp1 = rel_udp_pair->c2s.skype;
+   }
+  else 
+    skypetemp1 = NULL;
+
+  if (rel_udp_pair->s2c.skype!=NULL)
+   {
+     memset (rel_udp_pair->s2c.skype, 0, sizeof (skype_stat));
+     skypetemp2 = rel_udp_pair->s2c.skype;
+   }
+  else 
+    skypetemp2 = NULL;
 
   bayes_reset0 (bctemp1 = rel_udp_pair->c2s.bc_pktsize);
   bayes_reset0 (bctemp2 = rel_udp_pair->s2c.bc_pktsize);
@@ -438,6 +478,8 @@ utp_release (udp_pair * rel_udp_pair)
   rel_udp_pair->next = udp_pair_flist;
   udp_pair_flist = rel_udp_pair;
 
+  rel_udp_pair->c2s.skype = skypetemp1;
+  rel_udp_pair->s2c.skype = skypetemp2;
   rel_udp_pair->c2s.bc_pktsize = bctemp1;
   rel_udp_pair->s2c.bc_pktsize = bctemp2;
   rel_udp_pair->c2s.bc_avgipg = bctemp3;

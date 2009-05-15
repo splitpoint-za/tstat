@@ -21,7 +21,8 @@
 
 /* param dealing with the address hit counters */
 #define MAX_ADX_SLOTS 70001	/* hash size for the ip addresses hit counter */
-#define ADDR_MASK 0x00ffffff	/* mask to count IP addresses - inet order */
+// #define ADDR_MASK 0x00ffffff	/* mask to count IP addresses - inet order */
+#define ADDR_MASK 0x000000ff	/* mask to count IP addresses - inet order */
 
 /* max number of nets to check if ip is internal or external */
 #define MAX_INTERNAL_HOSTS  100

@@ -422,7 +422,7 @@ typedef struct tcb
   u_llong idle_max;		/* maximum idle time observed (usecs) */
 
   upper_protocols u_protocols;
-  skype_stat skype;
+  skype_stat *skype;
 #ifdef MSN_CLASSIFIER
     msn_stat msn;
 #endif
@@ -724,7 +724,7 @@ typedef struct ucb
   /*end TOPIX */
 
   /* skype */
-  skype_stat skype;
+  skype_stat *skype;
   int lastnumpkt;
   /* end skype */
 

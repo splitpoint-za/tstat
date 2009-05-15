@@ -226,18 +226,18 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   if (tproto == PROTOCOL_UDP)
   {
       payload_len = ntohs (((struct udphdr *) pproto)->uh_ulen) - 8;
-      ((ucb *) pdir)->skype.pkt_type_num[type]++;
-      update_delta_t (&((ucb *) pdir)->skype.stat[type]);
-      update_randomness (&((ucb *) pdir)->skype.random, pproto, pskype, plast,
+      ((ucb *) pdir)->skype->pkt_type_num[type]++;
+      update_delta_t (&((ucb *) pdir)->skype->stat[type]);
+      update_randomness (&((ucb *) pdir)->skype->random, pproto, pskype, plast,
               tproto, payload_len);
 #ifdef SKYPE_EARLY_CLASSIF
       // try to identify skype comunication after few packets
       if (elapsed(thisdir->first_pkt_time, current_time) > SKYPE_EARLY_CLASSIF_WINDOW &&
           thisdir->packets > 10 &&
-          !thisdir->skype.early_classification)
+          !thisdir->skype->early_classification)
           {
-              thisdir->skype.early_classification = TRUE;
-              otherdir->skype.early_classification = TRUE;
+              thisdir->skype->early_classification = TRUE;
+              otherdir->skype->early_classification = TRUE;
               skype_conn_stats (((ucb *) pdir)->pup, C2S, PROTOCOL_UDP);
               skype_conn_stats (((ucb *) pdir)->pup, S2C, PROTOCOL_UDP);
           }
@@ -251,7 +251,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	getpayloadlength (pip, plast) - ((tcphdr *) pproto)->th_off * 4;
 
       if (payload_len > 0)	/* skip pure ack and signalling */
-	update_randomness (&((tcb *) pdir)->skype.random, pproto, pskype,
+	update_randomness (&((tcb *) pdir)->skype->random, pproto, pskype,
 			   plast, tproto, payload_len);
 
     }
@@ -269,7 +269,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	((ucb *) pdir)->bc_avgipg : ((tcb *) pdir)->bc_avgipg;
 
       struct skype_stat *sk = (tproto == PROTOCOL_UDP) ?
-	&((ucb *) pdir)->skype : &((tcb *) pdir)->skype;
+	((ucb *) pdir)->skype : ((tcb *) pdir)->skype;
 
       int pktsize, avgipg;
       Bool full_window = FALSE, is_1st_packet = FALSE;
@@ -414,16 +414,16 @@ is_skypeOUT_pkt (struct ip *pip, struct udphdr *pudp, void *pdir,
   void *theheader = ((char *) pudp + 8);	/* skip udp header */
   ucb *thisdir = (ucb *) pdir;
 
-  if ((thisdir->skype.OUT_data_block == 0) &&
+  if ((thisdir->skype->OUT_data_block == 0) &&
       ((u_long) theheader + (sizeof (struct skype_OUT)) - 1 <=
        (u_long) plast))
     {
       /* we have all the identifier block, copy it for future use */
-      thisdir->skype.OUT_data_block = ((struct skype_OUT *) theheader)->block;
+      thisdir->skype->OUT_data_block = ((struct skype_OUT *) theheader)->block;
       return NOT_SKYPE;
     }
 
-  if (thisdir->skype.OUT_data_block == ((struct skype_OUT *)
+  if (thisdir->skype->OUT_data_block == ((struct skype_OUT *)
 					theheader)->block)
     {
       return SKYPE_OUT_DATA;
@@ -431,7 +431,7 @@ is_skypeOUT_pkt (struct ip *pip, struct udphdr *pudp, void *pdir,
   else
     {
       /* we have a new the identifier block, copy it for future use */
-      thisdir->skype.OUT_data_block = ((struct skype_OUT *) theheader)->block;
+      thisdir->skype->OUT_data_block = ((struct skype_OUT *) theheader)->block;
       return NOT_SKYPE;
     }
 
@@ -529,13 +529,13 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 	{
 	  thisUdir = &(((udp_pair *) thisdir)->c2s);
 	  thisTdir = NULL;
-	  pskype = &thisUdir->skype;
+	  pskype = thisUdir->skype;
 	}
       else
 	{
 	  thisUdir = &(((udp_pair *) thisdir)->s2c);
 	  thisTdir = NULL;
-	  pskype = &thisUdir->skype;
+	  pskype = thisUdir->skype;
 	}
       break;
     case PROTOCOL_TCP:
@@ -543,13 +543,13 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
 	{
 	  thisTdir = &(((tcp_pair *) thisdir)->c2s);
 	  thisUdir = NULL;
-	  pskype = &thisTdir->skype;
+	  pskype = thisTdir->skype;
 	}
       else
 	{
 	  thisTdir = &(((tcp_pair *) thisdir)->s2c);
 	  thisUdir = NULL;
-	  pskype = &thisTdir->skype;
+	  pskype = thisTdir->skype;
 	}
       break;
     default:
@@ -575,7 +575,7 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
       break;
 
     case PROTOCOL_TCP:
-      if ((&thisTdir->skype)->random.rnd_n_samples < MIN_SKYPE_PKTS_TCP)
+      if ((thisTdir->skype)->random.rnd_n_samples < MIN_SKYPE_PKTS_TCP)
 	return;
       break;
     }
@@ -604,7 +604,7 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
   	  case SKYPE_E2E:
   	  case SKYPE_OUT:
   	  case SKYPE_SIG:
-  	      if (!thisUdir->skype.early_classification) {
+  	      if (!thisUdir->skype->early_classification) {
   		  fprintf (fp_stdout, "skype.c: No idea how I get there !\n");
   		  exit (1);
   	      }
@@ -690,7 +690,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 
   thisUdir = (ucb *) thisdir;
   pup = thisUdir->pup;
-  pskype = &thisUdir->skype;
+  pskype = thisUdir->skype;
   
   if (bayes_engine)
     {
@@ -720,7 +720,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   // was video present? yes if video only pkts are larger than 10%
 
   thisUdir = &(pup->c2s);
-  pskype = &thisUdir->skype;
+  pskype = thisUdir->skype;
 
   b_pktsize_c2s = 0;
   b_avgipg_c2s = 0;
@@ -844,7 +844,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 /*S2C*/
 
   thisUdir = &(pup->s2c);
-  pskype = &thisUdir->skype;
+  pskype = thisUdir->skype;
 
   b_pktsize_s2c = 0;
   b_avgipg_s2c = 0;
@@ -969,7 +969,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
        log_engine && fp_skype_logc != NULL  )
   {
     thisUdir = &(pup->c2s);
-    pskype = &thisUdir->skype;
+    pskype = thisUdir->skype;
  
     video_present =
       (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
@@ -1049,7 +1049,7 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
   /*S2C*/
 
     thisUdir = &(pup->s2c);
-    pskype = &thisUdir->skype;
+    pskype = thisUdir->skype;
 
 
     // was video present? yes if video only pkts are larger than 10%
@@ -1168,7 +1168,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
   struct stcp_pair *ptp;
   thisTdir = (tcb *) thisdir;
   ptp = thisTdir->ptp;
-  pskype = &thisTdir->skype;
+  pskype = thisTdir->skype;
 
   if (bayes_engine)
     {
@@ -1197,7 +1197,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
   // was video present? yes if video only pkts are larger than 10%
 
   thisTdir = &(ptp->c2s);
-  pskype = &thisTdir->skype;
+  pskype = thisTdir->skype;
 
   b_pktsize_c2s = 0;
   b_avgipg_c2s = 0;
@@ -1280,7 +1280,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 
 /*S2C*/
   thisTdir = &(ptp->s2c);
-  pskype = &thisTdir->skype;
+  pskype = thisTdir->skype;
 
   b_pktsize_s2c = 0;
   b_avgipg_s2c = 0;
@@ -1368,7 +1368,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
        log_engine && fp_skype_logc != NULL)
    {
      thisTdir = &(ptp->c2s);
-     pskype = &thisTdir->skype;
+     pskype = thisTdir->skype;
  
      video_present =
        (100 * pskype->video_pkts / (pskype->audiovideo_pkts + 1) >
@@ -1433,7 +1433,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
 
    /*S2C*/
      thisTdir = &(ptp->s2c);
-     pskype = &thisTdir->skype;
+     pskype = thisTdir->skype;
 
      // was video present? yes if video only pkts are larger than 10%
 
