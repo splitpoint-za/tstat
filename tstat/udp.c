@@ -482,7 +482,10 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     //       rtpdotrace (thisdir, p_rtp, dir, pip);
     // 
     // 
+
+    //fprintf(stderr, "BEFORE: %f\n", time2double(thisdir->skype->win.start));
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
+    //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
 
     if (pup_save->packets<MAX_UDP_OBFUSCATE)
        check_udp_obfuscate(thisdir,otherdir,uh_ulen);

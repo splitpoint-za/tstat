@@ -203,6 +203,7 @@ typedef struct skype_stat
   int video_pkts;
   int audiovideo_pkts;
   int skype_type;
+  Bool first_pkt_done;
 
   /* valid for UDP only */
   int pkt_type_num[TOTAL_SKYPE_KNOWN_TYPE];	/* count the number of

@@ -16,6 +16,8 @@
  *
 */
 
+#ifndef SKYPE_H_HDR 
+#define SKYPE_H_HDR
 
 #define NOT_SKYPE 0
 #define SKYPE_NAK 1
@@ -116,3 +118,12 @@ void print_skype_conn_stats_UDP (void *thisdir, int dir);
 void print_skype_conn_stats_TCP (void *thisdir, int dir);
 void skype_conn_stats (void *thisdir, int dir, int tproto);
 void skype_init ();
+
+int skype_feat2code (char *str);
+
+/* plugin functions */
+struct skype_hdr *getSkype (void *pproto, int tproto, void *pdir, void *plast);
+void skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir, void *hdr, void *last);
+void make_skype_conn_stats (void *thisdir, int tproto);
+
+#endif

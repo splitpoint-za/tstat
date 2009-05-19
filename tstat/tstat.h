@@ -647,19 +647,6 @@ void trace_done (void);
 void tcpdump_cleanup (FILE * wheref);
 
 
-/* skype */
-int skype_feat2code (char *str);
-struct skype_hdr *getSkype (struct udphdr *pudp, int tproto, void *pdir,
-			    void *plast);
-
-Bool is_skype_pkt (struct ip *pip, struct udphdr *pudp, void *pdir,
-		   struct skype_hdr *NAK, void *last);
-
-void
-skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
-		 int dir, void *hdr, void *last);
-
-void make_skype_conn_stats (void *thisdir, int tproto);
 
 /* msn.c */
 #ifdef MSN_CLASSIFIER

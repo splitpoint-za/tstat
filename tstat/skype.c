@@ -31,6 +31,10 @@ extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
 
+
+static Bool is_skype_pkt (struct ip * pip, struct udphdr * pudp, 
+                          void *pdir, struct skype_hdr * pskype, void *plast);
+
 void
 skype_init ()
 {
@@ -160,17 +164,22 @@ get_average_delta_t (deltaT_stat * stat)
 
 
 struct skype_hdr *
-getSkype (struct udphdr *pudp, int tproto, void *pdir, void *plast)
+getSkype (void *pproto, int tproto, void *pdir, void *plast)
 {
 
   void *theheader;
 
-  theheader = ((char *) pudp + 8);
-  if ((u_long) theheader + (sizeof (struct skype_hdr)) - 1 > (u_long) plast)
-    {
-      /* part of the header is missing */
-      return (NULL);
-    }
+  if (tproto == PROTOCOL_UDP) {
+      theheader = ((char *) pproto + 8);
+      if ((u_long) theheader + (sizeof (struct skype_hdr)) - 1 > (u_long) plast)
+        {
+          /* part of the header is missing */
+          return (NULL);
+        }
+  }
+  else {
+      theheader = (char *)pproto + 4 * ((tcphdr *) pproto)->th_off;
+  }
   return (struct skype_hdr *) theheader;
 }
 
@@ -223,6 +232,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   type = (tproto == PROTOCOL_UDP) ?
       is_skype_pkt (pip, pproto, pdir, pskype, plast) : NOT_SKYPE;
 
+
   if (tproto == PROTOCOL_UDP)
   {
       payload_len = ntohs (((struct udphdr *) pproto)->uh_ulen) - 8;
@@ -272,7 +282,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	((ucb *) pdir)->skype : ((tcb *) pdir)->skype;
 
       int pktsize, avgipg;
-      Bool full_window = FALSE, is_1st_packet = FALSE;
+      Bool full_window = FALSE;
 
       // 
       // non windowed 
@@ -286,12 +296,10 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	{
 	case PROTOCOL_UDP:
 	  pktsize = UDP_PAYLOAD_LEN (pip);
-	  if (((ucb *) pdir)->packets == 1)
-	    {
-	      sk->win.start = current_time;
-	      is_1st_packet = TRUE;
-	    }
-	  break;
+      if (!sk->first_pkt_done) {
+          sk->win.start = current_time;
+      }
+      break;
 
 	case PROTOCOL_TCP:
 	  pktsize =
@@ -299,22 +307,16 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	  /* avoid to consider TCP ACK */
 	  if (pktsize == 0)
 	    return;
-	  if (((tcb *) pdir)->data_pkts == 1)
+	  if (!sk->first_pkt_done)
 	    {
 	      sk->win.start = current_time;
-	      is_1st_packet = TRUE;
 	    }
-//       fprintf (fp_stdout, " %d ",(4*ptcp->th_off));
 	  break;
 	default:
 	  fprintf (fp_stderr, "skype_flow_stat: fatal - you should never stop here!!\n");
       fprintf (fp_stderr, "%s\n", strerror(errno));
 	  exit (1);
 	}
-
-      //fprintf (fp_stdout, " %d ", pktsize); 
-
-
 
       // update the number of pure video packets
       // CHECK DARIO
@@ -337,7 +339,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       sk->win.pktsize_min =
 	sk->win.pktsize_min < pktsize ? sk->win.pktsize_min : pktsize;
 
-      if (full_window && !is_1st_packet)
+      if (full_window && sk->first_pkt_done)
 	{
 	  avgipg =
 	    (int) (elapsed (sk->win.start, current_time) / 1000.0 /
@@ -355,6 +357,8 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       // rougly filter video packets for UDP protocol only
       if ((pktsize < 400 && tproto == PROTOCOL_UDP) || tproto == PROTOCOL_TCP)
 	bayes_sample (bc_pktsize, pktsize);
+
+      sk->first_pkt_done = TRUE;
     }
 
 // bayes END
@@ -442,9 +446,8 @@ is_skypeOUT_pkt (struct ip *pip, struct udphdr *pudp, void *pdir,
 
 
 
-Bool
-is_skype_pkt (struct ip * pip, struct udphdr * pudp, void *pdir,
-	      struct skype_hdr * pskype, void *plast)
+static Bool is_skype_pkt (struct ip * pip, struct udphdr * pudp, void *pdir,
+	                      struct skype_hdr * pskype, void *plast)
 {
 
 
