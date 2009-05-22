@@ -185,7 +185,7 @@ print_adx ()
 	      while ((tmp_adx != NULL)
 		     && (tmp_adx->src_hits != 0 || tmp_adx->dst_hits != 0))
 		{
-		  fprintf (fp, "%s\t%ld\t%ld\t%ld\t%ld\n", inet_ntoa (tmp_adx->ip),
+		  fprintf (fp, "%s\t%ld\t%ld\t%llu\t%llu\n", inet_ntoa (tmp_adx->ip),
 			   tmp_adx->src_hits, tmp_adx->dst_hits,
                            tmp_adx->src_bytes, tmp_adx->dst_bytes);
 		  tmp_adx->src_hits = 0;

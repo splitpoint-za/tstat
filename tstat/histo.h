@@ -99,8 +99,8 @@ struct adx
   struct in_addr ip;
   unsigned long src_hits;
   unsigned long dst_hits;
-  unsigned long src_bytes;
-  unsigned long dst_bytes;
+  unsigned long long src_bytes;
+  unsigned long long dst_bytes;
   struct adx *next;
 };
 
