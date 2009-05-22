@@ -125,6 +125,7 @@ int two_files = 1;		/* used if you have two traces that store packet in
 				   two different direction... works only with DAG for now.
 				 */
 Bool con_cat = FALSE;		/* Concatenate the input files */
+Bool first_ip_packet = TRUE;
 u_long pnum = 0;
 u_long ctrunc = 0;
 u_long bad_ip_checksums = 0;
@@ -988,11 +989,12 @@ ip_header_stat (int phystype,
   ++(*fpnum);			/* local to this file */
   ++(*pcount);			/* counter per chiudere i pendenti */
 
-
   /* the last_time_step is assigned only at the first packet */
-  if (pnum == 1)
+  if (first_ip_packet == TRUE)
+   {
+    first_ip_packet = FALSE;
     last_time_step = last_cleaned = current_time;
-
+   }
 
   /* check for re-ordered packets */
   if (!ZERO_TIME (&last_packet))
