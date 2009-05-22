@@ -889,8 +889,8 @@ void ip_histo_stat(struct ip *pip)
 
    if (adx_engine)
     {
-      add_adx (&(pip->ip_src), SRC_ADX);
-      add_adx (&(pip->ip_dst), DST_ADX);
+      add_adx (&(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
+      add_adx (&(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
     }
     
 } 

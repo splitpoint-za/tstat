@@ -99,6 +99,8 @@ struct adx
   struct in_addr ip;
   unsigned long src_hits;
   unsigned long dst_hits;
+  unsigned long src_bytes;
+  unsigned long dst_bytes;
   struct adx *next;
 };
 
@@ -141,7 +143,7 @@ void print_histo_definition (struct double_histo_list *phisto, char *title);
 int clear_all_histo ();
 int clear_histo (struct double_histo_list *phisto);
 
-int add_adx (struct in_addr *adx, int dir);
+int add_adx (struct in_addr *adx, int dir, int bytes);
 int print_adx ();
 
 //    struct dhisto *create_dhisto (double min, double max, double bin_size);

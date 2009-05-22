@@ -51,7 +51,7 @@ alloc_adx ()
 }
 
 int
-add_adx (struct in_addr *adx, int dest)
+add_adx (struct in_addr *adx, int dest, int bytes)
 {
   unsigned pos;
   struct adx *temp_adx, *ptr_adx, *prev_ptr_adx;
@@ -76,11 +76,15 @@ add_adx (struct in_addr *adx, int dest)
 	{
 	  temp_adx->src_hits = 1;
 	  temp_adx->dst_hits = 0;
+	  temp_adx->src_bytes = bytes;
+	  temp_adx->dst_bytes = 0;
 	}
       else
 	{
 	  temp_adx->src_hits = 0;
 	  temp_adx->dst_hits = 1;
+	  temp_adx->src_bytes = 0;
+	  temp_adx->dst_bytes = bytes;
 	}
       adx_index_current[pos] = temp_adx;
       return 1;
@@ -95,9 +99,15 @@ add_adx (struct in_addr *adx, int dest)
 	{
 	  ptr_adx->ip.s_addr = seed;
 	  if (dest == SRC_ADX)
+	   {
 	    ptr_adx->src_hits++;
+	    ptr_adx->src_bytes+=bytes;
+	   }
 	  else
+           {
 	    ptr_adx->dst_hits++;
+	    ptr_adx->dst_bytes+=bytes;
+	   }
 	  return 1;
 	}
       prev_ptr_adx = ptr_adx;
@@ -113,11 +123,15 @@ add_adx (struct in_addr *adx, int dest)
     {
       temp_adx->src_hits = 1;
       temp_adx->dst_hits = 0;
+      temp_adx->src_bytes = bytes;
+      temp_adx->dst_bytes = 0;
     }
   else
     {
       temp_adx->src_hits = 0;
       temp_adx->dst_hits = 1;
+      temp_adx->src_bytes = 0;
+      temp_adx->dst_bytes = bytes;
     }
   prev_ptr_adx->next = temp_adx;
   return 1;
@@ -160,7 +174,7 @@ print_adx ()
 	   ADDR_MASK & 0x000000ff,
 	   (ADDR_MASK & 0x0000ff00) >> 8,
 	   (ADDR_MASK & 0x00ff0000) >> 16, (ADDR_MASK & 0xff000000) >> 24);
-  fprintf (fp, "#Subnet IP \tsrc_hits \tdst_hits\n");
+  fprintf (fp, "#Subnet IP \tsrc_hits \tdst_hits \tsrc_bytes \tdst_bytes\n");
   for (i = 0; i < MAX_ADX_SLOTS; i++)
     {
       tmp_adx = adx_index[i];
@@ -171,10 +185,13 @@ print_adx ()
 	      while ((tmp_adx != NULL)
 		     && (tmp_adx->src_hits != 0 || tmp_adx->dst_hits != 0))
 		{
-		  fprintf (fp, "%s\t%ld\t%ld\n", inet_ntoa (tmp_adx->ip),
-			   tmp_adx->src_hits, tmp_adx->dst_hits);
+		  fprintf (fp, "%s\t%ld\t%ld\t%ld\t%ld\n", inet_ntoa (tmp_adx->ip),
+			   tmp_adx->src_hits, tmp_adx->dst_hits,
+                           tmp_adx->src_bytes, tmp_adx->dst_bytes);
 		  tmp_adx->src_hits = 0;
 		  tmp_adx->dst_hits = 0;
+		  tmp_adx->src_bytes = 0;
+		  tmp_adx->dst_bytes = 0;
 		  tmp_adx->ip.s_addr = 0L;
 		  tmp_adx = tmp_adx->next;
 		}
