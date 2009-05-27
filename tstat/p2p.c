@@ -727,6 +727,19 @@ int UDP_p2p_to_logtype(ucb *thisflow)
           default:
 	    return thisflow->type;
 	}
+    case SKYPE_E2E:
+      if (thisflow->skype!=NULL && 
+          thisflow->skype->skype_type==L7_FLOW_SKYPE_E2E)
+         return SKYPE_E2E;
+      else
+	 return UDP_UNKNOWN;
+
+    case SKYPE_OUT:
+      if (thisflow->skype!=NULL && 
+          thisflow->skype->skype_type==L7_FLOW_SKYPE_E2O)
+         return SKYPE_OUT;
+      else
+	 return UDP_UNKNOWN;
     default:
       return thisflow->type;
    }
@@ -743,10 +756,18 @@ int UDP_p2p_to_L7type (ucb *thisflow)
       return L7_FLOW_RTCP;
 
     case SKYPE_E2E:
-      return L7_FLOW_SKYPE_E2E;
+      if (thisflow->skype!=NULL && 
+          thisflow->skype->skype_type==L7_FLOW_SKYPE_E2E)
+         return L7_FLOW_SKYPE_E2E;
+      else
+	 return L7_FLOW_UNKNOWN;
 
     case SKYPE_OUT:
-      return L7_FLOW_SKYPE_E2O;
+      if (thisflow->skype!=NULL && 
+          thisflow->skype->skype_type==L7_FLOW_SKYPE_E2O)
+         return L7_FLOW_SKYPE_E2O;
+      else
+	 return L7_FLOW_UNKNOWN;
 
     case SKYPE_SIG:
       return L7_FLOW_SKYPE_SIG;
