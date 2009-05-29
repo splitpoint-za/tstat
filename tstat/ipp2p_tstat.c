@@ -614,7 +614,6 @@ udp_search_pplive (unsigned char *haystack, const int packet_len,
 	}
     else  {
         res = IPP2P_PPLIVE * 100 + 0;
-        printf("match\n");
     }
  
     return res;
