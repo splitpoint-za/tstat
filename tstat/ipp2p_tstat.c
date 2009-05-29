@@ -582,10 +582,10 @@ udp_search_pplive (unsigned char *haystack, const int packet_len,
         //get_u8(haystack, 27) != 0x00)
         ) {
 		// the match is based on 5 bytes
-		// - the first three bytes
+		// - the first three bytes of the payload
 		// - other two consecutives bytes at ((((x1 & 0x0f) % 8) // 2) * 2 + 5)
 		//
-		//                         xa xb   xa xb   xa  xb    xa  xb
+		//                          xa xb   xa xb   xa  xb    xa  xb
 		//   [x1 : (x2:x3) (x4:x5) (x6:x7) (x8:x9) (x10:x11) (x12:x13)]
 		//                          ^       ^       ^         ^
 		//    x1 & 0x0f = 0,1,8,9___|       |       |         |
@@ -612,8 +612,10 @@ udp_search_pplive (unsigned char *haystack, const int packet_len,
 			}
 		}
 	}
-    else 
+    else  {
         res = IPP2P_PPLIVE * 100 + 0;
+        printf("match\n");
+    }
  
     return res;
 }
