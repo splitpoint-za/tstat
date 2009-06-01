@@ -79,9 +79,13 @@ static int snap_len = 0;    //snapshot length of the packet to dump
                             //0 == the complete packet
 static long slice_win = 0;   //each trace generated contains packet 
                             //in a time window (in sec) as big as the specified value
-                            
+
+// monitor for writing access to dump files
+static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;                            
+
 
 Bool dump_engine = FALSE;
+extern Bool threaded;
 
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
     int i = 0;
@@ -350,6 +354,9 @@ void dump_flow_stat (struct ip *pip,
     if (!dump_engine)
         return;
 
+    if (threaded)
+        pthread_mutex_lock(&dump_mutex);
+
     if (tproto == PROTOCOL_TCP) {
         if (proto2dump[DUMP_TCP_COMPLETE].enabled)
             dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
@@ -370,6 +377,9 @@ void dump_flow_stat (struct ip *pip,
         if (proto2dump[DUMP_UDP_COMPLETE].enabled)
             dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
     }
+
+    if (threaded)
+        pthread_mutex_unlock(&dump_mutex);
 }
 
 void dump_flush(Bool trace_completed) {
@@ -424,6 +434,9 @@ void dump_create_outdir(char * basedir) {
     if (!dump_engine)
         return;
 
+    if (threaded)
+        pthread_mutex_lock(&dump_mutex);
+
     // store basedir to check when a new output directory is created
     if (log_basedir && strcmp(log_basedir, basedir) != 0) {
         dump_flush(TRUE);
@@ -440,8 +453,8 @@ void dump_create_outdir(char * basedir) {
     buf = sprintf_safe("%s/%s%02d", basedir, DUMP_DIR_BASENAME, dir_counter);
     if (outdir)
         free(outdir);
-    outdir = MMmalloc(strlen(buf), "dump_create_outdir");
-    memcpy(outdir, buf, strlen(buf));
+    outdir = MMmalloc(strlen(buf) + 1, "dump_create_outdir");
+    memcpy(outdir, buf, strlen(buf) + 1);
 
     if (mkdir(outdir, 0777) != 0) {
         fprintf(fp_stderr, "dump engine err: error creating '%s'\n", outdir);
@@ -458,6 +471,9 @@ void dump_create_outdir(char * basedir) {
     }
 
     dir_counter++;
+
+    if (threaded)
+        pthread_mutex_unlock(&dump_mutex);
 }
 
 static Bool old_dump_engine;
