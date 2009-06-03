@@ -733,6 +733,62 @@ udp_search_tvants (unsigned char *haystack,
     return (IPP2P_TVANTS * 100 + 0);
 }
 
+int
+udp_search_dns (unsigned char *haystack, 
+                   const int packet_len,
+		           int payload_len)
+{
+  unsigned char *t = haystack;
+  t += 8;
+
+  // Following the example of L7 Filter, we match QUESTION (either 1 or 2) at (offset 4-5)
+  // and the fact that the queries start with 0x01-0x3F followed by [a-z0-9] (offset 12-13)
+  // This should be enough if we have at least 22 bytes in the payload.
+  // If we have more bytes, we look for Type (0x0001-0x0010 or 0x001c) 
+  // and Class (0x01,0x03,0x04,0xff), that are located after the Name termination 0x00
+  // If you really want to be paranoid, you can check that characters in Name are in the 
+  // legitimate charset.
+  // This rule does not match the refused responses for Dynamic Update, because Zones (i.e. 
+  // Question) is 0. The corresponding queries are matched.
+  // It also doesn't match a few esoteric queries.
+
+  if (t[4]!=0 && t[5]!=0x01 && t[5]!=0x02)
+    return 0;
+    
+  if (t[12]<0x01 || t[12]>0x3F)
+    return 0;
+
+  if (!((t[13]>=0x61 && t[13]<=0x7a) || (t[13]>=0x30 && t[13]<=0x39)))
+    return 0;
+
+  if (payload_len>22)
+   {
+     int idx = 14;
+     while (idx < payload_len-8)
+      {
+        if (t[idx]==0) 
+	  break;
+	idx++;
+      }
+
+     if (idx < payload_len-12)
+      {
+        if ( t[idx+1]==0 &&
+	    ( ( t[idx+2]>=0x01 && t[idx+2]<=0x10) || t[idx+2]==0x1c ) &&
+	     t[idx+3]==0 &&
+	     ( t[idx+4]==0x01 || t[idx+4]==0x03 || t[idx+4]==0x04 || t[idx+4]==0xFF)
+	   )
+          return (IPP2P_DNS *100 + 0);
+	else
+	  return 0;
+      }
+     else
+      return (IPP2P_DNS *100 + 0);
+   }
+
+ return (IPP2P_DNS *100 + 0);
+
+}
 
 /*Search for Ares commands*/
 //#define IPP2P_DEBUG_ARES
@@ -1477,5 +1533,6 @@ struct udpmatch udp_list[] = {
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
+//  {IPP2P_DNS, SHORT_HAND_IPP2P, 22, &udp_search_dns},
   {0, 0, 0, NULL}
 };

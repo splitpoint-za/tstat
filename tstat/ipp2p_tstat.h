@@ -41,6 +41,7 @@ struct ipt_p2p_info {
 #define IPP2P_PPLIVE		(1 << 19)
 #define IPP2P_SOPCAST		(1 << 20)
 #define IPP2P_TVANTS		(1 << 21)
+#define IPP2P_DNS		(1 << 22)
 
 int search_all_edk (const unsigned char *, const int, int);
 int search_kazaa (const unsigned char *, const int, int);
@@ -67,6 +68,7 @@ int udp_search_directconnect (unsigned char *, const int, int);
 int udp_search_pplive (unsigned char *, const int, int);
 int udp_search_sopcast (unsigned char *, const int, int);
 int udp_search_tvants (unsigned char *, const int, int);
+int udp_search_dns (unsigned char *, const int, int);
 
 struct udpmatch
 {
