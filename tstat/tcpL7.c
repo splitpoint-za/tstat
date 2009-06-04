@@ -88,6 +88,19 @@ Bool ssl_server_check(void *pdata)
   return FALSE;
 }
 
+Bool ssh_header_check(void *pdata)
+{
+  if (( *(char *)(pdata + 4) == 0x31 || *(char *)(pdata + 4) == 0x32 ) && 
+        *(char *)(pdata + 5) == 0x2E && 
+      ( *(char *)(pdata + 6) >= 0x30 && *(char *)(pdata + 6) <= 0x39 )
+     )
+   { 
+     /* Match SSH 2.x/1.x Handshake */
+      return TRUE;
+   }
+  return FALSE;
+}
+
 Bool is_imap_tag(void *pdata)
 {
   int i;
@@ -410,6 +423,20 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        }
 	      break;
 
+#ifdef ENABLE_SSH
+            case SSH_HEADER: 
+              /* SSH Server handshake SSH-[1-2].[0-9]
+	         message 
+	      */
+	      if (dir == S2C &&
+	         ((char *) pdata + 7 <= (char *) plast) &&
+	          ssh_header_check(pdata)
+	          )
+	        {
+	          ptp->state = SSH_SERVER;
+	        }
+	      break;
+#endif
            default:
              if ( dir==C2S && 
 	         ((char *) pdata + 6 <= (char *) plast) &&
@@ -694,6 +721,28 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     }
 	  }  
         break;
+#ifdef ENABLE_SSH
+     case SSH_SERVER:
+        if (dir == C2S && ((char *) pdata + 7 <= (char *) plast))
+	 {
+	   switch (*((u_int32_t *) pdata))
+	    {
+	      case SSH_HEADER:
+	        if (ssh_header_check(pdata))
+		 {
+	           ptp->con_type |= SSH_PROTOCOL;
+	           ptp->con_type &= ~OBF_PROTOCOL;
+	           ptp->state = IGNORE_FURTHER_PACKETS;
+		 }
+	        break;
+	      default:
+	        break;
+	    }
+	   if (ptp->packets > MAX_HTTP_COMMAND_PACKETS)
+	     ptp->state = IGNORE_FURTHER_PACKETS;
+	 }
+        break;
+#endif
      default:
 	break;
    }

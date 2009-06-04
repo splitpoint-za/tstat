@@ -752,7 +752,7 @@ udp_search_dns (unsigned char *haystack,
   // Question) is 0. The corresponding queries are matched.
   // It also doesn't match a few esoteric queries.
 
-  if (t[4]!=0 && t[5]!=0x01 && t[5]!=0x02)
+  if (!(t[4]==0 && (t[5]==0x01 || t[5]==0x02)))
     return 0;
     
   if (t[12]<0x01 || t[12]>0x3F)

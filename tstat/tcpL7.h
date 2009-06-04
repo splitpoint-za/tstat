@@ -69,6 +69,9 @@
 /* IMAP4 commands */
 #define IMAP_OK   0x2A204F4BUL
 
+/* SSH header */
+#define SSH_HEADER 0x5353482DUL
+
 #else
 
 #define DESCRIBE 0x4542495243534544ULL
@@ -94,6 +97,9 @@
 
 /* IMAP4 commands */
 #define IMAP_OK   0x4B4F202AUL
+
+/* SSH header */
+#define SSH_HEADER 0x2D485353UL
 
 #endif
 
