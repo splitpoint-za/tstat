@@ -26,6 +26,8 @@ extern Bool histo_engine_log;
 extern Bool adx_engine;
 extern Bool global_histo;
 
+extern unsigned int adx_addr_mask;
+
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
@@ -75,6 +77,71 @@ find_histo (char *hname)
   return NULL;
 }
 
+unsigned int validate_adx_mask(char *mask_string)
+{
+
+  struct in_addr adx_net2;
+  unsigned int adx_net_mask;
+
+  unsigned int full_local_mask;
+  int mask_bits;
+  char *err;
+  char s[16];
+  err = NULL;
+
+  //network mask as a single number
+  if (!strchr(mask_string,'.'))
+  { 
+      err = NULL;
+      mask_bits = strtol(mask_string, &err, 10);
+      if (*err || mask_bits < 1 || mask_bits > 32) {
+      fprintf(fp_stderr, 
+            "Warning: Invalid netmask in <adx_mask> histogram option. Using default %d.%d.%d.%d\n",
+        ADDR_MASK & 0xff,
+        (ADDR_MASK >> 8 ) & 0x0000ff,
+        (ADDR_MASK >> 16)  & 0x00ff,
+        ADDR_MASK >> 24);
+      return ADDR_MASK;
+      }
+
+      if (mask_bits == 0)
+  	 full_local_mask = 0;
+      else
+  	 full_local_mask = 0xffffffff << (32 - mask_bits);
+
+      sprintf(s,"%d.%d.%d.%d",
+  	  full_local_mask >> 24,
+  	  (full_local_mask >> 16)  & 0x00ff,
+  	  (full_local_mask >> 8 ) & 0x0000ff,
+  	  full_local_mask & 0xff);
+      inet_aton (s, &(adx_net2));
+      adx_net_mask = inet_addr(s);
+  }
+  //mask in dotted format
+  else
+  {
+      if (!inet_aton (mask_string, &(adx_net2))) {
+      fprintf(fp_stderr, 
+            "Warning: Invalid netmask %s in <adx_mask> histogram option. Using default %d.%d.%d.%d\n",
+        mask_string,
+        ADDR_MASK & 0xff,
+        (ADDR_MASK >> 8 ) & 0x0000ff,
+        (ADDR_MASK >> 16)  & 0x00ff,
+        ADDR_MASK >> 24);
+      return ADDR_MASK;
+      }
+      adx_net_mask = inet_addr (mask_string);
+  }
+
+//  printf("0x%08x %d.%d.%d.%d\n",adx_net_mask,
+//        adx_net_mask & 0xff,
+//        (adx_net_mask >> 8 ) & 0x0000ff,
+//        (adx_net_mask >> 16)  & 0x00ff,
+//        adx_net_mask >> 24
+//	);
+
+  return adx_net_mask;
+}
 
 void
 histo_parse_conf ()
@@ -159,6 +226,11 @@ histo_parse_conf ()
 		}
 	      histo = histo->next;
 	    }
+	}
+      else if (!strcmp (keyword, "adx_mask"))
+	{
+	  fscanf (conf, "%s", arg1);
+          adx_addr_mask = validate_adx_mask(arg1);
 	}
       else
 	{

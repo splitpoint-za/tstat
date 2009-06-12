@@ -189,6 +189,7 @@ int log_version = 2;            /* -1 */
 struct bayes_settings *bayes_settings_pktsize;
 struct bayes_settings *bayes_settings_avgipg;
 
+unsigned int adx_addr_mask = ADDR_MASK;
 
 /* locally global variables */
 static u_long filesize = 0;
@@ -356,6 +357,9 @@ Help (void)
 	"\t         and the address hits histograms, file should be:\n"
     "\t         include ADX\n"
     "\t         include_matching tcp\n"
+    "\t         'adx_mask N' is a special command to define the\n"
+    "\t         size of the netmask used to aggregate the address histograms\n"
+    "\t         (e.g. 'adx_mask 24' to use the 255.255.255.0 mask)\n"  
     "\n"
     "\t-g: Enable global histo engine\n"
     "\t-S: No histo engine: do not create histograms files \n"
@@ -889,8 +893,12 @@ void ip_histo_stat(struct ip *pip)
 
    if (adx_engine)
     {
-      add_adx (&(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
-      add_adx (&(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
+      /* If -N is not used, all addresses are internal, 
+        and the ADX histo would be empty */
+      if (!internal_src || !net_conf)
+        add_adx (&(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
+      if (!internal_dst || !net_conf)
+        add_adx (&(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
     }
     
 } 
@@ -2579,7 +2587,7 @@ LoadInternalNets (char *file) {
             //mask in dotted format
             else
             {
-                if (!inet_aton (mask_string, &(internal_net_mask2[0]))) {
+                if (!inet_aton (mask_string, &(internal_net_mask2[i]))) {
                     fprintf(fp_stderr, "Invalid network mask in net config n.%d\n", (i+1));
                     return 0;
                 }

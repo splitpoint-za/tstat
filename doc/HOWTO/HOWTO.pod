@@ -282,6 +282,9 @@ the command is the following:
                  and the address hits histograms, file should be:
                  include ADX
                  include_matching tcp
+		 'adx_mask N' is a special command to define the 
+		 size of the netmask used to aggregate the address histograms
+		 (e.g. 'adx_mask 24' to use the 255.255.255.0 mask)  
 
         -g: Enable global histo engine
         -S: No histo engine: do not create histograms files 
@@ -697,11 +700,12 @@ the configuration file is really simple:
 
     include ALL             # add all histograms
     include ADX             # histogram to count how many times ip address are used
+    adx_mask 16             # define the size of the netmask for the ADX histogram
 
     include ip_len_in      # histogram of the ip packet length of the input traffic
 
     include_matching ip_    # match all the histograms which name start with 'ip_'
-
+    
 Histogram data are saved using simple ASCII files: 
 the first line contains a description of the
 measured quantity, while the second line contains the parameters of the histograms

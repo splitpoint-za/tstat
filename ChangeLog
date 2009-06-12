@@ -32,6 +32,10 @@
   * Several MSN Chat bugfixes and paranoic string size checking
   * Added support for MPLS over ETH and MPLS over VLAN
   * Optional early closure for singleton TCP/UDP flows (SYN or UDP flooding)
+  * SSH 2.0/1.99 Handshake identification
+  * DNS identification
+  * Change: ADX histogram includes only external addresses (if existing, i.e. -N defined)
+  * ADX histogram: added 'adx_mask <size>' option to histogram configuration
 
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made

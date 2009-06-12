@@ -153,6 +153,7 @@ Connection type (Column no. 97) description (from protocol.h)
 #    4096 # IMAP4 protocol		#
 #    8192 # SSL/TLS protocol		#
 #   16384 # ED2K protocol (obfuscated)	# 
+#   32768 # SSH 2.0/1.99 protocol	# 
 #########################################
 
 Since the connection type is a bitmask, it's possible to have combinated
@@ -187,6 +188,7 @@ P2P type (Column no. 98) description (from ipp2p_tstat.h)
 # 19	    # IPP2P_PPLIVE		       	#
 # 20	    # IPP2P_SOPCAST		       	#
 # 21	    # IPP2P_TVANTS		       	#
+# 22	    # IPP2P_DNS			       	#
 #################################################
 
 Some of these values are actually internally used for UDP only, 

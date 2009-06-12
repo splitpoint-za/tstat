@@ -66,4 +66,5 @@ UDP type (Columns no. 8, 16) description (from struct.h)
 # 16	# P2P_SOPCAST	# SopCast IP-TV protocol			#
 # 17	# P2P_TVANTS	# TV-Ants IPTV protocol				#
 # 18	# P2P_OKAD	# eMule obfuscated KAD protocol			#
+# 19	# DNS		# DNS protocol					#
 #########################################################################

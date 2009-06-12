@@ -65,7 +65,15 @@
 #define L7_FLOW_SSL		33
 
 #define L7_FLOW_OBF_KAD		34
+/*
+// Temporary leave this ID unused, to maintain compatibility
+// between old RRDs and new RRDs in the CGI script
 #define L7_FLOW_UNKNOWN         35
+*/
 
-#define L7_FLOW_TOT             50    /* Large to leave space for future */
+#define L7_FLOW_DNS             36
+#define L7_FLOW_SSH             37
+
+#define L7_FLOW_UNKNOWN         49    /* Unknown is set to the largest ID */
+#define L7_FLOW_TOT             50    /* Large to leave space for future  */
 				      /* protocol types */

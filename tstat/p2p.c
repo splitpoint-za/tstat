@@ -298,6 +298,9 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    case IPP2P_TVANTS:
 	      udir->type = P2P_TVANTS;
 	      break;  
+	    case IPP2P_DNS:
+	      udir->type = DNS;
+	      break;  
 	   }
 
 #ifdef P2P_DETAILS
@@ -332,6 +335,9 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      break;
 	     case IPP2P_TVANTS:
 	      (udir->p2p).pkt_type_num[9]++;
+	      break;
+	     default:
+              /* No use counting DNS messages */
 	      break;
 	   }
 #endif
@@ -721,9 +727,7 @@ int UDP_p2p_to_logtype(ucb *thisflow)
           case OUDP_SIZE_IN_46_57:
           case OUDP_SIZEX_22:
           case OUDP_SIZEX_52:
-	    if (thisflow->pup->addr_pair.a_port != 53 &&
-            thisflow->pup->addr_pair.a_port != 123 &&
-            thisflow->pup->addr_pair.b_port != 53 &&
+	    if (thisflow->pup->addr_pair.a_port != 123 &&
 	        thisflow->pup->addr_pair.b_port != 123)
 	        return P2P_OKAD;
 	    else
@@ -807,6 +811,9 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case P2P_TVANTS:
       return L7_FLOW_TVANTS; 
 
+    case DNS:
+      return L7_FLOW_DNS;
+
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:
@@ -817,9 +824,7 @@ int UDP_p2p_to_L7type (ucb *thisflow)
           case OUDP_SIZE_IN_46_57:
           case OUDP_SIZEX_22:
           case OUDP_SIZEX_52:
-	    if (thisflow->pup->addr_pair.a_port != 53 &&
-	        thisflow->pup->addr_pair.a_port != 123 &&
-            thisflow->pup->addr_pair.b_port != 53 &&
+	    if (thisflow->pup->addr_pair.a_port != 123 &&
 	        thisflow->pup->addr_pair.b_port != 123)
 	        return L7_FLOW_OBF_KAD;
 	    else

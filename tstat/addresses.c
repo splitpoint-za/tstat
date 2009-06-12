@@ -21,6 +21,7 @@
 
 extern Bool histo_engine;
 extern Bool adx_engine;
+extern unsigned int adx_addr_mask;
 
 struct adx **adx_index_first;
 struct adx **adx_index_second;
@@ -60,7 +61,7 @@ add_adx (struct in_addr *adx, int dest, int bytes)
 //  if (adx_engine == FALSE)
 //    return 0;
 
-  seed = (adx->s_addr & ADDR_MASK);
+  seed = (adx->s_addr & adx_addr_mask);
   adx_search_hash_count++;
   pos = (seed % MAX_ADX_SLOTS);
 
@@ -171,9 +172,9 @@ print_adx ()
     }
 
   fprintf (fp, "#Number of packets per subnet (%d.%d.%d.%d NETMASK) \n",
-	   ADDR_MASK & 0x000000ff,
-	   (ADDR_MASK & 0x0000ff00) >> 8,
-	   (ADDR_MASK & 0x00ff0000) >> 16, (ADDR_MASK & 0xff000000) >> 24);
+	   adx_addr_mask & 0x000000ff,
+	   (adx_addr_mask & 0x0000ff00) >> 8,
+	   (adx_addr_mask & 0x00ff0000) >> 16, (adx_addr_mask & 0xff000000) >> 24);
   fprintf (fp, "#Subnet IP \tsrc_hits \tdst_hits \tsrc_bytes \tdst_bytes\n");
   for (i = 0; i < MAX_ADX_SLOTS; i++)
     {

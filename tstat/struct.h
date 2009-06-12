@@ -572,6 +572,7 @@ enum udp_type
   P2P_SOPCAST,
   P2P_TVANTS,
   P2P_OKAD,
+  DNS,
   LAST_UDP_PROTOCOL
 };
 
@@ -616,6 +617,8 @@ enum udp_type
  printf("P2P_TVANTS = %d\n",temp); \
  temp = P2P_OKAD; \
  printf("P2P_OKAD = %d\n",temp); \
+ temp = DNS; \
+ printf("DNS = %d\n",temp); \
 }
 
 

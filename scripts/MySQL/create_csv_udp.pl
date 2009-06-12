@@ -23,7 +23,8 @@ use strict;
                15=>"pplive",    
                16=>"sopcast",   
                17=>"tvants",
-	       18=>"okad",    
+	       18=>"okad",
+	       19=>"dns",    
 );
 	 
 # substitute here the CSV filename, that must be the same than the

@@ -21,7 +21,8 @@ use strict;
                15=>"pplive",    
                16=>"sopcast",   
                17=>"tvants",
-	       18=>"okad",    
+	       18=>"okad",
+	       19=>"dns",    
 );
 	 
 # substitute here the database name, username and password

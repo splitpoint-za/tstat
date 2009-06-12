@@ -11,6 +11,7 @@ HDR_FILES = \
     $(top_srcdir)/tstat/jabber.h\
     $(top_srcdir)/tstat/msn.h\
     $(top_srcdir)/tstat/naivebayes.h\
+    $(top_srcdir)/tstat/names.h\
     $(top_srcdir)/tstat/param.h\
     $(top_srcdir)/tstat/plugin.h\
     $(top_srcdir)/tstat/protocol.h\

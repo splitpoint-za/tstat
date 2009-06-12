@@ -423,7 +423,6 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        }
 	      break;
 
-#ifdef ENABLE_SSH
             case SSH_HEADER: 
               /* SSH Server handshake SSH-[1-2].[0-9]
 	         message 
@@ -436,7 +435,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          ptp->state = SSH_SERVER;
 	        }
 	      break;
-#endif
+
            default:
              if ( dir==C2S && 
 	         ((char *) pdata + 6 <= (char *) plast) &&
@@ -721,7 +720,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     }
 	  }  
         break;
-#ifdef ENABLE_SSH
+
      case SSH_SERVER:
         if (dir == C2S && ((char *) pdata + 7 <= (char *) plast))
 	 {
@@ -742,7 +741,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     ptp->state = IGNORE_FURTHER_PACKETS;
 	 }
         break;
-#endif
+
      default:
 	break;
    }
@@ -864,6 +863,12 @@ int map_flow_type(tcp_pair *thisflow)
    if(thisflow->con_type & SSL_PROTOCOL)
    {
       type = L7_FLOW_SSL;
+   }
+
+   /* SSH */
+   if(thisflow->con_type & SSH_PROTOCOL)
+   {
+      type = L7_FLOW_SSH;
    }
 
    /* P2P */
