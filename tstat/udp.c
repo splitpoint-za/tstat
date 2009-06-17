@@ -359,17 +359,17 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip)
   if (internal_src && !internal_dst)
     {
       L4_bitrate.out[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_out, (float) (pudp->uh_dport));
+      add_histo (udp_port_dst_out, (float) ntohs(pudp->uh_dport));
     }
   else if (!internal_src && internal_dst)
     {
       L4_bitrate.in[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_in, (float) (pudp->uh_dport));
+      add_histo (udp_port_dst_in, (float) ntohs(pudp->uh_dport));
     }
   else if (internal_src && internal_dst)
     {
       L4_bitrate.loc[UDP_TYPE] += ntohs (pip->ip_len);
-      add_histo (udp_port_dst_loc, (float) (pudp->uh_dport));
+      add_histo (udp_port_dst_loc, (float) ntohs(pudp->uh_dport));
     }
 
   return;
