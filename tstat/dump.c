@@ -369,10 +369,10 @@ void dump_flow_stat (struct ip *pip,
         if (proto2dump[ucb_type].enabled) {
             dump_to_file(&proto2dump[ucb_type], pip, plast);
         }
-        //dumo to unknown
-        else if (proto2dump[UDP_UNKNOWN].enabled) {
-            dump_to_file(&proto2dump[UDP_UNKNOWN], pip, plast);
-        }
+        // dump to unknown
+         // else if (proto2dump[UDP_UNKNOWN].enabled) {
+         //    dump_to_file(&proto2dump[UDP_UNKNOWN], pip, plast);
+         // }
         //dump to a complete file
         if (proto2dump[DUMP_UDP_COMPLETE].enabled)
             dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
