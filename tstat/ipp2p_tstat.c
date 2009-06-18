@@ -758,7 +758,7 @@ udp_search_dns (unsigned char *haystack,
   if (t[12]<0x01 || t[12]>0x3F)
     return 0;
 
-  if (!((t[13]>=0x61 && t[13]<=0x7a) || (t[13]>=0x30 && t[13]<=0x39)))
+  if (!((t[13]>=0x61 && t[13]<=0x7a) || (t[13]>=0x41 && t[13]<=0x5a) || (t[13]>=0x30 && t[13]<=0x39)))
     return 0;
 
   if (payload_len>22)
@@ -774,7 +774,10 @@ udp_search_dns (unsigned char *haystack,
      if (idx < payload_len-12)
       {
         if ( t[idx+1]==0 &&
-	    ( ( t[idx+2]>=0x01 && t[idx+2]<=0x10) || t[idx+2]==0x1c ) &&
+	    ( ( t[idx+2]>=0x01 && t[idx+2]<=0x10) || t[idx+2]==0x1c ||
+	        t[idx+2]==0x26 || /* A6 IPv6 with indirection */ 
+	      ( t[idx+2]==0xff || t[idx+2]==0xfd || t[idx+2]==0xfc )  /* QTYPEs */
+	    ) &&
 	     t[idx+3]==0 &&
 	     ( t[idx+4]==0x01 || t[idx+4]==0x03 || t[idx+4]==0x04 || t[idx+4]==0xFF)
 	   )
