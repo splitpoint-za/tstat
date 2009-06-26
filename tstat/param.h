@@ -68,7 +68,7 @@ Used only if WIPE_TCP_SINGLETON is defined
 #define UDP_SINGLETON_TIME 10000000   /* 10 s */
 
 //5min = 5 * 60 sec
-#define RUNTIME_CONFIG_IDLE 300
+#define RUNTIME_CONFIG_IDLE 60    /* 1 min */
 //#define RUNTIME_CONFIG_IDLE 1
 #define RUNTIME_MTIME_COUNTER 3
 
