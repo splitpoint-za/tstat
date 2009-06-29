@@ -339,7 +339,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->con_type = 0;
   ptp->state = UNKNON_TYPE;
   ptp->p2p_type = 0;
-  ptp->p2p_state = UNKNON_TYPE2;
+  ptp->p2p_state = UNKNON_TYPE;
   ptp->ignore_dpi = FALSE;
 
   return (&ttp[num_tcp_pairs]);

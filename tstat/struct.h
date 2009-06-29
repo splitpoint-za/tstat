@@ -486,13 +486,6 @@ enum state_type
   IGNORE_FURTHER_PACKETS
 };
 
-// MGM get rid of this!
-enum state2_type
-{ UNKNON_TYPE2 = 0,
-  MORE_PACKETS2,
-  IGNORE_FURTHER_PACKETS2
-};
-
 struct stcp_pair
 {
 

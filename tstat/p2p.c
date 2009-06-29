@@ -351,7 +351,7 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       ptcp = (tcphdr *) hdr;
 
       ptp = ((tcb *) pdir)->ptp;
-      if (ptp != NULL && ptp->p2p_state != IGNORE_FURTHER_PACKETS2 && 
+      if (ptp != NULL && ptp->p2p_state != IGNORE_FURTHER_PACKETS && 
              ptp->ignore_dpi!=TRUE )
 	{
 	  return_code =
@@ -433,9 +433,9 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    }
 
 	  if ((ptp->p2p_type/100 != IPP2P_EDK) && ptp->packets > MAX_PACKETS_CON)
-	    ptp->p2p_state = IGNORE_FURTHER_PACKETS2;
+	    ptp->p2p_state = IGNORE_FURTHER_PACKETS;
 //	  if (ptp->packets > MAX_PACKETS_CON)
-//	    ptp->p2p_state = IGNORE_FURTHER_PACKETS2;
+//	    ptp->p2p_state = IGNORE_FURTHER_PACKETS;
 	}
     }
 
