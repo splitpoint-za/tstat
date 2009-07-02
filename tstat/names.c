@@ -96,7 +96,7 @@ Timestamp (void) {
 
 static char *buf = NULL;
 static int buf_size = 0;
-#define BUFFER_SIZE 10
+#define BUFFER_SIZE 80
 
 char * sprintf_safe(const char *format, ...) {
     va_list ap;

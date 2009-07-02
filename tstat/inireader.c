@@ -34,7 +34,7 @@ static struct ini_section ini_sections[] = {
     {"[log]", log_parse_ini_arg, NULL, NULL},
 };
 #define INI_SECTION_LEN (sizeof(ini_sections) / sizeof(struct ini_section))
-#define BUF_SIZE 50
+#define BUF_SIZE 80
 #define INI_PARAM_VALUE_DEFAULT -1000
 
 char * readline(FILE *fp, int skip_comment, int skip_void_lines) {
