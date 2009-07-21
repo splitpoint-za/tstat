@@ -50,9 +50,9 @@ struct pcap_pkthdr *callback_phdr;
 /* (Courtesy Jeffrey Semke, Pittsburgh Supercomputing Center) */
 /* locate ip within FDDI according to RFC 1188 */
 static int
-find_ip_fddi (char *buf, int iplen)
+find_ip_fddi (unsigned char *buf, int iplen)
 {
-  char *ptr, *ptr2;
+  unsigned char *ptr, *ptr2;
   int i;
   u_char pattern[] = { 0xAA, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00 };
 #define FDDIPATTERNLEN 7
@@ -79,7 +79,7 @@ find_ip_fddi (char *buf, int iplen)
 /* We handle two cases : straight Ethernet encapsulation or PPPoE encapsulation */
 /* Written by Yann Samama (ysamama@nortelnetworks.com) on july 18th, 2003 */
 int
-find_ip_eth (char *buf)
+find_ip_eth (unsigned char *buf)
 {
   unsigned short ppp_proto_type;	/* the protocol type field of the PPP header */
   unsigned short eth_proto_type;	/* the protocol type field of the Ethernet header */
@@ -127,7 +127,7 @@ find_ip_eth (char *buf)
 /* This function determine the offset for the IP packet in a PPP or HDLC PPP frame */
 /* Written by Yann Samama (ysamama@nortelnetworks.com) on june 19th, 2003 */
 static int
-find_ip_ppp (char *buf)
+find_ip_ppp (unsigned char *buf)
 {
   unsigned char ppp_byte0;	/* the first byte of the PPP frame */
   unsigned short ppp_proto_type;	/* the protocol type field of the PPP header */
@@ -167,7 +167,7 @@ find_ip_ppp (char *buf)
 
 
 static int
-callback (char *user, struct pcap_pkthdr *phdr, char *buf)
+callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
 {
     int type;
     int iplen;
@@ -353,7 +353,7 @@ pread_tcpdump (struct timeval *ptime,
       /* This confuses EVERYTHING.  Try to compensate. */
       {
 	static Bool bogus_nanoseconds = FALSE;
-	if ((callback_phdr->ts.tv_usec >= US_PER_SEC) || (bogus_nanoseconds))
+	if ((pcap_current_hdr.ts.tv_usec >= US_PER_SEC) || (bogus_nanoseconds))
 	  {
 	    if (!bogus_nanoseconds)
 	      {
@@ -361,7 +361,7 @@ pread_tcpdump (struct timeval *ptime,
 			 "tcpdump: attempting to adapt to bogus nanosecond timestamps\n");
 		bogus_nanoseconds = TRUE;
 	      }
-	    callback_phdr->ts.tv_usec /= 1000;
+	    pcap_current_hdr.ts.tv_usec /= 1000;
 	  }
       }
 
@@ -371,10 +371,10 @@ pread_tcpdump (struct timeval *ptime,
       *ppip = (struct ip *) ip_buf;
       *pplast = callback_plast;	/* last byte in IP packet */
       /* (copying time structure in 2 steps to avoid RedHat brain damage) */
-      ptime->tv_usec = callback_phdr->ts.tv_usec;
-      ptime->tv_sec = callback_phdr->ts.tv_sec;
-      *plen = callback_phdr->len;
-      *ptlen = callback_phdr->caplen;
+      ptime->tv_usec = pcap_current_hdr.ts.tv_usec;
+      ptime->tv_sec = pcap_current_hdr.ts.tv_sec;
+      *plen = pcap_current_hdr.len;
+      *ptlen = pcap_current_hdr.caplen;
 
       /* if it's not IP, then skip it */
       if ((ntohs (eth_header.ether_type) != ETHERTYPE_IP) &&
