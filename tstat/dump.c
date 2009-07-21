@@ -238,6 +238,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_PPLIVE, "udp_pplive");
     dump_reset_dump_file(proto2dump, P2P_SOPCAST, "udp_sopcast");
     dump_reset_dump_file(proto2dump, P2P_TVANTS, "udp_tvants");
+    dump_reset_dump_file(proto2dump, DNS, "udp_dns");
     dump_reset_dump_file(proto2dump, DUMP_IP_COMPLETE, "ip_complete");
     dump_reset_dump_file(proto2dump, DUMP_UDP_COMPLETE, "udp_complete");
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
