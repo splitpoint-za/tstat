@@ -650,7 +650,7 @@ bayes_new (struct bayes_settings *settings)
     fprintf (fp_stderr, "bc->settings[%p] = %s\n", settings, settings->name);
 
   classifier->belief =
-    (double *) MMmalloc (settings->class_num * sizeof (double),
+    (double *) MMmalloc ((settings->class_num + 1) * sizeof (double),
 			 "struct bayes_classifier: belief");
   classifier->mean_belief =
     (double *) MMmalloc (settings->class_num * sizeof (double),
@@ -844,7 +844,7 @@ bayes_eval_pdf (struct bayes_settings *settings, int class_num, int index)
 
   if (settings->class_type[class_num] == BAYES_DISCRETE)
     {
-      if (index > settings->class_dlen[class_num])
+      if (index >= settings->class_dlen[class_num])
 	{
 #ifdef BAYES_SAFE
 	  fprintf (fp_stderr,
