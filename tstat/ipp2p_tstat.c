@@ -993,9 +993,8 @@ search_winmx (const unsigned char *payload, const int plen, int payload_len)
   if ((memcmp (payload, "SEND", 4) == 0) || (memcmp (payload, "GET", 3) == 0))
     {
       tt_uint16 c = 4;
-      const tt_uint16 end = plen - 2;
       tt_uint8 count = 0;
-      while (c < end)
+      while (c + 2 < plen)
 	{
 	  if (payload[c] == 0x20 && payload[c + 1] == 0x22)
 	    {
@@ -1145,8 +1144,7 @@ search_all_gnu (const unsigned char *payload, const int plen, int payload_len)
 	  || (memcmp (payload, "GET /uri-res/", 13) == 0))
 	{
 	  tt_uint16 c = 8;
-	  const tt_uint16 end = plen - 22;
-	  while (c < end)
+	  while (c + 13 < plen )
 	    {
 	      if (payload[c] == 0x0a && payload[c + 1] == 0x0d
 		  && ((memcmp (&payload[c + 2], "X-Gnutella-", 11) == 0)
@@ -1175,8 +1173,7 @@ search_all_kazaa (const unsigned char *payload, const int plen,
       if (memcmp (payload, "GET /", 5) == 0)
 	{
 	  tt_uint16 c = 8;
-	  const tt_uint16 end = plen - 22;
-	  while (c < end)
+	  while (c + 26 < plen )
 	    {
 	      if (payload[c] == 0x0a && payload[c + 1] == 0x0d
 		  &&
@@ -1481,10 +1478,9 @@ search_xdcc (const unsigned char *payload, const int plen, int payload_len)
     {
 
       tt_uint16 x = 10;
-      const tt_uint16 end = plen - 13;
 
       /* is seems to be a irc private massage, chedck for xdcc command */
-      while (x < end)
+      while (x + 13 < plen)
 	{
 	  if (payload[x] == ':')
 	    {
