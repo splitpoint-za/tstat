@@ -58,6 +58,8 @@
 #define SMTP_220  0x32323020UL
 #define SMTP_HELO 0x48454C4FUL
 #define SMTP_EHLO 0x45484C4FUL
+#define SMTP_helo 0x68656C6FUL
+#define SMTP_ehlo 0x65686C6FUL
 
 /* POP3 commands */
 #define POP_OK    0x2B4F4B20UL
@@ -87,6 +89,8 @@
 #define SMTP_220  0x20303232UL
 #define SMTP_HELO 0x4F4C4548UL
 #define SMTP_EHLO 0x4F4C4845UL
+#define SMTP_helo 0x6F6C6568UL
+#define SMTP_ehlo 0x6F6C6865UL
 
 /* POP3 commands */
 #define POP_OK    0x204B4F2BUL

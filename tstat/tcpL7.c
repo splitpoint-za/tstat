@@ -457,6 +457,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      */
 	      case SMTP_HELO:
 	      case SMTP_EHLO:
+	      case SMTP_helo:
+	      case SMTP_ehlo:
 	        ptp->con_type |= SMTP_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
