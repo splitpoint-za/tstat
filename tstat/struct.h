@@ -458,7 +458,7 @@ typedef struct
 tcp_pair_addrblock;
 
 enum state_type
-{ UNKNON_TYPE = 0,
+{ UNKNOWN_TYPE = 0,
   RTSP_COMMAND,
   RTSP_RESPONSE,
   HTTP_COMMAND,

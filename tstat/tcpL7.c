@@ -281,7 +281,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
   switch (ptp->state)
    {
-     case UNKNON_TYPE:
+     case UNKNOWN_TYPE:
         if ((char *) pdata + 4 > (char *) plast)
 	  return;
 	switch (*((u_int32_t *) pdata))
@@ -718,7 +718,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
             if (ptp->packets > MAX_SSL_HANDSHAKE_PACKETS )
 	     { 
 	    //   printf("Reset SSL State\n");
-	       ptp->state = UNKNON_TYPE;
+	       ptp->state = UNKNOWN_TYPE;
 	     }
 	  }  
         break;
