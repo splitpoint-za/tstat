@@ -285,6 +285,9 @@ typedef struct upper_protocols
   timeval f_icy;
 } upper_protocols;
 
+/* Only store the size for the first 4 messages */
+#define MAX_COUNT_MESSAGES 4
+
 typedef struct tcb
 {
   struct bayes_classifier *bc_avgipg;
@@ -441,6 +444,10 @@ typedef struct tcb
   u_short last_checksum;        /* checksum of the last packet */
 #endif
 
+/* Count TCP messages, as separated by PSH or FIN*/
+ seqnum msg_last_seq;
+ u_int msg_count;
+ u_int msg_size[MAX_COUNT_MESSAGES];
 }
 tcb;
 
@@ -486,6 +493,25 @@ enum state_type
   IGNORE_FURTHER_PACKETS
 };
 
+enum http_content
+{
+  HTTP_GET = 0,		/* Unclassified GET command 			*/
+  HTTP_POST,		/* Unclassified POST command 			*/
+  HTTP_MSN,		/* MSN Chat command tunneled over HTTP (POST) 	*/
+  HTTP_RTMPT,		/* RTMPT - RTMP over HTTP Tunnel (POST) 	*/
+  HTTP_YOUTUBE,		/* YouTube video content download (GET) 	*/
+  HTTP_GOOGLEVIDEO,	/* GoogleVideo video content download (GET) 	*/
+  HTTP_VIMEO,		/* Vimeo video content download (GET) 		*/
+  HTTP_WIKI,		/* Wikipedia (GET) 				*/
+  HTTP_RAPIDSHARE,	/* RapidShare file download (GET) 		*/
+  HTTP_MEGAUPLOAD,	/* MegaUpload file download (GET) 		*/
+  HTTP_FACEBOOK,	/* Facebook-related connections (GET/POST) 	*/
+  HTTP_ADV,		/* Site advertisement (GET) 			*/
+  HTTP_FLICKR,		/* Flickr photo download (GET) 			*/
+  HTTP_GMAPS,		/* GoogleMaps images (GET) 			*/
+  HTTP_LAST_TYPE
+};
+
 struct stcp_pair
 {
 
@@ -516,6 +542,7 @@ struct stcp_pair
   enum state_type p2p_state;
   unsigned char rtp_pt;
   Bool ignore_dpi;
+  enum http_content http_data;
 
   /* obfuscate ed2k identification */
   unsigned state_11:1;
@@ -780,6 +807,14 @@ struct L7_bitrates
   unsigned long long out[L7_FLOW_TOT]; /* unsigned long long out[L7_FLOW_TOT] */
   unsigned long long loc[L7_FLOW_TOT]; /* unsigned long long loc[L7_FLOW_TOT] */
 };
+
+struct HTTP_bitrates
+{
+  unsigned long long in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[HTTP_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+};
+
 
 #ifdef HAVE_RRDTOOL
 /*-----------------------------------------------------------*/

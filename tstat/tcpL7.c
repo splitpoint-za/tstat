@@ -28,6 +28,7 @@ int map_flow_type(tcp_pair *thisflow);
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
+extern struct HTTP_bitrates HTTP_bitrate;
 
 void
 tcpL7_init ()
@@ -238,6 +239,547 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
 }
 #endif
 
+enum http_content classify_http_get(void *pdata,int data_length)
+{
+  char *base = (char *)pdata+4;
+  int available_data = data_length - 4 ;
+
+  char c;
+  int i;
+  int status1,status2;
+  
+  if (available_data < 1)
+    return HTTP_GET;
+
+  if (*base != 0x2f)
+    return HTTP_GET;
+
+  switch (*(base+1))
+   {
+     case 'a':
+       if (memcmp(base, "/ads3/flyers/",
+        	      ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/album.php?",
+        	      ( available_data < 11 ? available_data : 11)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/apps/application.php",
+        	     ( available_data < 21 ? available_data : 21)) == 0)
+          return HTTP_FACEBOOK;
+       else if ( available_data > 10 && (memcmp(base, "/ajax/",6) == 0) )
+         {
+	   switch (*(base+6))
+	    {
+	      case 'b':
+                if (memcmp(base + 6, "browse_history.php",
+        	      ((available_data - 6) < 18 ? available_data - 6 : 18)) == 0)
+                  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'c':
+           	if (memcmp(base + 6, "chat/",
+        		   ((available_data - 6) < 5 ? available_data - 6 : 5)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "composer/",
+        		   ((available_data - 6) < 9 ? available_data - 6 : 9)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "ct.php?",
+        		   ((available_data - 6) < 7 ? available_data - 6 : 7)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'f':
+           	if (memcmp(base + 6, "f2.php?",
+        		   ((available_data - 6) < 7 ? available_data - 6 : 7)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "feed/",
+        		   ((available_data - 6) < 5 ? available_data - 6 : 5)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "f.php?",
+        		   ((available_data - 6) < 6 ? available_data - 6 : 6)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'i':
+	      	if (memcmp (base + 6, "intent.php",
+	      		   ((available_data - 6) < 10 ? available_data - 6 : 10)) == 0)
+	      	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'l':
+           	if (memcmp(base + 6, "like/participants.php",
+        		   ((available_data - 6) < 21 ? available_data - 6 : 21)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'n':
+           	if (memcmp(base + 6, "nectar.php",
+        		   ((available_data - 6) < 10 ? available_data - 6 : 10)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "notes_upload_ajax.php",
+        		   ((available_data - 6) < 21 ? available_data - 6 : 21)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'p':
+           	if (memcmp(base + 6, "presence/",
+        		   ((available_data - 6) < 9 ? available_data - 6 : 9)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "profile/",
+        		   ((available_data - 6) < 8 ? available_data - 6 : 8)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'r':
+           	if (memcmp(base + 6, "recent_pics.php",
+        		   ((available_data - 6) < 15 ? available_data - 6 : 15)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+
+	      case 's':
+           	if (memcmp(base + 6, "share_dialog.php",
+        		   ((available_data - 6) < 16 ? available_data - 6 : 16)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "stream/profile.php",
+        		   ((available_data - 6) < 18 ? available_data - 6 : 18)) == 0)
+           	  return HTTP_FACEBOOK;
+	   	     break;
+
+	      case 't':
+                if (memcmp(base + 6, "typeahead_",
+                	   ((available_data - 6) < 10 ? available_data - 6 : 10)) == 0)
+                  return HTTP_FACEBOOK;
+	        break;
+
+	      case 'v':
+           	if (memcmp(base + 6, "video/",
+        		   ((available_data - 6) < 6 ? available_data - 6 : 6)) == 0)
+           	  return HTTP_FACEBOOK;
+	        break;
+	      default:
+	        break;
+	    }
+         }
+       break;
+
+     case 'c':
+      /* */
+       if (memcmp(base, "/cgi-bin/m?ci=",
+        	       ( available_data < 14 ? available_data : 14)) == 0)
+         return HTTP_ADV;
+       else if (memcmp(base, "/cgi-bin/m?rnd=",
+        	       ( available_data < 15 ? available_data : 15)) == 0)
+         return HTTP_ADV;
+       else if (memcmp(base, "/cgi-bin/count?cid=",
+        	       ( available_data < 19 ? available_data : 19)) == 0)
+         return HTTP_ADV;
+       else if (memcmp(base, "/cgi-bin/count?url=",
+        	       ( available_data < 19 ? available_data : 19)) == 0)
+         return HTTP_ADV;
+       else if (memcmp(base, "/cgi-bin/count?rnd=",
+        	       ( available_data < 19 ? available_data : 19)) == 0)
+         return HTTP_ADV;
+       /* */
+       break;
+
+     case 'e':
+       if (memcmp(base, "/editapps.php",
+        	     ( available_data < 13 ? available_data : 13)) == 0)
+          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/editnote.php",
+        	     ( available_data < 13 ? available_data : 13)) == 0)
+          return HTTP_FACEBOOK;
+       break;
+
+     case 'f':
+       if (memcmp(base, "/friends/",
+               ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_FACEBOOK;
+       else if (available_data>15 && (memcmp(base, "/files/",7) ==0) )
+        {
+          status1=0;
+          status2=0;
+          for (i=0;i<8;i++)		     
+           {				     
+             c = *(char *)(base + 7 + i );
+             if (!isdigit(c)) status1=1;
+             if (!isxdigit(c)) status2=1;
+           }				     
+          if (status1==0)		     
+            return HTTP_RAPIDSHARE;	     
+          else if (status2==0)		     
+            return HTTP_MEGAUPLOAD;	     
+        }
+       break;
+
+     case 'g':
+      if (memcmp(base, "/group.php?",
+               ( available_data < 11 ? available_data : 11)) == 0)
+         return HTTP_FACEBOOK;
+      else if (memcmp(base, "/groups.php?",
+               ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'h':
+       if (memcmp(base, "/home.php?ref=",
+               ( available_data < 14 ? available_data : 14)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'k':
+       if (memcmp(base, "/kh/v=",
+               ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_GMAPS;
+       break;
+
+     case 'm':
+       if (memcmp(base, "/maps/gen_",
+               ( available_data < 10 ? available_data : 10)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/maps/vp?",
+               ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/maps/l?",
+               ( available_data < 8 ? available_data : 8)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/maps/trends?",
+               ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_GMAPS;
+       break;
+       
+     case 'n':
+       if (memcmp(base, "/notifications.php",
+               ( available_data < 18 ? available_data : 18)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'o':
+       if ( available_data > 14 && (memcmp(base, "/object",7) == 0) )
+     	{
+     	  status1=0;
+     	  i = 7;
+     	  while (i<14)
+     	   {
+     	     c = *(char *)(base + i );
+     	     if (!isdigit(c) && c!='/') 
+     	      {
+     		status1=1;
+     		break;
+     	      }
+     	     i++;
+     	   }
+     	  if (status1==0)
+     	    return HTTP_FACEBOOK;
+     	}		 
+       break;
+
+     case 'p':
+      if (memcmp(base, "/photo.php?pid=",
+        	    ( available_data < 15 ? available_data : 15)) == 0)
+         return HTTP_FACEBOOK;
+      else if (memcmp(base, "/photo_search.php?",
+        	    ( available_data < 18 ? available_data : 18)) == 0)
+         return HTTP_FACEBOOK;
+      else if (memcmp(base, "/posted.php?",
+        	    ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/profile.php?id=",
+        	       ( available_data < 16 ? available_data : 16)) == 0)
+         return HTTP_FACEBOOK;
+       else if (available_data > 14 && (memcmp(base, "/profile",8) == 0))
+        {
+          status1=0;
+          i = 8;
+          while (i<14)
+           {
+             c = *(char *)(base + i );
+             if (!isdigit(c) && c!='/') 
+              {
+        	status1=1;
+        	break;
+              }
+             i++;
+           }
+          if (status1==0)
+            return HTTP_FACEBOOK;
+        }		 
+       break;
+
+     case 'r':
+       if (memcmp(base, "/reqs.php?",
+               ( available_data < 10 ? available_data : 10)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 's':
+       if (memcmp(base, "/safe_image.php?d=",
+        	       ( available_data < 18 ? available_data : 18)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/s.php?",
+        	    ( available_data < 7 ? available_data : 7)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'v':
+       if (memcmp(base, "/videoplayback?ip=",
+                  ( available_data < 18 ? available_data : 18)) == 0)
+          return HTTP_YOUTUBE;
+       else if (memcmp (base, "/videoplayback?id=",
+                  ( available_data < 18 ? available_data : 18)) == 0)
+          return HTTP_GOOGLEVIDEO;
+       else if (memcmp(base, "/vimeo/v/",
+                  ( available_data < 9 ? available_data : 9)) == 0)
+          return HTTP_VIMEO;
+       if (memcmp(base, "/vt/v=",
+               ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_GMAPS;
+       else if (available_data > 12 && (memcmp(base, "/v",2) == 0) )
+   	{
+          status1=0;
+   	  i = 2;
+   	  while (i<12)
+   	   {
+   	     c = *(char *)(base + i );
+    	     if (!isdigit(c) && c!='/')
+   	      {
+   		status1=1;
+   		break;
+   	      }
+   	     i++;
+   	   }
+   	  if (status1==0)
+   	    return HTTP_FACEBOOK;
+   	}		 
+       break;
+
+     case 'w':
+       if (memcmp(base, "/w/index.php?title=",
+        	      ( available_data < 19 ? available_data : 19)) == 0)
+         return HTTP_WIKI;
+       else if (memcmp(base, "/wiki/",
+        	       ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_WIKI;
+       else if (memcmp(base, "/www/app_full_proxy.php?app=",
+        	       ( available_data < 28 ? available_data : 28)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'x':
+       if (available_data>16 && (memcmp(base, "/x/", 3) == 0))
+        {
+          status1=0;
+          status2=0;
+  	  i = 3;
+  	  
+	  while (i<14)
+  	   {
+  	     c = *(char *)(base + i );
+  	     if (c=='/') 
+  	      {
+  	     	status2=1;
+  	     	break;
+  	      }
+  	     if (!isdigit(c)) 
+  	      {
+  	     	status1=1;
+  	     	break;
+  	      }
+  	     i++;
+  	   }
+  	 if (status1==0 && status2==1)
+  	   {
+  	     if ((memcmp(base + i,"/false/p_",
+     	     	    ((available_data - i ) < 9 ? available_data - i : 9)) == 0)
+  	     	 || (memcmp(base + i,"/true/p_",
+     	     	    ((available_data - i ) < 8 ? available_data - i : 8)) == 0)
+  	     	)
+  	     return HTTP_FACEBOOK;
+  	   }
+     	 }
+       break;
+
+     case '0':
+     case '1':
+     case '2':
+     case '3':
+     case '4':
+     case '5':
+     case '6':
+     case '7':
+     case '8':
+     case '9':
+       if (available_data>25)
+        {
+  	  c = *(char *)(base + 2 );
+          if (!isdigit(c))
+	    break;
+
+          status1=0;
+          status2=0;
+	  i = 3;
+	  while (i<6)
+  	   {
+  	     c = *(char *)(base + i );
+  	     if (c=='/') 
+  	      {
+  	     	status2=1;
+  	     	break;
+  	      }
+  	     if (!isdigit(c)) 
+  	      {
+  	     	status1=1;
+  	     	break;
+  	      }
+  	     i++;
+  	   }
+  	 if (status1==0 && status2==1)
+  	   {
+	     int digit_count = 0;
+             status1=0;
+             status2=0;
+	     i++;
+             while (i < 20)
+	      {
+	        c = *(char *)(base + i );
+  	     	if (c=='_') 
+  	     	 {
+  	     	   status2=1;
+  	     	   break;
+  	     	 }
+  	     	if (!isdigit(c)) 
+  	     	 {
+  	     	   status1=1;
+  	     	   break;
+  	     	 }
+                digit_count++;
+		i++;
+	      }
+             if (status1==0 && status2==1 && digit_count>8)
+	      {
+	        status1=0;
+		i++;
+		digit_count = 0;
+                while (digit_count<10 && i < available_data)
+	         {
+	           c = *(char *)(base + i );
+  	           if (!isxdigit(c)) 
+  	            {
+  	              status1=1;
+  	              break;
+  	            }
+	           i++;
+		   digit_count++;
+	         }
+		if (status1==0 && digit_count==10)
+    	          return HTTP_FLICKR;
+  	      }
+     	   }
+	}
+       break;
+     
+     default:
+       break;
+   }
+
+  if ( available_data > 14 && 
+           (memcmp(base + 6, "-ak-",4) == 0 ||
+            memcmp(base + 7, "-ak-",4) == 0 ||
+	    memcmp(base + 8, "-ak-",4) == 0))
+    return HTTP_FACEBOOK;
+
+  return HTTP_GET;
+
+}
+
+enum http_content classify_http_post(void *pdata,int data_length)
+{
+  char *base = (char *)pdata+5;
+  int available_data = data_length - 5 ;
+  
+  if (available_data < 1)
+    return HTTP_POST;
+
+  if (*base != 0x2f)
+    return HTTP_POST;
+
+  switch (*(base+1))
+   {
+     case 'a':
+       if (memcmp(base, "/ajax/presence/",
+        	      ( available_data < 15 ? available_data : 15)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/ajax/chat/",
+        	      ( available_data < 11 ? available_data : 11)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/ajax/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'c':
+       if (memcmp(base, "/close/",
+        	      ( available_data < 7 ? available_data : 7)) == 0)
+         return HTTP_RTMPT;
+       break;
+
+     case 'C':
+       if (memcmp(base, "/CLOSE/",
+        	      ( available_data < 7 ? available_data : 7)) == 0)
+         return HTTP_RTMPT;
+       else if (memcmp(base, "/current/flashservices/",
+        	      ( available_data < 23 ? available_data : 23)) == 0)
+         return HTTP_FACEBOOK;
+       break;
+
+     case 'g':
+       if (memcmp(base, "/gateway/gateway.dll?Action=",
+        	      ( available_data < 28 ? available_data : 28)) == 0)
+         return HTTP_MSN;
+       break;
+
+     case 'i':
+       if (memcmp(base, "/idle/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+     case 'I':
+       if (memcmp(base, "/IDLE/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+
+     case 'o':
+       if (memcmp(base, "/open/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+     case 'O':
+       if (memcmp(base, "/OPEN/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+
+     case 's':
+       if (memcmp(base, "/send/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+     case 'S':
+       if (memcmp(base, "/SEND/",
+        	      ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_RTMPT;
+       break;
+
+     default:
+       break;
+   }
+
+  return HTTP_POST;
+
+}
+
+
 void
 tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	       int dir, void *hdr, void *plast)
@@ -287,7 +829,35 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	switch (*((u_int32_t *) pdata))
 	 {
             case GET:
+	      if (dir == C2S)
+	        {
+	          tcp_stats->u_protocols.f_http = current_time;
+	          ptp->state = HTTP_COMMAND;
+                  ptp->http_data = HTTP_GET;
+/*
+                  {
+                   int ii;
+                   printf (" GET ");
+                   for (ii=4;ii<data_length;ii++)
+                    {
+                      printf ("%c",isprint(*(char *)(pdata+ii))?*(char *)(pdata+ii):'.');
+                    }
+                   printf("\n");
+                 }
+*/
+                  ptp->http_data = classify_http_get(pdata,data_length);
+	        }
+	      break;
 	    case POST:
+	      if (dir == C2S)
+	        {
+	          tcp_stats->u_protocols.f_http = current_time;
+	          ptp->state = HTTP_COMMAND;
+		  ptp->http_data = HTTP_POST;
+
+                  ptp->http_data = classify_http_post(pdata,data_length);
+	        }
+	      break;
 	    case HEAD:
 	      if (dir == C2S)
 	        {
@@ -766,12 +1336,24 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	{
 	case OUT_FLOW:
 	  add_histo (L7_TCP_num_out, type);
+	  if (type==L7_FLOW_HTTP)
+	   {
+	     add_histo (L7_HTTP_num_out, ptp->http_data);
+	   }
 	  break;
 	case IN_FLOW:
 	  add_histo (L7_TCP_num_in, type);
+	  if (type==L7_FLOW_HTTP)
+	   {
+	     add_histo (L7_HTTP_num_in, ptp->http_data);
+	   }
 	  break;
 	case LOC_FLOW:
 	  add_histo (L7_TCP_num_loc, type);
+	  if (type==L7_FLOW_HTTP)
+	   {
+	     add_histo (L7_HTTP_num_loc, ptp->http_data);
+	   }
 	  break;
 	}
 return;
@@ -904,14 +1486,20 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
    if (internal_src && !internal_dst)
     {
        L7_bitrate.out[type] += len;
+      if (type==L7_FLOW_HTTP)
+         HTTP_bitrate.out[thisflow->http_data] += len;
     }
   else if (!internal_src && internal_dst)
     {
        L7_bitrate.in[type] += len;
+      if (type==L7_FLOW_HTTP)
+         HTTP_bitrate.in[thisflow->http_data] += len;
     }
   else if (internal_src && internal_dst)
     {
        L7_bitrate.loc[type] += len;
+      if (type==L7_FLOW_HTTP)
+         HTTP_bitrate.loc[thisflow->http_data] += len;
     }
 
   return;

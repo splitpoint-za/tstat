@@ -543,6 +543,14 @@ struct double_histo_list *L7_UDP_num_out;
 struct double_histo_list *L7_UDP_num_in;
 struct double_histo_list *L7_UDP_num_loc;
 
+struct double_histo_list *L7_HTTP_num_out;
+struct double_histo_list *L7_HTTP_num_in;
+struct double_histo_list *L7_HTTP_num_loc;
+
+struct double_histo_list *http_bitrate_out;
+struct double_histo_list *http_bitrate_in;
+struct double_histo_list *http_bitrate_loc;
+
 /* Chat stat */
 
 #define MSN_CHAT_HISTO 1

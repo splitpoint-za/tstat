@@ -31,6 +31,7 @@ extern unsigned int adx_addr_mask;
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
+extern struct HTTP_bitrates HTTP_bitrate;
 
 
 /* Pointer to the last valid histo */
@@ -1976,6 +1977,32 @@ create_all_histo (void)
 				   "UDP application bitrate [bit/s] - local segments", 0,
 				   L7_FLOW_TOT, 1);
 
+  L7_HTTP_num_out =
+    create_histo ("L7_HTTP_num_out",
+		  "Number of tracked HTTP flows - outgoing flows",
+                  0, HTTP_LAST_TYPE, 1);
+
+  L7_HTTP_num_in =
+    create_histo ("L7_HTTP_num_in",
+		  "Number of tracked HTTP flows - incoming flows ",
+                   0, HTTP_LAST_TYPE, 1);
+
+  L7_HTTP_num_loc =
+    create_histo ("L7_HTTP_num_loc",
+		  "Number of tracked HTTP flows - local flows",
+                   0, HTTP_LAST_TYPE, 1);
+
+  http_bitrate_in = create_histo ("http_bitrate_in",
+				  "HTTP content bitrate [bit/s] - incoming segments", 0,
+				  HTTP_LAST_TYPE, 1);
+  http_bitrate_out = create_histo ("http_bitrate_out",
+				   "HTTP content bitrate [bit/s] - outgoing segments", 0,
+				   HTTP_LAST_TYPE, 1);
+  http_bitrate_loc = create_histo ("http_bitrate_loc",
+				   "HTTP content bitrate [bit/s] - local segments", 0,
+				   HTTP_LAST_TYPE, 1);
+
+
   /* Microsoft messenger  classification */
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
@@ -2044,6 +2071,10 @@ update_fake_histos ()
   fake_histo_bitrate_update (udp_bitrate_in, elapsed_time, L7_udp_bitrate.in, L7_FLOW_TOT);
   fake_histo_bitrate_update (udp_bitrate_out, elapsed_time, L7_udp_bitrate.out, L7_FLOW_TOT);
   fake_histo_bitrate_update (udp_bitrate_loc, elapsed_time, L7_udp_bitrate.loc, L7_FLOW_TOT);
+
+  fake_histo_bitrate_update (http_bitrate_in, elapsed_time, HTTP_bitrate.in, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_out, elapsed_time, HTTP_bitrate.out, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_loc, elapsed_time, HTTP_bitrate.loc, HTTP_LAST_TYPE);
 
 #ifdef MSN_CLASSIFIER
   msn_get_average ();

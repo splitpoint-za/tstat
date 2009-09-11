@@ -146,6 +146,7 @@ unsigned long int f_RTP_tunneled_TCP_count = 0;	/* total RTP flow tunneled on TC
 struct L4_bitrates L4_bitrate;
 struct L7_bitrates L7_bitrate;
 struct L7_bitrates L7_udp_bitrate;
+struct HTTP_bitrates HTTP_bitrate;
 
 #ifdef L3_BITRATE
 unsigned long long L3_bitrate_in;
@@ -597,6 +598,7 @@ main (int argc, char *argv[]) {
   memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
   memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
+  memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
 
   
 #ifndef TSTAT_RUNASLIB
@@ -1155,6 +1157,7 @@ void InitAfterFirstPacketReaded(char *filename, int file_count) {
       memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
       memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
       memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
+      memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
       
       tot_conn_TCP = 0;
       tot_conn_UDP = 0;
@@ -2902,4 +2905,5 @@ void flush_histo_engine(void) {
     memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
     memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
+    memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
 }

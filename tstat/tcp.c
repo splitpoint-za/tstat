@@ -1160,6 +1160,25 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	thisdir->cwin_min = cwin;
     }
 
+  /* Count TCP messages and track message sizes.
+     We split messages on PSH segments 
+  */
+  if (ACK_SET(ptcp))
+   {
+     if ( (PUSH_SET(ptcp)||FIN_SET(ptcp)) && 
+           thisdir->msg_last_seq < thisdir->seq) 
+      {
+        u_int curr_msg_size = thisdir->msg_last_seq==0 ? 
+	                           thisdir->seq - thisdir->min_seq - 1 :
+	                           thisdir->seq - thisdir->msg_last_seq;
+	if (thisdir->msg_count<MAX_COUNT_MESSAGES)
+          thisdir->msg_size[thisdir->msg_count]= curr_msg_size;
+        if (curr_msg_size>0) thisdir->msg_count++;
+        thisdir->msg_last_seq = thisdir->seq;
+     }
+
+   }
+
   /* make upper layer protocol analysis and update the classified bitrate */
 
   proto_analyzer (pip, ptcp, PROTOCOL_TCP, thisdir, *dir, plast);

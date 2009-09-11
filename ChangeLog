@@ -2,8 +2,10 @@
 - Main changes from 2.0 to 2.1:
   * Libtstat: Changed the API for tstat_next_pckt()
   * added snap_len option in dump engine and fixed bug in skype runtime engine
-  * added ip_complete option in dump engine to straightforward dump traces at level 3
-  * added slice_win option in dump engine to control the slicing of the traffic in traces
+  * added ip_complete option in dump engine to straightforward dump traces at 
+    level 3
+  * added slice_win option in dump engine to control the slicing of the traffic
+    in traces
   * added TODO
   * updated ChangeLog and NEWS.in
   * bugfix: corrected use of RUNTIME_CONFIG_IDLE and removed skype debug 
@@ -34,8 +36,13 @@
   * Optional early closure for singleton TCP/UDP flows (SYN or UDP flooding)
   * SSH 2.0/1.99 Handshake identification
   * DNS identification
-  * Change: ADX histogram includes only external addresses (if existing, i.e. -N defined)
+  * Change: ADX histogram includes only external addresses (if existing, 
+    i.e. -N defined)
   * ADX histogram: added 'adx_mask <size>' option to histogram configuration
+  * Change: dynamic allocation of Skype/Bayes data structures to reduce 
+    memory footprint when Skype identification is not active
+  * Added HTTP flow content identification, based on the shallow matching of 
+    the URL path (currently RRD only)
 
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made
