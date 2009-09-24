@@ -46,6 +46,7 @@
 #define SSL_PROTOCOL   8192
 #define OBF_PROTOCOL  16384
 #define SSH_PROTOCOL  32768
+#define RTMP_PROTOCOL 65536
 
 /* IP address classes */
 #define UNICAST       0

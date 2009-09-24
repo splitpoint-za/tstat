@@ -17,7 +17,7 @@ CREATE TABLE tcp (
   duration double NOT NULL default "0",
   src_internal tinyint(1) default NULL,
   dst_internal tinyint(1) default NULL,
-  conn_type set("HTTP","RSTP","RTP","ICY","RTCP","MSN","YMSG","XMPP","P2P","SKYPE","SMTP","POP3","IMAP","SSL","OBF","SSH") NOT NULL default "",
+  conn_type set("HTTP","RSTP","RTP","ICY","RTCP","MSN","YMSG","XMPP","P2P","SKYPE","SMTP","POP3","IMAP","SSL","OBF","SSH","RTMP") NOT NULL default "",
   p2p_type set("","ED2K","DATA_KAZAA","DATA_ED2K","DATA_DC","DC","DATA_GNU","GNU","KAZAA","BIT","APPLE","SOUL","WINMX","ARES","MUTE","WASTE","XDCC","KAD","KADU") NOT NULL default "",
   ed2k_data smallint(5) unsigned default NULL,
   ed2k_sig smallint(5) unsigned default NULL,

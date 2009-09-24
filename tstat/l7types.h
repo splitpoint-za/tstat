@@ -74,6 +74,8 @@
 #define L7_FLOW_DNS             36
 #define L7_FLOW_SSH             37
 
+#define L7_FLOW_RTMP            38
+
 #define L7_FLOW_UNKNOWN         49    /* Unknown is set to the largest ID */
 #define L7_FLOW_TOT             50    /* Large to leave space for future  */
 				      /* protocol types */

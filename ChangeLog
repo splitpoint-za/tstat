@@ -43,6 +43,7 @@
     memory footprint when Skype identification is not active
   * Added HTTP flow content identification, based on the shallow matching of 
     the URL path (currently RRD only)
+  * RTMP (Adobe Flash Streaming Protocol) identification
 
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made

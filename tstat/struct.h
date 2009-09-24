@@ -490,6 +490,7 @@ enum state_type
   IMAP_COMMAND,
   SSL_HANDSHAKE,
   SSH_SERVER,
+  RTMP_HANDSHAKE,
   IGNORE_FURTHER_PACKETS
 };
 
@@ -553,6 +554,12 @@ struct stcp_pair
   unsigned state_22_18:1;
   unsigned state_6:1;
   unsigned state_6_46:1;
+
+  /* rtmp identification */
+  unsigned state_rtmp_c2s_seen:1;
+  unsigned state_rtmp_s2c_seen:1;
+  unsigned state_rtmp_c2s_hand:1;
+  unsigned state_rtmp_s2c_hand:1;
 
 };
 typedef struct stcp_pair tcp_pair;

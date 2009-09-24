@@ -154,6 +154,7 @@ Connection type (Column no. 97) description (from protocol.h)
 #    8192 # SSL/TLS protocol		#
 #   16384 # ED2K protocol (obfuscated)	# 
 #   32768 # SSH 2.0/1.99 protocol	# 
+#   65536 # RTMP protocol		# 
 #########################################
 
 Since the connection type is a bitmask, it's possible to have combinated
