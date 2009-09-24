@@ -130,6 +130,8 @@ Here it follows a brief description of the columns.
 # 103 # ED2K C2C       # For P2P ED2K flows, the number of client<->client messages
 # 104 # ED2K Chat      # For P2P ED2K flows, the number of chat messages 
 ############################################################################
+# 105 # HTTP type      # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+############################################################################
 
 Connection type (Column no. 97) description (from protocol.h)
 -------------------------------------------------------------
@@ -195,3 +197,28 @@ P2P type (Column no. 98) description (from ipp2p_tstat.h)
 Some of these values are actually internally used for UDP only, 
 or correspond to currently disabled alternate matching rules,
 so they might never appear in log_tcp_(no)complete. 
+
+HTTP Web2.0 type (Column no. 105) description (from struct.h)
+---------------------------------------------------------
+##########################################################################
+# Value	# Internal          # Description				 #
+##########################################################################
+# 1	# HTTP_GET	    # Unclassified GET command  		 #
+# 2	# HTTP_POST	    # Unclassified POST command 		 #
+# 3	# HTTP_MSN          # MSN Chat command tunneled over HTTP (POST) #
+# 4	# HTTP_RTMPT        # RTMPT - RTMP over HTTP Tunnel (POST)	 #
+# 5	# HTTP_YOUTUBE      # YouTube video content download (GET)	 #
+# 6	# HTTP_GOOGLEVIDEO  # GoogleVideo video content download (GET)   #
+# 7	# HTTP_VIMEO        # Vimeo video content download (GET)	 #
+# 8	# HTTP_WIKI         # Wikipedia (GET)				 #
+# 9	# HTTP_RAPIDSHARE   # RapidShare file download (GET)		 #
+# 10	# HTTP_MEGAUPLOAD   # MegaUpload file download (GET)		 #
+# 11	# HTTP_FACEBOOK     # Facebook-related connections (GET/POST)	 #
+# 12	# HTTP_ADV          # Site advertisement (GET)  		 #
+# 13	# HTTP_FLICKR       # Flickr photo download (GET)		 #
+# 14	# HTTP_GMAPS        # GoogleMaps images (GET)			 #
+##########################################################################
+
+These values are different from 0 only for identified HTTP connections 
+(column no. 97). There constants are also used in the RRD data and in 
+histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).

@@ -2718,6 +2718,14 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       /*      currently only for ED2K-TCP - MMM 5/6/08*/
       fprintf (fp, " %d", ptp_save->p2p_msg_count);
 
+      /* Web2.0: added 105th colon: HTTP content type */
+      /* 
+         Using http_data+1 so that valid values are > 0, i.e. GET is 1,
+         POST is 2, etc.
+      */
+      fprintf (fp, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
+                          ptp_save->http_data + 1 : 0 );
+
       /* write to log file */
       fprintf (fp, "\n");
 
