@@ -129,26 +129,33 @@ Bool is_imap_tag(void *pdata)
 
 void rtmp_handshake_check(tcp_pair *ptp, void *pdata, int payload_len, int dir)
 {
+  char c;
+  
   /* Check first byte of the first data segment in both directions...*/
 
   if (ptp->state_rtmp_c2s_seen==1 && ptp->state_rtmp_s2c_seen==1)
     return;
     
+  c = *(char *)pdata; /* First byte in the payload: 
+                         must be 0x03 (unencrypted), 0x06 (encrypted) 
+                         or 0x08 (further encrypted)
+		      */ 
+    
   if (dir == C2S && ptp->state_rtmp_c2s_seen==0)
     { 
       ptp->state_rtmp_c2s_seen=1;
-      if ( *(char *)pdata == 0x03 )
-        ptp->state_rtmp_c2s_hand=1;
+      if ( c == 0x03 || c==0x06 || c==0x08 )
+         ptp->state_rtmp_c2s_hand=1;
     }
 
   if (dir == S2C && ptp->state_rtmp_s2c_seen==0)
     { 
       ptp->state_rtmp_s2c_seen=1;
-      if ( *(char *)pdata == 0x03 )
+      if ( c == 0x03 || c==0x06 || c==0x08 )
         ptp->state_rtmp_s2c_hand=1;
     }
     
-  if ( ptp->state_rtmp_c2s_hand == 1 && ptp->state_rtmp_s2c_hand == 1) 
+  if ( ptp->state_rtmp_c2s_hand == 1 && ptp->state_rtmp_s2c_hand == 1)
     ptp->con_type |= RTMP_PROTOCOL;
 
   return;
@@ -1412,7 +1419,8 @@ int map_flow_type(tcp_pair *thisflow)
      if (thisflow->c2s.msg_count>0 && thisflow->s2c.msg_count>0)
        {
          if (thisflow->c2s.msg_size[0]==1537 &&
-             thisflow->s2c.msg_size[0]==3073) 
+             ( thisflow->s2c.msg_size[0]==3073 || 
+	       thisflow->s2c.msg_size[0]==1537) ) 
            type = L7_FLOW_RTMP;
          else
           /* If con_type was set to RTMP_PROTOCOL, I already 
