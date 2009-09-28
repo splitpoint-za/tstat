@@ -456,7 +456,12 @@ int dpmi_parse_config (const char *fname);
 
 void *MemCpy_TCPTRACE (void *p1, void *p2, size_t n);	/* in tstat.c */
 void *MemCpy_OPTIMIZED (void *p1, void *p2, size_t n);	/* in tcptrace.c */
+
+/* Removed the usage to MemCpy_OPTIMIZED, that might not be thread-safe and
+the glibc memcpy seems to be faster nowadays -MMM- */
+/*
 #define memcpy(p1,p2,n) MemCpy_OPTIMIZED(p1,p2,n);
+*/
 
 #ifndef EOL
 #define EOL          0xa
