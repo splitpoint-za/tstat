@@ -290,6 +290,11 @@ enum http_content classify_http_get(void *pdata,int data_length)
 
   switch (*(base+1))
    {
+     case 'A':
+       if (memcmp(base, "/ADSAdClient",
+               ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_ADV;
+       break;
      case 'a':
        if (memcmp(base, "/ads3/flyers/",
         	      ( available_data < 13 ? available_data : 13)) == 0)
@@ -300,6 +305,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/apps/application.php",
         	     ( available_data < 21 ? available_data : 21)) == 0)
           return HTTP_FACEBOOK;
+       else if (memcmp(base, "/adj/",
+        	     ( available_data < 5 ? available_data : 5)) == 0)
+          return HTTP_ADV;
        else if ( available_data > 10 && (memcmp(base, "/ajax/",6) == 0) )
          {
 	   switch (*(base+6))
@@ -755,20 +763,23 @@ enum http_content classify_http_post(void *pdata,int data_length)
        if (memcmp(base, "/close/",
         	      ( available_data < 7 ? available_data : 7)) == 0)
          return HTTP_RTMPT;
+       else if (memcmp(base, "/current/flashservices/",
+        	      ( available_data < 23 ? available_data : 23)) == 0)
+         return HTTP_FACEBOOK;
        break;
 
      case 'C':
        if (memcmp(base, "/CLOSE/",
         	      ( available_data < 7 ? available_data : 7)) == 0)
          return HTTP_RTMPT;
-       else if (memcmp(base, "/current/flashservices/",
-        	      ( available_data < 23 ? available_data : 23)) == 0)
-         return HTTP_FACEBOOK;
        break;
 
      case 'g':
        if (memcmp(base, "/gateway/gateway.dll?Action=",
         	      ( available_data < 28 ? available_data : 28)) == 0)
+         return HTTP_MSN;
+       else if (memcmp(base, "/gateway/gateway.dll?SessionID=",
+        	      ( available_data < 31 ? available_data : 31)) == 0)
          return HTTP_MSN;
        break;
 
