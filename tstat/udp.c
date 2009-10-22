@@ -153,6 +153,12 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
   udp_pair *pup_last;
   udp_pair tp_in;
 
+  int prof_curr_clk;
+  struct timeval prof_tm;
+  double prof_curr_tm;
+  struct tms prof_curr_tms;
+  double cpu;
+
 
   int dir;
   hash hval;
@@ -199,6 +205,35 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 	    return (pup);
 	}
       pup_last = pup;
+    }
+
+    /* profile CPU */
+    if (profile_cpu -> flag == HISTO_ON) {
+        prof_curr_clk = (int)clock();
+        gettimeofday(&prof_tm, NULL);
+        prof_curr_tm = time2double(prof_tm)/1e6;
+        times(&prof_curr_tms);
+        
+        
+        if (prof_curr_tm - prof_last_tm > PROFILE_IDLE) {
+            /* system cpu */
+            cpu = 1.0 * (prof_curr_tms.tms_stime - prof_last_tms.tms_stime) / prof_cps /
+                  (prof_curr_tm - prof_last_tm) * 100;
+            AVE_new_step(prof_tm, &ave_win_sys_cpu, cpu);
+            // system + user cpu
+            //usr_cpu = 1.0 * (prof_curr_clk - prof_last_clk) / CLOCKS_PER_SEC / 
+            //      (prof_curr_tm - prof_last_tm) * 100;
+            /* user cpu */
+            cpu = 1.0 * (prof_curr_tms.tms_utime - prof_last_tms.tms_utime) / prof_cps /
+                  (prof_curr_tm - prof_last_tm) * 100;
+            AVE_new_step(prof_tm, &ave_win_usr_cpu, cpu);
+        
+            prof_last_tm = prof_curr_tm;
+            prof_last_clk = prof_curr_clk; 
+            prof_last_tms = prof_curr_tms;
+            max_cpu = (max_cpu < cpu) ? cpu : max_cpu;
+            //printf("cpu:%.2f max:%.2f\n", cpu, max_cpu);
+        }
     }
 
 /* if is elapsed an IDLE_TIME from the last cleaning flow operation I will start
@@ -253,10 +288,15 @@ a new one */
   /* put at the head of the access list */
   if (pup)
     {
+      if (profile_flows->flag == HISTO_ON)
+        AVE_arrival(current_time, &active_flows_win_UDP);
       tot_conn_UDP++;
       pup->next = *ppup_head;
       *ppup_head = pup;
     }
+  /* profile number of missed udp session */
+  else if (profile_flows->flag == HISTO_ON)
+        AVE_arrival(current_time, &missed_flows_win_UDP);
 
   *pdir = C2S;
 
@@ -655,6 +695,8 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
 
   /* Consider this flow for statistic collections */
   make_udp_conn_stats (pup, TRUE);
+  if (profile_flows->flag == HISTO_ON)
+     AVE_departure(current_time, &active_flows_win_UDP);
   tot_conn_UDP--;
 
   /* free up hash element->.. */

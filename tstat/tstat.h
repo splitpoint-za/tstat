@@ -687,6 +687,7 @@ void jabber_get_average ();
 
 void AVE_departure (timeval tc, win_stat * w);
 void AVE_arrival (timeval tc, win_stat * w);
+void AVE_new_step (timeval tc, win_stat *w, double val);
 double AVE_get_stat (timeval tc, win_stat * w);
 void AVE_init (win_stat * stat, char *name, timeval tc);
 
@@ -720,3 +721,14 @@ void make_udpL7_rate_stats (ucb * thisflow, int len);
 
 tstat_report * get_stats_report(tstat_report *report);
 void log_parse_ini_arg(char *param_name, int param_value);
+
+/* PROFILE VARIABLES */
+#include <sys/times.h>
+/* PROFILE VARIABLES */
+extern int prof_last_clk;            // last amount of clock usage
+extern double prof_last_tm;          // last overall running time
+extern struct tms prof_last_tms;     // last running time (user and sys)
+extern double prof_cps;              // clock per seconds give by sysconf()
+
+#define PROFILE_IDLE 1
+

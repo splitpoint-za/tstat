@@ -853,7 +853,7 @@ typedef struct win_stat
   char name[20];		/* name of observed struct */
   timeval t0;			/* Initial time of this observation window */
   timeval t;			/* Last measurement time */
-  int n;			/* Last measurement value */
+  double n;             /* Last measurement value */
   double tot;			/* Integral of n(t) */
 
 } win_stat;

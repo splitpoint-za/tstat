@@ -551,6 +551,26 @@ struct double_histo_list *http_bitrate_out;
 struct double_histo_list *http_bitrate_in;
 struct double_histo_list *http_bitrate_loc;
 
+/* profiling */
+#define PROFILE_CPU_MAX 1
+#define PROFILE_CPU_USR 2
+#define PROFILE_CPU_SYS 3
+#define PROFILE_CPU_TOT 4
+struct double_histo_list *profile_cpu;
+struct double_histo_list *profile_flows;
+win_stat ave_win_usr_cpu;
+win_stat ave_win_sys_cpu;
+double max_cpu;
+#define PROFILE_FLOWS_MISSED_UDP 1
+#define PROFILE_FLOWS_ACTIVE_UDP 2
+#define PROFILE_FLOWS_MISSED_TCP 3
+#define PROFILE_FLOWS_ACTIVE_TCP 4
+#define PROFILE_FLOWS_TOT 5
+win_stat active_flows_win_TCP;
+win_stat active_flows_win_UDP;
+win_stat missed_flows_win_TCP;
+win_stat missed_flows_win_UDP;
+
 /* Chat stat */
 
 #define MSN_CHAT_HISTO 1

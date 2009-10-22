@@ -94,7 +94,7 @@ AVE_arrival (timeval tc, win_stat * stat)
   stat->n++;
   if (debug > DEBUG_AVERAGE)
     fprintf (fp_stdout, 
-        "new arrival %s: n:%d - tot: %f (elapsed = %f)\n", 
+        "new arrival %s: n:%.3f - tot: %f (elapsed = %f)\n", 
         stat->name, stat->n, stat->tot, elapsed (stat->t, tc));
   stat->t = tc;
 
@@ -108,10 +108,23 @@ AVE_departure (timeval tc, win_stat * stat)
   stat->n--;
   if (debug > DEBUG_AVERAGE)
     fprintf (fp_stdout,
-        "new departure %s: n:%d - tot: %f (elapsed = %f)\n", 
+        "new departure %s: n:%.3f - tot: %f (elapsed = %f)\n", 
         stat->name, stat->n, stat->tot, elapsed (stat->t, tc));
   stat->t = tc;
 }
+
+void
+AVE_new_step (timeval tc, win_stat *stat, double val)
+{
+  stat->tot += elapsed (stat->t, tc) / 1000.0 * stat->n;
+  stat->n = val;
+  if (debug > DEBUG_AVERAGE)
+    fprintf (fp_stdout, 
+        "new step %s: n:%.3f - tot: %f (elapsed = %f)\n", 
+        stat->name, stat->n, stat->tot, elapsed (stat->t, tc));
+  stat->t = tc;
+}
+
 
 double
 AVE_get_stat (timeval tc, win_stat * stat)
@@ -120,7 +133,7 @@ AVE_get_stat (timeval tc, win_stat * stat)
   double avg = stat->tot / elapsed (stat->t0, tc) * 1000;
   if (debug > DEBUG_AVERAGE)
     fprintf (fp_stdout,
-        "new stat %s: n:%d - tot: %f (elapsed = %f) AVG: %f\n",
+        "new stat %s: n:%.3f - tot: %f (elapsed = %f) AVG: %f\n",
 	    stat->name, stat->n, stat->tot, elapsed (stat->t, tc), avg);
   stat->tot = 0;
   stat->t = tc;

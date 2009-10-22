@@ -269,6 +269,12 @@ extern char dump_conf_fname[];
 char runtime_conf_fname[200];
 //static timeval last_runtime_check = {-1,-1};
 
+/* PROFILE VARIABLES */
+int prof_last_clk;              // last amount of clock usage
+double prof_last_tm;            // last overall running time
+struct tms prof_last_tms;       // last running time (user and sys)
+double prof_cps;                // clock per seconds give by sysconf()
+
 #ifdef SIG_CHILD_HANDLER
 /* SIG_CHILD handler (to avoid zombie processes)*/
 void
@@ -490,6 +496,7 @@ main (int argc, char *argv[]) {
   pthread_t thread_done_periodic;
   pthread_t thread_all_dumping;
   pthread_mutexattr_t attr;
+  struct timeval prof_tm;
 
 /*
   if ((argc == 1) && !fExists ("tstat.conf"))
@@ -600,6 +607,12 @@ main (int argc, char *argv[]) {
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
 
+  /* init profile variables */
+  prof_last_clk = (int)clock();
+  gettimeofday(&prof_tm, NULL);
+  prof_last_tm = time2double(prof_tm)/1e6;
+  times(&prof_last_tms);
+  prof_cps = sysconf(_SC_CLK_TCK) * 1.0;
   
 #ifndef TSTAT_RUNASLIB
   /* read each file in turn */

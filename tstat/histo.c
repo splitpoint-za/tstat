@@ -33,6 +33,9 @@ extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 
+extern unsigned long tot_conn_TCP;
+extern unsigned long tot_conn_UDP;
+
 
 /* Pointer to the last valid histo */
 struct double_histo_list *hl = NULL;
@@ -965,6 +968,8 @@ print_histo (struct double_histo_list *phisto, char *titolo, int flag)
 void
 create_all_histo (void)
 {
+  struct timeval prof_tm;
+
 /*-------------------------------------------------------------*/
 /* NOTE                                                        */
 /*      variable name MUST be SHORTER (<) than 20              */
@@ -2052,6 +2057,19 @@ create_all_histo (void)
 		      "Global OTHER bitrate OUT [kbit/s]", 0, 1000000, 100);
     }
 
+    /* profiling */
+    profile_cpu = create_histo("profile_cpu", "cpu load [clock/time]", 0, PROFILE_CPU_TOT, 1);
+    gettimeofday(&prof_tm, NULL);
+    AVE_init(&ave_win_usr_cpu, "usr cpu load", prof_tm);
+    AVE_init(&ave_win_sys_cpu, "sys cpu load", prof_tm);
+    max_cpu = 0;
+
+    profile_flows =
+        create_histo("profile_flows", "flows handled", 0, PROFILE_FLOWS_TOT, 1);
+    AVE_init(&active_flows_win_TCP, "active flows TCP", current_time);
+    AVE_init(&active_flows_win_UDP, "active flows UDP", current_time);
+    AVE_init(&missed_flows_win_TCP, "missed flows TCP", current_time);
+    AVE_init(&missed_flows_win_UDP, "missed flows UDP", current_time);
 }
 
 extern struct bitrates bitrate;
@@ -2059,6 +2077,8 @@ extern struct bitrates bitrate;
 void
 update_fake_histos ()
 {
+  struct timeval prof_tm;
+  double sys_cpu, usr_cpu;
   double elapsed_time = elapsed (last_time_step, current_time) / 1000.0;
   fake_histo_bitrate_update (ip_bitrate_in, elapsed_time, L4_bitrate.in, 4);
   fake_histo_bitrate_update (ip_bitrate_out, elapsed_time, L4_bitrate.out, 4);
@@ -2085,4 +2105,36 @@ update_fake_histos ()
 #ifdef XMPP_CLASSIFIER
   jabber_get_average ();
 #endif
+  /* profile */
+    
+    /*
+  printf("tcp:%f udp:%f\n", 
+    AVE_get_stat(current_time, &active_flows_win_TCP),
+    AVE_get_stat(current_time, &active_flows_win_UDP));
+*/
+
+  if (profile_flows->flag == HISTO_ON) {
+      set_histo(profile_flows, PROFILE_FLOWS_ACTIVE_TCP, AVE_get_stat(current_time, &active_flows_win_TCP));
+      set_histo(profile_flows, PROFILE_FLOWS_ACTIVE_UDP, AVE_get_stat(current_time, &active_flows_win_UDP));
+      set_histo(profile_flows, PROFILE_FLOWS_MISSED_TCP, AVE_get_stat(current_time, &missed_flows_win_TCP));
+      set_histo(profile_flows, PROFILE_FLOWS_MISSED_UDP, AVE_get_stat(current_time, &missed_flows_win_UDP));
+      missed_flows_win_TCP.n = 0;
+      missed_flows_win_UDP.n = 0;
+  }
+
+  if (profile_cpu -> flag == HISTO_ON) {
+      gettimeofday(&prof_tm, NULL);
+      usr_cpu = AVE_get_stat(prof_tm, &ave_win_usr_cpu);
+      sys_cpu = AVE_get_stat(prof_tm, &ave_win_sys_cpu);
+      set_histo(profile_cpu, PROFILE_CPU_USR, (int)(usr_cpu + 0.5));
+      set_histo(profile_cpu, PROFILE_CPU_SYS, (int)(sys_cpu + 0.5));
+      set_histo(profile_cpu, PROFILE_CPU_MAX, (int)(max_cpu - usr_cpu - sys_cpu + 0.5));
+      ave_win_usr_cpu.n = 0;
+      ave_win_sys_cpu.n = 0;
+      max_cpu = 0;
+      //printf("usr:%ld sys:%ld max:%ld\n", 
+      //  profile_cpu -> current_data[PROFILE_CPU_USRSYS],
+      //  profile_cpu -> current_data[PROFILE_CPU_SYS],
+      //  profile_cpu -> current_data[PROFILE_CPU_MAX]);
+  }
 }

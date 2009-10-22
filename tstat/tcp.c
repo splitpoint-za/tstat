@@ -79,6 +79,8 @@ static u_int FinCount (tcp_pair * ptp);
 void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
+
+
 #ifdef CHECK_TCP_DUP
 Bool
 dup_tcp_check (struct ip *pip, struct tcphdr *ptcp, tcb * thisdir)
@@ -398,6 +400,12 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
   int dir;
   hash hval;
 
+  int prof_curr_clk;
+  struct timeval prof_tm;
+  double prof_curr_tm;
+  struct tms prof_curr_tms;
+  double cpu;
+
   /* grab the address from this packet */
   CopyAddr (&tp_in, pip, ntohs (ptcp->th_sport), ntohs (ptcp->th_dport));
 
@@ -464,6 +472,36 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
       fprintf (fp_stdout, "tracing a new TCP flow\n");
     }
 
+    if (profile_cpu -> flag == HISTO_ON) {
+        prof_curr_clk = (int)clock();
+        gettimeofday(&prof_tm, NULL);
+        prof_curr_tm = time2double(prof_tm)/1e6;
+        times(&prof_curr_tms);
+        
+        
+        if (prof_curr_tm - prof_last_tm > PROFILE_IDLE) {
+            /* system cpu */
+            cpu = 1.0 * (prof_curr_tms.tms_stime - prof_last_tms.tms_stime) / prof_cps /
+                  (prof_curr_tm - prof_last_tm) * 100;
+            AVE_new_step(prof_tm, &ave_win_sys_cpu, cpu);
+            // system + user cpu 
+            //cpu = 1.0 * (prof_curr_clk - prof_last_clk) / CLOCKS_PER_SEC / 
+            //      (prof_curr_tm - prof_last_tm) * 100;
+            //AVE_new_step(prof_tm, &ave_win_usrsys_cpu, cpu);
+            cpu = 1.0 * (prof_curr_tms.tms_utime - prof_last_tms.tms_utime) / prof_cps /
+                  (prof_curr_tm - prof_last_tm) * 100;
+            AVE_new_step(prof_tm, &ave_win_usr_cpu, cpu);
+        
+            prof_last_tm = prof_curr_tm;
+            prof_last_clk = prof_curr_clk; 
+            prof_last_tms = prof_curr_tms;
+            max_cpu = (max_cpu < cpu) ? cpu : max_cpu;
+            //printf("cpu:%.2f max:%.2f\n", cpu, max_cpu);
+        }
+    }
+    
+    
+
   // we fire it at DOUBLE rate, but actually clean only those > TCP_IDLE_TIME
 #ifdef WIPE_TCP_SINGLETONS
   if (elapsed (last_cleaned, current_time) > TCP_SINGLETON_TIME / 2)
@@ -520,8 +558,15 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
         "** out of memory when creating flows - considering a not_id_p\n");
 	}
       not_id_p++;
+
+    /* profile number of missed TCP session */
+    if (profile_flows->flag == HISTO_ON)
+        AVE_arrival(current_time, &missed_flows_win_TCP);
+
       return (NULL);
     }
+  if (profile_flows->flag == HISTO_ON)
+    AVE_arrival(current_time, &active_flows_win_TCP);
   tot_conn_TCP++;
   ptph = NewPTPH_2 ();
   ptph->ttp_ptr = temp_ttp;
@@ -696,6 +741,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
     {
       //fprintf (fp_stdout, "  Closing a half duplex flow\n");
+      if (profile_flows->flag == HISTO_ON)
+        AVE_departure(current_time, &active_flows_win_TCP);
       tot_conn_TCP--;
       make_conn_stats (ptp_save,
 		       (ptp_save->s2c.syn_count > 0
@@ -1028,6 +1075,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (ConnReset (ptp_save))
 	{
 	  //fprintf (fp_stdout, "  (new reset)\n");
+      if (profile_flows->flag == HISTO_ON)
+        AVE_departure(current_time, &active_flows_win_TCP);
 	  tot_conn_TCP--;
 	  make_conn_stats (ptp_save,
 			   (ptp_save->s2c.syn_count > 0
@@ -1192,7 +1241,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if (ConnComplete (ptp_save))
     {
       //fprintf (fp_stdout, "  (new complete)\n");
-
+      if (profile_flows->flag == HISTO_ON)
+        AVE_departure(current_time, &active_flows_win_TCP);
       tot_conn_TCP--;
       make_conn_stats (ptp_save, TRUE);
 
@@ -1408,6 +1458,8 @@ trace_done_periodic ()
 
 	  make_conn_stats (ptp, (ptp->s2c.syn_count > 0)
 			   && (ptp->c2s.syn_count > 0));
+      if (profile_flows->flag == HISTO_ON)
+        AVE_departure(current_time, &active_flows_win_TCP);
 	  tot_conn_TCP--;
 
 	  /* free up hash element->.. */
