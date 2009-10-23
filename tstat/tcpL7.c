@@ -490,6 +490,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_GMAPS;
        break;
        
+     case 'M':
+       if (memcmp(base, "/Movies/nexos/MPEG2/",
+               ( available_data < 20 ? available_data : 20)) == 0)
+         return HTTP_VOD;
+       break;
+
      case 'n':
        if (memcmp(base, "/notifications.php",
                ( available_data < 18 ? available_data : 18)) == 0)
@@ -881,17 +887,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          tcp_stats->u_protocols.f_http = current_time;
 	          ptp->state = HTTP_COMMAND;
                   ptp->http_data = HTTP_GET;
-/*
-                  {
-                   int ii;
-                   printf (" GET ");
-                   for (ii=4;ii<data_length;ii++)
-                    {
-                      printf ("%c",isprint(*(char *)(pdata+ii))?*(char *)(pdata+ii):'.');
-                    }
-                   printf("\n");
-                 }
-*/
+
                   ptp->http_data = classify_http_get(pdata,data_length);
 	        }
 	      break;
@@ -1334,7 +1330,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	  {
             if (ptp->packets > MAX_SSL_HANDSHAKE_PACKETS )
 	     { 
-	    //   printf("Reset SSL State\n");
+	       /* Reset SSL State */
 	       ptp->state = UNKNOWN_TYPE;
 	     }
 	  }  

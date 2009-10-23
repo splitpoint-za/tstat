@@ -1,4 +1,4 @@
-27/02/09 -MMM & Finamore
+23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:
   * Libtstat: Changed the API for tstat_next_pckt()
   * added snap_len option in dump engine and fixed bug in skype runtime engine
@@ -42,8 +42,10 @@
   * Change: dynamic allocation of Skype/Bayes data structures to reduce 
     memory footprint when Skype identification is not active
   * Added HTTP flow content identification, based on the shallow matching of 
-    the URL path (currently RRD only)
+    the URL path
   * RTMP (Adobe Flash Streaming Protocol) identification
+  * Added RRD/histograms to profile Tstat concurrent flows and CPU usage
+  * Added identification of private Bittorrent trackers
 
 19/10/08 -Finamore
 -Restarting point for Tstat because a lot of changes/adds has been made

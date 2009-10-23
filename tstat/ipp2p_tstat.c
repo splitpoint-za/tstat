@@ -1048,7 +1048,7 @@ int
 search_bittorrent (const unsigned char *payload, const int plen,
 		   int payload_len)
 {
-  if (plen > 20 && payload_len > 5)
+  if (plen > 20 && payload_len > 6)
     {
       /* test for match 0x13+"BitTorrent protocol" */
       if (payload[0] == 0x13)
@@ -1063,7 +1063,8 @@ search_bittorrent (const unsigned char *payload, const int plen,
        * then it can follow: scrape| announce
        * and then ?hash_info=
        */
-      if (memcmp (payload, "GET /", 5) == 0)
+      if (memcmp (payload, "GET /", 5) == 0 && 
+            (payload[5]==0x61 || payload[5]==0x73)) /* either 'a' or 's' */ 
 	{
 	  /* message scrape */
 	  if (memcmp
@@ -1075,6 +1076,19 @@ search_bittorrent (const unsigned char *payload, const int plen,
 	      (payload + 5, "announce?info_hash=",
 	       ((payload_len - 5) < 19 ? payload_len - 5 : 19)) == 0)
 	    return (IPP2P_BIT * 100 + 2);
+	  /* Private torrent messages */
+	  if (memcmp
+	      (payload + 5, "announce.php?info_hash=",
+	       ((payload_len - 5) < 23 ? payload_len - 5 : 23)) == 0)
+	    return (IPP2P_BIT * 100 + 3);
+	  if (memcmp
+	      (payload + 5, "announce.php?passkey=",
+	       ((payload_len - 5) < 21 ? payload_len - 5 : 21)) == 0)
+	    return (IPP2P_BIT * 100 + 4);
+	  if (memcmp
+	      (payload + 5, "announce.php?pid=",
+	       ((payload_len - 5) < 17 ? payload_len - 5 : 17)) == 0)
+	    return (IPP2P_BIT * 100 + 5);
 	}
     }
   else

@@ -217,8 +217,11 @@ HTTP Web2.0 type (Column no. 105) description (from struct.h)
 # 12	# HTTP_ADV          # Site advertisement (GET)  		 #
 # 13	# HTTP_FLICKR       # Flickr photo download (GET)		 #
 # 14	# HTTP_GMAPS        # GoogleMaps images (GET)			 #
+# 15	# HTTP_VOD          # Video-on-Demand download (GET) [*]	 #
 ##########################################################################
 
 These values are different from 0 only for identified HTTP connections 
 (column no. 97). There constants are also used in the RRD data and in 
 histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).
+[*] HTTP_VOD connection identification is experimental and not valid for
+usage outside Politecnico di Torino.

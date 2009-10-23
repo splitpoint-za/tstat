@@ -510,6 +510,7 @@ enum http_content
   HTTP_ADV,		/* Site advertisement (GET) 			*/
   HTTP_FLICKR,		/* Flickr photo download (GET) 			*/
   HTTP_GMAPS,		/* GoogleMaps images (GET) 			*/
+  HTTP_VOD,             /* Video-On-Demand (GET) [internal use only]    */
   HTTP_LAST_TYPE
 };
 
