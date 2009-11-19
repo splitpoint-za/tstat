@@ -157,7 +157,7 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
   struct timeval prof_tm;
   double prof_curr_tm;
   struct tms prof_curr_tms;
-  double cpu;
+  double cpu_sys,cpu_usr;
 
 
   int dir;
@@ -217,21 +217,21 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
         
         if (prof_curr_tm - prof_last_tm > PROFILE_IDLE) {
             /* system cpu */
-            cpu = 1.0 * (prof_curr_tms.tms_stime - prof_last_tms.tms_stime) / prof_cps /
+            cpu_sys = 1.0 * (prof_curr_tms.tms_stime - prof_last_tms.tms_stime) / prof_cps /
                   (prof_curr_tm - prof_last_tm) * 100;
-            AVE_new_step(prof_tm, &ave_win_sys_cpu, cpu);
+            AVE_new_step(prof_tm, &ave_win_sys_cpu, cpu_sys);
             // system + user cpu
             //usr_cpu = 1.0 * (prof_curr_clk - prof_last_clk) / CLOCKS_PER_SEC / 
             //      (prof_curr_tm - prof_last_tm) * 100;
             /* user cpu */
-            cpu = 1.0 * (prof_curr_tms.tms_utime - prof_last_tms.tms_utime) / prof_cps /
+            cpu_usr = 1.0 * (prof_curr_tms.tms_utime - prof_last_tms.tms_utime) / prof_cps /
                   (prof_curr_tm - prof_last_tm) * 100;
-            AVE_new_step(prof_tm, &ave_win_usr_cpu, cpu);
+            AVE_new_step(prof_tm, &ave_win_usr_cpu, cpu_usr);
         
             prof_last_tm = prof_curr_tm;
             prof_last_clk = prof_curr_clk; 
             prof_last_tms = prof_curr_tms;
-            max_cpu = (max_cpu < cpu) ? cpu : max_cpu;
+            max_cpu = (max_cpu < (cpu_usr+cpu_sys)) ? cpu_usr+cpu_sys : max_cpu;
             //printf("cpu:%.2f max:%.2f\n", cpu, max_cpu);
         }
     }
