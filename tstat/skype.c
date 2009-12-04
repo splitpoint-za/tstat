@@ -1265,6 +1265,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
       ptp->con_type &= ~OBF_PROTOCOL;
+      ptp->con_type &= ~MSE_PROTOCOL;
       pskype->skype_type = C2S_CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))
@@ -1349,6 +1350,7 @@ print_skype_conn_stats_TCP (void *thisdir, int dir)
       /* this is a Skype flow -> set the TCP flow type as well */
       ptp->con_type |= SKYPE_PROTOCOL;
       ptp->con_type &= ~OBF_PROTOCOL;
+      ptp->con_type &= ~MSE_PROTOCOL;
       pskype->skype_type = S2C_CSFT;
 
       switch ((in_out_loc (ptp->internal_src, ptp->internal_dst, dir)))

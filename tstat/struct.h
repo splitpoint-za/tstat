@@ -556,6 +556,15 @@ struct stcp_pair
   unsigned state_6:1;
   unsigned state_6_46:1;
 
+  /* Entropy evaluation to detect encrypted data */
+  u_int16_t nibbles_l[16];
+  u_int16_t nibble_l_count;
+  u_int16_t nibbles_h[16];
+  u_int16_t nibble_h_count;
+  u_int16_t nibble_packet_count;
+  double entropy_l;
+  double entropy_h;
+
   /* rtmp identification */
   unsigned state_rtmp_c2s_seen:1;
   unsigned state_rtmp_s2c_seen:1;

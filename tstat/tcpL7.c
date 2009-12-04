@@ -219,6 +219,55 @@ void ed2k_obfuscate_check(tcp_pair *ptp,int payload_len)
    }
 }
 
+void mse_protocol_check(tcp_pair *ptp)
+{
+/* Identification of BitTorrent Message Stream Encryption protocol
+   At the handshake, the (concurrent) handshake between A<->B is
+    A -> B between 96 and 608 bytes
+    B -> A between 96 and 608 bytes
+   Data entropy is high (>ENTROPY_THRESHOLD for both the high and the low
+   nibbles)
+   Due to the protocol behavior, messages are overlapped and fragmented 
+   randomly, so we must check the cumulative size of consecutive packets
+*/	
+ int length_test;
+
+ if (ptp->c2s.msg_count==0 || ptp->s2c.msg_count==0)
+   return;
+   
+ length_test = FALSE;
+ 
+ if (ptp->c2s.msg_size[0]>=96 && ptp->c2s.msg_size[0]<=608)
+  {
+    if ((ptp->s2c.msg_size[0]>=96 && ptp->s2c.msg_size[0]<=608)||
+        ((ptp->s2c.msg_size[0]+ptp->s2c.msg_size[1])>=96 && 
+           (ptp->s2c.msg_size[0]+ptp->s2c.msg_size[1])<=608))
+     {
+       length_test = TRUE;
+     }
+  }
+ else if ((ptp->c2s.msg_size[0]+ptp->c2s.msg_size[1])>=96 && 
+          (ptp->c2s.msg_size[0]+ptp->c2s.msg_size[1])<=608)
+  {
+    if ((ptp->s2c.msg_size[0]>=96 && ptp->s2c.msg_size[0]<=608)||
+        ((ptp->s2c.msg_size[0]+ptp->s2c.msg_size[1])>=96 && 
+         (ptp->s2c.msg_size[0]+ptp->s2c.msg_size[1])<=608))
+     {
+       length_test = TRUE;
+     }
+  }
+     
+  if (length_test == TRUE && ptp->entropy_h>ENTROPY_THRESHOLD && 
+                             ptp->entropy_l>ENTROPY_THRESHOLD )
+    if (ptp->con_type==UNKNOWN_PROTOCOL)
+      /* Don't overwrite existing classification with MSE/PE */
+      ptp->con_type |= MSE_PROTOCOL; 
+
+ return;
+ 
+}
+
+
 #ifdef MSN_CLASSIFIER
 void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pdata, void *plast)
 {
@@ -236,6 +285,7 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
      case VER:
         ptp->con_type |= MSN_PROTOCOL;
 	ptp->con_type &= ~OBF_PROTOCOL;
+	ptp->con_type &= ~MSE_PROTOCOL;
         ptp->state = MSN_VER_S2C;
         ptp->s2c.msn.MSN_VER_count = 1;
 	
@@ -252,18 +302,21 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
      case USR:
         ptp->con_type |= MSN_PROTOCOL;
 	ptp->con_type &= ~OBF_PROTOCOL;
+	ptp->con_type &= ~MSE_PROTOCOL;
         ptp->state = MSN_USR_S2C;
         ptp->s2c.msn.MSN_USR_count = 1;
 	break;
      case ANS:
         ptp->con_type |= MSN_PROTOCOL;
 	ptp->con_type &= ~OBF_PROTOCOL;
+	ptp->con_type &= ~MSE_PROTOCOL;
         ptp->state = MSN_ANS_COMMAND;
         ptp->s2c.msn.MSN_ANS_count = 1;
 	break;
      case IRO:
         ptp->con_type |= MSN_PROTOCOL;
 	ptp->con_type &= ~OBF_PROTOCOL;
+	ptp->con_type &= ~MSE_PROTOCOL;
         ptp->state = MSN_IRO_COMMAND;
         ptp->s2c.msn.MSN_IRO_count = 1;
         break;
@@ -272,6 +325,85 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
    }
 }
 #endif
+
+void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
+	       int dir, void *hdr, void *plast)
+{
+/* Compute information entropy over high and low nibbles (4 bits)
+   of the available payload. Only the first four payload packets are
+   considered. 
+*/
+  void *pdata;			/*start of payload */
+  tcp_pair *ptp;
+  int data_length, payload_len;
+  int i;
+  char c;
+  char c1,c2;
+  double log2=log(2);
+  double probi;
+
+  tcphdr *ptcp;
+  ptcp = (tcphdr *) hdr;
+
+  if (tproto == PROTOCOL_UDP)
+    {
+       return;
+    }
+
+  ptp = ((tcb *) pdir)->ptp;
+
+  if (ptp == NULL)
+    return;
+
+  if (ptp->nibble_packet_count>=4)
+   return;
+
+  pdata = (char *) ptcp + ptcp->th_off * 4;
+  payload_len = getpayloadlength (pip, plast) - ptcp->th_off * 4;
+  data_length = (char *) plast - (char *) pdata + 1;
+
+  if (data_length <= 0 || payload_len == 0)
+    return;
+
+  for (i=0;i<data_length;i++)
+   {
+     c = *(char *)(pdata+i);
+
+     c1 = c & 0x0f;
+     c2 = (c>>4)&0x0f;
+
+     ptp->nibbles_l[(int)c1]++;
+     ptp->nibble_l_count++;
+     ptp->nibbles_h[(int)c2]++;
+     ptp->nibble_h_count++;
+   }
+   ptp->nibble_packet_count++;
+
+   ptp->entropy_h = 0.0;
+   if (ptp->nibble_h_count>0)
+    {
+      for (i=0; i<16;i++)
+      {
+        if (ptp->nibbles_h[i]==0) continue;
+        probi = ptp->nibbles_h[i]*1.0/ptp->nibble_h_count;
+        ptp->entropy_h += (-1.0)*probi*log(probi)/log2;
+      }
+    }
+
+   ptp->entropy_l = 0.0;
+   if (ptp->nibble_l_count>0)
+    {
+      for (i=0; i<16;i++)
+      {
+        if (ptp->nibbles_l[i]==0) continue;
+        probi = ptp->nibbles_l[i]*1.0/ptp->nibble_l_count;
+        ptp->entropy_l += (-1.0)*probi*log(probi)/log2;
+      }
+    }
+
+  return;
+}
+
 
 enum http_content classify_http_get(void *pdata,int data_length)
 {
@@ -852,6 +984,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
   ptp = ((tcb *) pdir)->ptp;
 
+  if (ptp!=NULL)
+   {
+     compute_nibbles(pip,pproto,tproto,pdir,dir,hdr,plast);
+   }
+
   if (ptp == NULL || ptp->state == IGNORE_FURTHER_PACKETS)
     return;
 
@@ -869,6 +1006,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
   rtmp_handshake_check(ptp,pdata,payload_len,dir);
 
+  mse_protocol_check(ptp);
+  
   if (dir == C2S)
     tcp_stats = &(ptp->c2s);
   else
@@ -913,6 +1052,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     ptp->state = YMSGP;
 	     ptp->con_type |= YMSG_PROTOCOL;
 	     ptp->con_type &= ~OBF_PROTOCOL;
+	     ptp->con_type &= ~MSE_PROTOCOL;
 
 	      /* try to find Yahoo! Messenger Protocol version */
 
@@ -933,6 +1073,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     ptp->state = XMPP;
 	     ptp->con_type |= XMPP_PROTOCOL;
 	     ptp->con_type &= ~OBF_PROTOCOL;
+	     ptp->con_type &= ~MSE_PROTOCOL;
 	     break;
 #endif
 #ifdef MSN_CLASSIFIER
@@ -1074,6 +1215,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      case SMTP_ehlo:
 	        ptp->con_type |= SMTP_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+   	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 	      default:
@@ -1097,6 +1239,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               case POP_APOP:
 	        ptp->con_type |= POP3_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+  	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 	      default:
@@ -1133,6 +1276,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     {
 	        ptp->con_type |= IMAP_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 		break;
 	     }
@@ -1150,12 +1294,14 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        tcp_stats->u_protocols.f_http = current_time;
 	        ptp->con_type |= HTTP_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = HTTP_RESPONSE;
 	        break;
 	      case ICY:
 	        tcp_stats->u_protocols.f_icy = current_time;
 	        ptp->con_type |= ICY_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = IGNORE_FURTHER_PACKETS;
 	        break;
 #ifdef MSN_CLASSIFIER
@@ -1216,6 +1362,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	           ptp->state = RTSP_RESPONSE;
  	           ptp->con_type |= RTSP_PROTOCOL;
 	           ptp->con_type &= ~OBF_PROTOCOL;
+	           ptp->con_type &= ~MSE_PROTOCOL;
 	         }
 #endif
 	        break;
@@ -1236,6 +1383,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        ptp->state = RTSP_RESPONSE;
 	        ptp->con_type |= RTSP_PROTOCOL;
 	        ptp->con_type &= ~OBF_PROTOCOL;
+	        ptp->con_type &= ~MSE_PROTOCOL;
 	        break;
 	      default:
 	        break;
@@ -1263,6 +1411,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      ptp->state = IGNORE_FURTHER_PACKETS;
 	      ptp->con_type |= RTP_PROTOCOL;
 	      ptp->con_type &= ~OBF_PROTOCOL;
+	      ptp->con_type &= ~MSE_PROTOCOL;
 	    }
 	 }
 #endif
@@ -1324,6 +1473,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	  {
 	    ptp->con_type |= SSL_PROTOCOL;
 	    ptp->con_type &= ~OBF_PROTOCOL;
+	    ptp->con_type &= ~MSE_PROTOCOL;
 	    ptp->state = IGNORE_FURTHER_PACKETS;
 	  }
          else
@@ -1346,6 +1496,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		 {
 	           ptp->con_type |= SSH_PROTOCOL;
 	           ptp->con_type &= ~OBF_PROTOCOL;
+	           ptp->con_type &= ~MSE_PROTOCOL;
 	           ptp->state = IGNORE_FURTHER_PACKETS;
 		 }
 	        break;
@@ -1414,7 +1565,14 @@ int map_flow_type(tcp_pair *thisflow)
 {
    int type=L7_FLOW_UNKNOWN;
 
-   /* OBF (lowest priority) */
+
+   /* MSE (lowest priority) */
+   if(thisflow->con_type & MSE_PROTOCOL)
+   {
+      type = L7_FLOW_MSE;
+   }
+
+   /* OBF (penultimate lowest priority) */
    if(thisflow->con_type & OBF_PROTOCOL)
    {
       type = L7_FLOW_OBF;

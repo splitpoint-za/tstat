@@ -362,6 +362,7 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               
 	      ptp->con_type |= P2P_PROTOCOL;
 	      ptp->con_type &= ~OBF_PROTOCOL;
+	      ptp->con_type &= ~MSE_PROTOCOL;
               
               if (ptp->p2p_type != 0
 		  && (ptp->p2p_type / 100) != (return_code / 100))

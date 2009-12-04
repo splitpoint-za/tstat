@@ -74,7 +74,7 @@ Used only if WIPE_TCP_SINGLETON is defined
 
 /* maximum number of concurrent TCP connection stored in the vector TTP 
 Increase this number on high speed network will help ...*/
-#define MAX_TCP_PAIRS 55023
+#define MAX_TCP_PAIRS 75023
 
 /* maximum number of concurrent UDP connection stored in the vector UTP 
 Increase this number on high speed network will help ...*/
@@ -130,3 +130,8 @@ Increase this number on high speed network will help ...*/
 				   flows. MUST BE a power of 2!!! */
 #define OVERFLOW_TH 2000	/* threshold to consider rtp segment as out
 				   of sequence */
+
+/* Entropy threshold to detect encrypted flows */
+#define ENTROPY_THRESHOLD 3.7   /* Empirically tested that nibble entropy 
+                                   over about 100 random samples is larger
+				   than 3.7 with 99% probability */

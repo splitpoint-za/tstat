@@ -85,9 +85,18 @@ find_ip_eth (unsigned char *buf)
   unsigned short eth_proto_type;	/* the protocol type field of the Ethernet header */
   unsigned short vlan_proto_type;	/* the protocol type field of the VLAN header */
   int offset = -1;		/* the calculated offset that this function will return */
+#ifndef USE_MEMCPY
+  uint16_t *ptype;              /* pointer at the location of the field in the buffer */ 
+#endif
 
+#ifdef USE_MEMCPY
   memcpy (&eth_proto_type, buf + 12, 2);
   eth_proto_type = ntohs (eth_proto_type);
+#else
+  ptype = (uint16_t *)(buf+12);
+  eth_proto_type = ntohs (*ptype);
+#endif
+
   switch (eth_proto_type)
     {
     case ETHERTYPE_IPV6:	/* it's pure IPv6 over ethernet */
@@ -97,15 +106,25 @@ find_ip_eth (unsigned char *buf)
       offset = 14;
       break;
     case ETHERTYPE_PPPOE_SESSION:	/* it's a PPPoE session */
+#ifdef USE_MEMCPY
       memcpy (&ppp_proto_type, buf + 20, 2);
       ppp_proto_type = ntohs (ppp_proto_type);
+#else
+      ptype = (uint16_t *)(buf+20);
+      ppp_proto_type = ntohs (*ptype);
+#endif
       if (ppp_proto_type == 0x0021)	/* it's IP over PPPoE */
 	offset = PPPOE_SIZE;
       break;
     case ETHERTYPE_8021Q:
       offset = 18;
+#ifdef USE_MEMCPY
       memcpy (&vlan_proto_type, buf + 16, 2);
       vlan_proto_type = ntohs (vlan_proto_type);
+#else
+      ptype = (uint16_t *)(buf+16);
+      vlan_proto_type = ntohs (*ptype);
+#endif
       if (vlan_proto_type == ETHERTYPE_MPLS)	/* it's MPLS over VLAN */
         {
 	  offset += 4; /* Skip 4 bytes of MPLS label*/
@@ -132,13 +151,25 @@ find_ip_ppp (unsigned char *buf)
   unsigned char ppp_byte0;	/* the first byte of the PPP frame */
   unsigned short ppp_proto_type;	/* the protocol type field of the PPP header */
   int offset = -1;		/* the calculated offset that this function will return */
+#ifndef USE_MEMCPY
+  uint16_t *ptype;              /* pointer at the location of the field in the buffer */ 
+#endif
 
+#ifdef USE_MEMCPY
   memcpy (&ppp_byte0, buf, 1);
+#else
+  ppp_byte0 = buf[0];
+#endif
   switch (ppp_byte0)
     {
     case 0xff:			/* It is HDLC PPP encapsulation (2 bytes for HDLC and 2 bytes for PPP) */
+#ifdef USE_MEMCPY
       memcpy (&ppp_proto_type, buf + 2, 2);
       ppp_proto_type = ntohs (ppp_proto_type);
+#else
+      ptype = (uint16_t *)(buf+2);
+      ppp_proto_type = ntohs (*ptype);
+#endif
       if (ppp_proto_type == 0x21)	/* That means HDLC PPP is encapsulating IP */
 	offset = 4;
       else			/* That means PPP is *NOT* encapsulating IP */
@@ -150,8 +181,13 @@ find_ip_ppp (unsigned char *buf)
       break;
 
     case 0x00:			/* It is raw PPP encapsulation */
+#ifdef USE_MEMCPY
       memcpy (&ppp_proto_type, buf, 2);
       ppp_proto_type = ntohs (ppp_proto_type);
+#else
+      ptype = (uint16_t *)(buf);
+      ppp_proto_type = ntohs (*ptype);
+#endif
       if (ppp_proto_type == 0x21)	/* It is raw PPP encapsulation of IP with uncompressed (2 bytes) protocol field */
 	offset = 2;
       else			/* That means PPP is *NOT* encapsulating IP */
@@ -172,6 +208,9 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
     int type;
     int iplen;
     static int offset = -1;
+#ifndef USE_MEMCPY
+    struct ether_header *ptr_eth_header;
+#endif
 
     iplen = phdr->caplen;
     if (iplen > IP_MAXPACKET)
@@ -193,27 +232,44 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
         case PCAP_DLT_EN10MB:
             offset = find_ip_eth (buf);	/* Here we check if we are dealing with Straight Ethernet encapsulation or PPPoE */
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
+#else
+	    ptr_eth_header = (struct ether_header *)buf;
+	    eth_header.ether_type = ptr_eth_header->ether_type; /* save ether type */
+#endif
             switch (offset)
             {
                 case -1:		/* Not an IP packet */
                     return (-1);
                 case EH_SIZE:		/* straight Ethernet encapsulation */
+#ifdef USE_MEMCPY
                     memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+		    ip_buf = (char *)(buf + offset);
+#endif
                     callback_plast = ip_buf + iplen - 1;
                     break;
                 case PPPOE_SIZE:	/* PPPoE encapsulation */
                 //case MPLS8021Q_SIZE:		/* VLAN-MPLS encapsulation - same len*/
                     /* we use a fake ether type here */
                     eth_header.ether_type = htons (ETHERTYPE_IP);
+#ifdef USE_MEMCPY
                     memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+		    ip_buf = (char *)(buf + offset);
+#endif
                     callback_plast = ip_buf + iplen - 1;
                     break;
                 case IEEE8021Q_SIZE:	/* VLAN encapsulation */
                 //case MPLS_SIZE:			/* MPLS encapsulation - same len*/
                     /* we use a fake ether type here */
                     eth_header.ether_type = htons (ETHERTYPE_IP);
+#ifdef USE_MEMCPY
                     memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+		    ip_buf = (char *)(buf + offset);
+#endif
                     callback_plast = ip_buf + iplen - 1;
                     break;
                 default:		/* should not be used, but we never know ... */
@@ -223,13 +279,26 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
         case PCAP_DLT_IEEE802:
             /* just pretend it's "normal" ethernet */
             offset = 14;		/* 22 bytes of IEEE cruft */
+#ifdef USE_MEMCPY
             memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
+#else
+	    ptr_eth_header = (struct ether_header *)buf;
+	    eth_header.ether_type = ptr_eth_header->ether_type; /* save ether type */
+#endif
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy (ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = (char *) ip_buf + iplen - 1;
             break;
         case PCAP_DLT_SLIP:
+#ifdef USE_MEMCPY
             memcpy (ip_buf, buf + 16, iplen);
+#else
+            ip_buf = (char *)(buf + 16);
+#endif
             iplen -= 16;
             callback_plast = (char *) ip_buf + iplen - 1;
             break;
@@ -239,7 +308,11 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
             if (offset < 0)		/* Not an IP packet */
                 return (-1);
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_FDDI:
@@ -248,34 +321,54 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
             if (offset < 0)
                 return (-1);
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_NULL:
             /* no phys header attached */
             offset = 4;
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_ATM_RFC1483:
             /* ATM RFC1483 - LLC/SNAP ecapsulated atm */
             iplen -= 8;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + 8, iplen);
+#else
+	    ip_buf = (char *)(buf + 8);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_RAW:
             /* raw IP */
             offset = 0;
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_LINUX_SLL:
             /* linux cooked socket */
             offset = 16;
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
             // Patch sent by Brandon Eisenamann to passby 802.11, LLC/SNAP
@@ -283,26 +376,44 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
         case PCAP_DLT_IEEE802_11:
             offset = 24 + 8;		// 802.11 header + LLC/SNAP header
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_IEEE802_11_RADIO:
             offset = 64 + 24;		//WLAN header + 802.11 header
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy (&eth_header, buf, EH_SIZE);	// save ethernet header
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ptr_eth_header = (struct ether_header *)buf;
+	    eth_header.ether_type = ptr_eth_header->ether_type; /* save ether type */
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_PRISM2:
             offset = 144 + 24 + 8;	// PRISM2+IEEE 802.11+ LLC/SNAP headers
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = ip_buf + iplen - 1;
             break;
         case PCAP_DLT_C_HDLC:
             offset = 4;
             iplen -= offset;
+#ifdef USE_MEMCPY
             memcpy ((char *) ip_buf, buf + offset, iplen);
+#else
+	    ip_buf = (char *)(buf + offset);
+#endif
             callback_plast = (char *) ip_buf + iplen - 1;
             break;
         default:

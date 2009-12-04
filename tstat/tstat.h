@@ -718,6 +718,7 @@ void tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 void make_tcpL7_conn_stats (void * thisdir, int tproto);
 void make_tcpL7_rate_stats (tcp_pair *thisflow, int len);
 void make_udpL7_rate_stats (ucb * thisflow, int len);
+void mse_protocol_check(tcp_pair *thisflow);
 
 tstat_report * get_stats_report(tstat_report *report);
 void log_parse_ini_arg(char *param_name, int param_value);

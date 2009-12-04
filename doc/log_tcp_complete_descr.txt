@@ -157,6 +157,7 @@ Connection type (Column no. 97) description (from protocol.h)
 #   16384 # ED2K protocol (obfuscated)	# 
 #   32768 # SSH 2.0/1.99 protocol	# 
 #   65536 # RTMP protocol		# 
+#  131072 # Bittorrent MSE/PE protocol	# 
 #########################################
 
 Since the connection type is a bitmask, it's possible to have combinated
