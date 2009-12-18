@@ -1483,6 +1483,8 @@ void tstat_new_logdir(char *filename,
     current_time = *pckt_time;
     cur_filename = filename;
     fpnum = 0;
+    if (filename == NULL)
+        filename = "TSTAT_RUNASLIB";
     InitAfterFirstPacketReaded(filename, 1);
 #endif
 }
@@ -1570,7 +1572,10 @@ ProcessFile (char *filename, Bool last)
   /* see how big the file is */
   is_stdin = FALSE;
   filesize = 1;
-  if (FileIsStdin (filename))
+
+  struct stat f_info;
+  stat(filename, &f_info);
+  if (FileIsStdin (filename) || S_ISFIFO(f_info.st_mode)) 
     {
       filesize = 1;
       is_stdin = TRUE;
