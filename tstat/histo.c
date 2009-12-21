@@ -24,9 +24,10 @@ extern Bool printticks;
 extern Bool histo_engine;
 extern Bool histo_engine_log;
 extern Bool adx_engine;
+extern Bool adx2_engine;
 extern Bool global_histo;
 
-extern unsigned int adx_addr_mask;
+extern unsigned int adx_addr_mask[3];
 
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
@@ -35,7 +36,8 @@ extern struct HTTP_bitrates HTTP_bitrate;
 
 extern unsigned long tot_conn_TCP;
 extern unsigned long tot_conn_UDP;
-
+extern unsigned long adx2_bitrate_delta;
+extern unsigned long adx3_bitrate_delta;
 
 /* Pointer to the last valid histo */
 struct double_histo_list *hl = NULL;
@@ -81,7 +83,7 @@ find_histo (char *hname)
   return NULL;
 }
 
-unsigned int validate_adx_mask(char *mask_string)
+unsigned int validate_adx_mask(char *mask_string,unsigned int default_mask)
 {
 
   struct in_addr adx_net2;
@@ -100,12 +102,12 @@ unsigned int validate_adx_mask(char *mask_string)
       mask_bits = strtol(mask_string, &err, 10);
       if (*err || mask_bits < 1 || mask_bits > 32) {
       fprintf(fp_stderr, 
-            "Warning: Invalid netmask in <adx_mask> histogram option. Using default %d.%d.%d.%d\n",
-        ADDR_MASK & 0xff,
-        (ADDR_MASK >> 8 ) & 0x0000ff,
-        (ADDR_MASK >> 16)  & 0x00ff,
-        ADDR_MASK >> 24);
-      return ADDR_MASK;
+            "Warning: Invalid netmask in <adx_mask> or <adx2_mask> histogram option. Using default %d.%d.%d.%d\n",
+        default_mask & 0xff,
+        (default_mask >> 8 ) & 0x0000ff,
+        (default_mask >> 16)  & 0x00ff,
+        default_mask >> 24);
+      return default_mask;
       }
 
       if (mask_bits == 0)
@@ -126,13 +128,13 @@ unsigned int validate_adx_mask(char *mask_string)
   {
       if (!inet_aton (mask_string, &(adx_net2))) {
       fprintf(fp_stderr, 
-            "Warning: Invalid netmask %s in <adx_mask> histogram option. Using default %d.%d.%d.%d\n",
+            "Warning: Invalid netmask %s in <adx_mask> or <adx2_mask> histogram option. Using default %d.%d.%d.%d\n",
         mask_string,
-        ADDR_MASK & 0xff,
-        (ADDR_MASK >> 8 ) & 0x0000ff,
-        (ADDR_MASK >> 16)  & 0x00ff,
-        ADDR_MASK >> 24);
-      return ADDR_MASK;
+        default_mask & 0xff,
+        (default_mask >> 8 ) & 0x0000ff,
+        (default_mask >> 16)  & 0x00ff,
+        default_mask >> 24);
+      return default_mask;
       }
       adx_net_mask = inet_addr (mask_string);
   }
@@ -155,6 +157,7 @@ histo_parse_conf ()
   FILE *conf;
   struct double_histo_list *histo;
   char ch;
+  int sample;
 
   if (!histo_conf.fname)
     {
@@ -193,6 +196,7 @@ histo_parse_conf ()
 	  if (!strcmp (arg1, "ALL"))
 	    {
 	      adx_engine = TRUE;
+	      adx2_engine = FALSE;
 	      histo = first_histo_list ();
 	      while (histo != NULL)
 		{
@@ -203,6 +207,7 @@ histo_parse_conf ()
 	  else if (!strcmp (arg1, "ADX"))
 	    {
 	      adx_engine = TRUE;
+	      adx2_engine = FALSE;
 	    }
 	  else if ((histo = find_histo (arg1)) != NULL)
 	    {
@@ -234,7 +239,63 @@ histo_parse_conf ()
       else if (!strcmp (keyword, "adx_mask"))
 	{
 	  fscanf (conf, "%s", arg1);
-          adx_addr_mask = validate_adx_mask(arg1);
+          adx_addr_mask[EXTERNAL_ADX_HISTO] = validate_adx_mask(arg1,ADDR_MASK);
+	}
+      else if (!strcmp (keyword, "adx2_mask"))
+	{
+          adx2_engine = TRUE;
+	  adx2_bitrate_delta = ADX2_BITRATE_DELTA*1000000;
+	  adx3_bitrate_delta = ADX2_MAX_DELTA*1000000;
+	  fscanf (conf, "%s", arg1);
+          adx_addr_mask[INTERNAL_ADX_HISTO] = validate_adx_mask(arg1,ADDR2_MASK);
+          adx_addr_mask[INTERNAL_ADX_MAX] = adx_addr_mask[INTERNAL_ADX_HISTO];
+	}
+      else if (!strcmp (keyword, "adx2_sample"))
+	{
+          char *err;
+          err = NULL;
+	  sample = 0;
+
+	  fscanf (conf, "%s", arg1);
+          sample = strtol(arg1, &err, 10);
+          if (*err || sample < 1 )
+           {
+	      fprintf (fp_stderr,
+		       "HISTO: wrong sample interval <%d> for adx2_sample at config line <%d>. Using default %d\n",
+		       sample, config_line,ADX2_BITRATE_DELTA);
+              adx2_bitrate_delta = ADX2_BITRATE_DELTA*1000000;
+	   }
+	  else
+	   {
+              adx2_bitrate_delta = sample*1000000;
+	   }
+	}
+      else if (!strcmp (keyword, "adx3_sample"))
+	{
+          char *err;
+          err = NULL;
+	  sample = 0;
+
+	  fscanf (conf, "%s", arg1);
+          sample = strtol(arg1, &err, 10);
+          if (*err || sample < 1 )
+           {
+	      fprintf (fp_stderr,
+		       "HISTO: wrong sample interval <%d> for adx3_sample at config line <%d>. Using default %d\n",
+		       sample, config_line,ADX2_MAX_DELTA);
+              adx3_bitrate_delta = ADX2_MAX_DELTA*1000000;
+	   }
+	  else
+	   {
+              adx3_bitrate_delta = sample*1000000;
+	   }
+
+          if (adx3_bitrate_delta>adx2_bitrate_delta)
+	   {
+	     fprintf (fp_stderr,"HISTO: max sample interval adx3_sample <%lu> is larger than adx2_sample <%lu>. Using adx2_sample value for both\n",
+		       adx3_bitrate_delta/1000000, adx2_bitrate_delta/1000000);
+  	     adx3_bitrate_delta = adx2_bitrate_delta;
+	   }
 	}
       else
 	{

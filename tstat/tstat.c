@@ -158,6 +158,10 @@ unsigned long long L3_bitrate_ip46_loc;
 struct timeval L3_last_time;
 #define L3_BITRATE_DELTA 10000000   /* 10 sec */
 #endif
+struct timeval adx2_last_time;
+unsigned long adx2_bitrate_delta;
+struct timeval adx3_last_time;
+unsigned long adx3_bitrate_delta;
 
 static u_long pcount = 0;   //global packet counter
 static u_long fpnum = 0;    //per file packet counter
@@ -174,6 +178,7 @@ Bool rrdset_conf = FALSE;	/* configuration file flag */
 
 Bool histo_engine = TRUE;	    /* -S */
 Bool adx_engine = FALSE;	    /* to allow disabling via -H */
+Bool adx2_engine = FALSE;	    /* secondary engine, enabled by histo.conf */
 Bool global_histo = FALSE;	    /* -g */
 
 Bool log_engine = TRUE;		    /* -L */
@@ -190,7 +195,7 @@ int log_version = 2;            /* -1 */
 struct bayes_settings *bayes_settings_pktsize;
 struct bayes_settings *bayes_settings_avgipg;
 
-unsigned int adx_addr_mask = ADDR_MASK;
+unsigned int adx_addr_mask[3] = { ADDR_MASK , ADDR2_MASK , ADDR2_MASK};
 
 /* locally global variables */
 static u_long filesize = 0;
@@ -262,8 +267,9 @@ long int tcp_packet_count;
 
 extern long not_id_p;
 extern int search_count;
-extern long int tot_adx_hash_count, tot_adx_list_count, adx_search_hash_count,
-  adx_search_list_count;
+extern long int tot_adx_hash_count[3], tot_adx_list_count[3], adx_search_hash_count[3],
+  adx_search_list_count[3];
+extern void max_adx(int, int, double);
 
 extern char dump_conf_fname[];
 char runtime_conf_fname[200];
@@ -569,7 +575,12 @@ main (int argc, char *argv[]) {
 
 
 /* inititializing adx_index_current */
-  alloc_adx ();
+  alloc_adx (EXTERNAL_ADX_HISTO);
+  if (adx_engine && adx2_engine) 
+    { 
+      alloc_adx (INTERNAL_ADX_HISTO);
+      alloc_adx (INTERNAL_ADX_MAX);
+    }
 
 /* thread creation and management  */
 
@@ -911,9 +922,23 @@ void ip_histo_stat(struct ip *pip)
       /* If -N is not used, all addresses are internal, 
         and the ADX histo would be empty */
       if (!internal_src || !net_conf)
-        add_adx (&(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
+        add_adx (EXTERNAL_ADX_HISTO, &(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
       if (!internal_dst || !net_conf)
-        add_adx (&(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
+        add_adx (EXTERNAL_ADX_HISTO, &(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
+
+      if (adx2_engine)
+        {
+      	  if (internal_src)
+           {
+      	    add_adx (INTERNAL_ADX_HISTO, &(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
+      	    add_adx (INTERNAL_ADX_MAX, &(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
+           }
+      	  if (internal_dst)
+           {
+      	    add_adx (INTERNAL_ADX_HISTO, &(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
+      	    add_adx (INTERNAL_ADX_MAX, &(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
+           }
+        }
     }
     
 } 
@@ -1130,6 +1155,8 @@ ip_header_stat (int phystype,
      L3_bitrate_ip46_out=0;
      L3_bitrate_ip46_loc=0;
 #endif
+     adx2_last_time = current_time;
+     adx3_last_time = current_time;
    }
   last_packet = current_time;
 
@@ -1157,6 +1184,28 @@ ip_header_stat (int phystype,
    }
 #endif
 
+ if (adx_engine && adx2_engine)
+  { 
+   double adx2_delta = elapsed (adx2_last_time, current_time);
+   double adx3_delta = elapsed (adx3_last_time, current_time);
+
+   if (adx2_delta > adx2_bitrate_delta)
+    {
+      sprintf (curr_data_dir, "%s/%03d", basename, step);
+      swap_adx(INTERNAL_ADX_MAX);
+      max_adx(INTERNAL_ADX_HISTO,INTERNAL_ADX_MAX,adx3_delta);
+      swap_adx (INTERNAL_ADX_HISTO);
+      print_adx (INTERNAL_ADX_HISTO,adx2_delta);
+      adx2_last_time = current_time;     
+      adx3_last_time = current_time;
+    }
+   else if (adx3_delta > adx3_bitrate_delta)
+    {
+      swap_adx(INTERNAL_ADX_MAX);
+      max_adx(INTERNAL_ADX_HISTO,INTERNAL_ADX_MAX,adx3_delta);
+      adx3_last_time = current_time;
+    }
+  }
   return 1;			/*finished ok */
 }
 
@@ -1447,14 +1496,21 @@ void ProcessFileCompleted(Bool last) {
             update_fake_histos ();
 
             /* swap since the frozen ones are printed out */
-            swap_adx ();
+            swap_adx (EXTERNAL_ADX_HISTO);
             swap_histo ();
             if (global_histo)
                 print_all_histo (HISTO_PRINT_GLOBAL);
 
             print_all_histo (HISTO_PRINT_CURRENT);
-            print_adx ();
-
+            print_adx (EXTERNAL_ADX_HISTO,0.0);
+	    if (adx_engine && adx2_engine)
+	     {
+              swap_adx(INTERNAL_ADX_MAX);
+              max_adx(INTERNAL_ADX_HISTO,INTERNAL_ADX_MAX,elapsed(adx3_last_time,current_time));
+              swap_adx (INTERNAL_ADX_HISTO);
+	      print_adx(INTERNAL_ADX_HISTO,elapsed(adx2_last_time,current_time));
+             }
+	     
             clear_all_histo ();
             step = 0;
 
@@ -1800,11 +1856,19 @@ QuitSig (int signum)
 
   /* swap since the frozen ones are printed out */
   swap_histo ();
-  swap_adx ();
+  swap_adx (EXTERNAL_ADX_HISTO);
   if (global_histo)
     print_all_histo (HISTO_PRINT_GLOBAL);
   print_all_histo (HISTO_PRINT_CURRENT);
-  print_adx ();
+  print_adx (EXTERNAL_ADX_HISTO,0.0);
+
+  if (adx_engine && adx2_engine)
+   {
+     swap_adx(INTERNAL_ADX_MAX);
+     max_adx(INTERNAL_ADX_HISTO,INTERNAL_ADX_MAX,elapsed(adx3_last_time,current_time));
+     swap_adx (INTERNAL_ADX_HISTO);
+     print_adx(INTERNAL_ADX_HISTO,elapsed(adx2_last_time,current_time));
+   }
 
     get_stats_report(&report);
   //dump_internal_stats (&report, stderr);
@@ -1858,10 +1922,10 @@ tstat_report * get_stats_report(tstat_report *report) {
         report->tot_conn_TCP = tot_conn_TCP;
         report->tot_conn_UDP = tot_conn_UDP;
         report->num_tcp_pairs = num_tcp_pairs;
-        report->tot_adx_hash_count = tot_adx_hash_count;
-        report->tot_adx_list_count = tot_adx_list_count;
-        report->adx_search_hash_count = adx_search_hash_count;
-        report->adx_search_list_count = adx_search_list_count;
+        report->tot_adx_hash_count = tot_adx_hash_count[0];
+        report->tot_adx_list_count = tot_adx_list_count[0];
+        report->adx_search_hash_count = adx_search_hash_count[0];
+        report->adx_search_list_count = adx_search_list_count[0];
         report->wallclock = etime;
         report->pcktspersec = (int) ((double) pnum / (etime / 1000000));
         report->flowspersec = (int) ((double) fcount / (etime / 1000000));
@@ -2789,7 +2853,7 @@ stats_dumping ()
 #ifdef DEBUG_THREAD
       fprintf (fp_stdout, "\n\nSvegliato thread stats DUMP.\n");
 #endif
-      swap_adx ();
+      swap_adx (EXTERNAL_ADX_HISTO);
       /* update average histos */
       update_fake_histos ();
 
@@ -2802,7 +2866,7 @@ stats_dumping ()
       sprintf (curr_data_dir, "%s/%03d", basename, step);
 
       print_all_histo (HISTO_PRINT_CURRENT);	/* print out the data frozen histograms */
-      print_adx ();
+      print_adx (EXTERNAL_ADX_HISTO,0.0);
 
       clear_all_histo ();	/* then clear them */
       step++;
@@ -2830,7 +2894,7 @@ stat_dumping_old_style ()
   update_fake_histos ();
 
 /* swap since the frozen ones are printed out */
-  swap_adx ();
+  swap_adx (EXTERNAL_ADX_HISTO);
   swap_histo ();
   sprintf (curr_data_dir, "%s/%03d", basename, step);
 
@@ -2838,7 +2902,9 @@ stat_dumping_old_style ()
   if (global_histo && step && !step % 1200)
     print_all_histo (HISTO_PRINT_GLOBAL);
   print_all_histo (HISTO_PRINT_CURRENT);
-  print_adx ();
+  print_adx (EXTERNAL_ADX_HISTO,0.0);
+
+
 
   clear_all_histo ();
 

@@ -641,11 +641,13 @@ void trace_done_periodic ();
 void create_new_outfiles (char *filename);
 void freequad (quadrant ** ppquad);
 
-#define adx_index_frozen (adx_index_first==adx_index_current?adx_index_second:adx_index_first)
+#define EXTERNAL_ADX_HISTO 0   /* Adx histogram for external networks, matched by adx_mask */
+#define INTERNAL_ADX_HISTO 1   /* Adx histogram for internal hosts, matched by ADX2_MASK */
+#define INTERNAL_ADX_MAX   2   /* Adx histogram for internal hosts, matched by ADX2_MASK */
 #define SRC_ADX 0
 #define DST_ADX 1
 
-void swap_adx ();
+void swap_adx (int idx);
 void make_conn_stats (tcp_pair * ptp_save, Bool flusso_nc);
 void make_udp_conn_stats (udp_pair * pup_save, Bool flusso_nc);
 void trace_done (void);

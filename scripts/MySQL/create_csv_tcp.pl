@@ -7,6 +7,24 @@ use strict;
 
 require 'check_internal.pl';
 
+%main::html = ( 0=>"NONE",
+         1=>"GET",
+         2=>"POST",
+         3=>"MSN",
+         4=> "RTMPT",
+         5=> "YOUTUBE",
+         6=> "GOOGLEVIDEO",
+         7=> "VIMEO",
+         8=> "WIKI",
+         9=> "RAPIDSHARE",
+         10=>"MEGAUPLOAD",
+         11=>"FACEBOOK",
+         12=>"ADV",
+         13=>"FLICKR",
+         14=>"GMAPS",
+         15=>"VOD",
+);
+
 # substitute here the CSV filename, that must be the same than the
 # corresponding MySQL table
 
@@ -49,6 +67,7 @@ my $fh_csv = new IO::File ">tcp.csv";
 		       $main::field[103],      #ed2k_msg
 		       $main::field[20],       #src_max_seg_size
 		       $main::field[64],       #dst_max_seg_size
+                       $main::html{$main::field[104]},  # HTML classification
 		       );
     my $status = $csv_obj->print($fh_csv,\@csv_line);
   }

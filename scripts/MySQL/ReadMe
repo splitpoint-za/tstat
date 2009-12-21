@@ -152,7 +152,7 @@ Usage
 -----
 
 IP addresses src_ip and dst_ip are stored as integers. You need INET_ATON() and
-INET_NTOA() to convert them to/form the dotted-decimal format.
+INET_NTOA() to convert them to/from the dotted-decimal format.
 
 To list all the destination IPs of TCP connections from 192.168.5.10:
  
@@ -165,3 +165,7 @@ connections  by hosts in the 192.168.16.0/24 network
  SELECT * FROM tcp WHERE src_ip>INET_ATON('192.168.16.0') 
                      AND src_ip<INET_ATON('192.168.16.255');
  
+ or
+ 
+ SELECT * FROM tcp WHERE src_ip BETWEEN INET_ATON('192.168.16.0') 
+                                    AND INET_ATON('192.168.16.255');

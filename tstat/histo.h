@@ -101,6 +101,8 @@ struct adx
   unsigned long dst_hits;
   unsigned long long src_bytes;
   unsigned long long dst_bytes;
+  double max_uprate;
+  double max_downrate;
   struct adx *next;
 };
 
@@ -120,8 +122,7 @@ void histo_parse_conf();
 struct double_histo_list *find_histo(char *hname);
 void alloc_histo (struct double_histo_list *thisto);
 
-void alloc_adx();
-
+void alloc_adx(int idx);
 
 struct double_histo_list *first_histo_list ();
 void create_all_histo (void);
@@ -143,8 +144,8 @@ void print_histo_definition (struct double_histo_list *phisto, char *title);
 int clear_all_histo ();
 int clear_histo (struct double_histo_list *phisto);
 
-int add_adx (struct in_addr *adx, int dir, int bytes);
-int print_adx ();
+int add_adx (int idx, struct in_addr *adx, int dir, int bytes);
+int print_adx (int idx, double delta);
 
 //    struct dhisto *create_dhisto (double min, double max, double bin_size);
 //    struct dhisto *create_dhisto2 (double min, double max, int num_col);

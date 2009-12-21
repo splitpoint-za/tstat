@@ -22,6 +22,7 @@
 /* param dealing with the address hit counters */
 #define MAX_ADX_SLOTS 70001	/* hash size for the ip addresses hit counter */
 #define ADDR_MASK 0x00ffffff	/* mask to count IP addresses - inet order */
+#define ADDR2_MASK 0x00ffffff	/* mask to count internal IP addresses bitrate - inet order */
 
 /* max number of nets to check if ip is internal or external */
 #define MAX_INTERNAL_HOSTS  100
@@ -135,3 +136,7 @@ Increase this number on high speed network will help ...*/
 #define ENTROPY_THRESHOLD 3.7   /* Empirically tested that nibble entropy 
                                    over about 100 random samples is larger
 				   than 3.7 with 99% probability */
+
+/* Secondary address histogram sample rate */
+#define ADX2_BITRATE_DELTA 60   /* 60 sec */
+#define ADX2_MAX_DELTA      1   /*  1 sec */

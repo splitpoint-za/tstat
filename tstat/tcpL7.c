@@ -571,18 +571,33 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_FACEBOOK;
        else if (available_data>15 && (memcmp(base, "/files/",7) ==0) )
         {
+     	  status1=0;
+     	  status2=0;
+     	  i = 7;
+     	  while (i<available_data)
+     	   {
+     	     c = *(char *)(base + i );
+	     if (c=='/')
+	        break;
+             if (!isdigit(c)) status1=1;
+     	     if (!isxdigit(c)) 
+     	      {
+     		status2=1;
+     		break;
+     	      }
+     	     i++;
+     	   }
+     	  if (i>15 && status2==0 && status1==1)
+            return HTTP_MEGAUPLOAD;	     
+
           status1=0;
-          status2=0;
           for (i=0;i<8;i++)		     
            {				     
              c = *(char *)(base + 7 + i );
              if (!isdigit(c)) status1=1;
-             if (!isxdigit(c)) status2=1;
            }				     
           if (status1==0)		     
             return HTTP_RAPIDSHARE;	     
-          else if (status2==0)		     
-            return HTTP_MEGAUPLOAD;	     
         }
        break;
 
@@ -876,6 +891,10 @@ enum http_content classify_http_post(void *pdata,int data_length)
 {
   char *base = (char *)pdata+5;
   int available_data = data_length - 5 ;
+
+  char c;
+  int i;
+  int status1;
   
   if (available_data < 1)
     return HTTP_POST;
@@ -910,6 +929,20 @@ enum http_content classify_http_post(void *pdata,int data_length)
        if (memcmp(base, "/CLOSE/",
         	      ( available_data < 7 ? available_data : 7)) == 0)
          return HTTP_RTMPT;
+       break;
+
+     case 'f':
+       if (available_data>15 && (memcmp(base, "/files/",7) ==0) )
+        {
+          status1=0;
+          for (i=0;i<8;i++)		     
+           {				     
+             c = *(char *)(base + 7 + i );
+             if (!isdigit(c)) status1=1;
+           }				     
+          if (status1==0)		     
+            return HTTP_RAPIDSHARE;	     
+        }
        break;
 
      case 'g':

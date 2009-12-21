@@ -7,8 +7,8 @@
 m4_define([_version_major], [2])
 m4_define([_version_minor], [1])
 m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Mon Jun  8 17:03:23 CEST 2009"])
-m4_define([_version_flavor], ["Brasilena"])
+m4_define([_version_date], ["Mon Dec 21 13:33:15 CET 2009"])
+m4_define([_version_flavor], ["Horchata"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
