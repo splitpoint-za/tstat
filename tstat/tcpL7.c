@@ -602,10 +602,16 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'g':
-      if (memcmp(base, "/group.php?",
+       if (memcmp(base, "/generate_204?ip=",
+                  ( available_data < 17 ? available_data : 17)) == 0)
+          return HTTP_YOUTUBE;
+       else if (memcmp (base, "/generate_204?id=",
+                  ( available_data < 17 ? available_data : 17)) == 0)
+          return HTTP_GOOGLEVIDEO;
+       else if (memcmp(base, "/group.php?",
                ( available_data < 11 ? available_data : 11)) == 0)
          return HTTP_FACEBOOK;
-      else if (memcmp(base, "/groups.php?",
+       else if (memcmp(base, "/groups.php?",
                ( available_data < 12 ? available_data : 12)) == 0)
          return HTTP_FACEBOOK;
        break;
@@ -726,9 +732,29 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/vimeo/v/",
                   ( available_data < 9 ? available_data : 9)) == 0)
           return HTTP_VIMEO;
-       if (memcmp(base, "/vt/v=",
+       else if (memcmp(base, "/vt/v=",
                ( available_data < 6 ? available_data : 6)) == 0)
          return HTTP_GMAPS;
+       else if (memcmp(base, "/vt/lyrs=",
+               ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_GMAPS;
+       else if (available_data > 29 && (memcmp(base, "/vi/",4) == 0) )
+        {
+	  if (memcmp(base + 16, "default.jpg",11) == 0 ||
+              memcmp(base + 16, "hqdefault.jpg",13) == 0 ||
+              memcmp(base + 16, "0.jpg",5) == 0 ||
+              memcmp(base + 16, "1.jpg",5) == 0 ||
+              memcmp(base + 16, "2.jpg",5) == 0 ||
+              memcmp(base + 16, "3.jpg",5) == 0 
+	      )
+           return HTTP_YOUTUBE;
+	}
+       else if (available_data > 15 && (memcmp(base, "/v/",3) == 0) )
+        {
+          c = *(char *)(base + 14);
+	  if (c==' ' || c== '&')
+	     return HTTP_YOUTUBE;
+	}
        else if (available_data > 12 && (memcmp(base, "/v",2) == 0) )
    	{
           status1=0;
@@ -758,6 +784,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/www/app_full_proxy.php?app=",
         	       ( available_data < 28 ? available_data : 28)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/watch?v=",
+        	       ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_YOUTUBE;
        break;
 
      case 'x':
@@ -792,6 +821,45 @@ enum http_content classify_http_get(void *pdata,int data_length)
   	     return HTTP_FACEBOOK;
   	   }
      	 }
+       break;
+
+     case 'y':
+       if ( available_data > 10 && (memcmp(base, "/yt/",4) == 0) )
+        {
+	   switch (*(base+4))
+	    {
+              case 'c':
+                if (memcmp(base + 4, "cssbin/",
+                      ((available_data - 4) < 7 ? available_data - 4 : 7)) == 0)
+                  return HTTP_YOUTUBE;
+	        break;
+              case 'f':
+                if (memcmp(base + 4, "favicon",
+                      ((available_data - 4) < 7 ? available_data - 4 : 7)) == 0)
+                  return HTTP_YOUTUBE;
+	        break;
+              case 'i':
+                if (memcmp(base + 4, "img/",
+                      ((available_data - 4) < 4 ? available_data - 4 : 4)) == 0)
+                  return HTTP_YOUTUBE;
+	        break;
+              case 'j':
+                if (memcmp(base + 4, "js/",
+                      ((available_data - 4) < 3 ? available_data - 4 : 3)) == 0)
+                  return HTTP_YOUTUBE;
+                else if (memcmp(base + 4, "jsbin/",
+                      ((available_data - 4) < 6 ? available_data - 4 : 6)) == 0)
+                  return HTTP_YOUTUBE;
+	        break;
+              case 's':
+                if (memcmp(base + 4, "swf/",
+                      ((available_data - 4) < 4 ? available_data - 4 : 4)) == 0)
+                  return HTTP_YOUTUBE;
+	        break;
+	      default:
+	        break;
+	    }
+	}
        break;
 
      case '0':
