@@ -553,6 +553,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/cgi-bin/count?rnd=",
         	       ( available_data < 19 ? available_data : 19)) == 0)
          return HTTP_ADV;
+       else if (memcmp(base, "/cbk?output=",
+               ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/connect.php/",
+               ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_FACEBOOK;
        /* */
        break;
 
@@ -641,6 +647,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/maps/trends?",
                ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_GMAPS;
+       else if (memcmp(base, "/mapslt?lyrs=",
+               ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/mapslt/ft?lyrs=",
+               ( available_data < 16 ? available_data : 16)) == 0)
+         return HTTP_GMAPS;
        break;
        
      case 'M':
@@ -676,7 +688,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'p':
-      if (memcmp(base, "/photo.php?pid=",
+      if (memcmp(base, "/pagead/",
+        	    ( available_data < 8 ? available_data : 8)) == 0)
+         return HTTP_ADV;
+      else if (memcmp(base, "/photo.php?pid=",
         	    ( available_data < 15 ? available_data : 15)) == 0)
          return HTTP_FACEBOOK;
       else if (memcmp(base, "/photo_search.php?",
@@ -711,6 +726,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
        if (memcmp(base, "/reqs.php?",
                ( available_data < 10 ? available_data : 10)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/rsrc.php/",
+               ( available_data < 10 ? available_data : 10)) == 0)
+         {
+	   if (available_data > 21 && (memcmp(base+15, "/hash/",6) == 0))
+             return HTTP_FACEBOOK;
+	 }
        break;
 
      case 's':
@@ -780,6 +801,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_WIKI;
        else if (memcmp(base, "/wiki/",
         	       ( available_data < 6 ? available_data : 6)) == 0)
+         return HTTP_WIKI;
+       else if (memcmp(base, "/wikipedia/",
+        	       ( available_data < 11 ? available_data : 11)) == 0)
          return HTTP_WIKI;
        else if (memcmp(base, "/www/app_full_proxy.php?app=",
         	       ( available_data < 28 ? available_data : 28)) == 0)
@@ -991,6 +1015,9 @@ enum http_content classify_http_post(void *pdata,int data_length)
        else if (memcmp(base, "/current/flashservices/",
         	      ( available_data < 23 ? available_data : 23)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/cbk?output=",
+               ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_GMAPS;
        break;
 
      case 'C':
@@ -1472,6 +1499,41 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	  if (ptp->packets > MAX_HTTP_RESPONSE_PACKETS)
 	    ptp->state = IGNORE_FURTHER_PACKETS;
          }
+        else if (dir == C2S && ((char *) pdata + 4 <= (char *) plast))
+	 {
+           enum http_content new_http_data;
+           /* Apply the Web2.0 rules for further commands in 
+	      not yet classified HTTP flows
+	   */
+	   switch (*((u_int32_t *) pdata))
+	    {
+              case GET:
+                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
+	         {
+                   new_http_data = classify_http_get(pdata,data_length);
+                   /* Only update previous classification if new one
+		      is specific */
+		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
+		     ptp->http_data = new_http_data;
+                 }
+	        break;
+              case POST:
+                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
+	         {
+                   new_http_data = classify_http_post(pdata,data_length);
+                   /* Only update previous classification if new one
+		      is specific */
+		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
+		     ptp->http_data = new_http_data;
+                 }
+	        break;
+	      default:
+	        break;
+	    }
+	   if (ptp->packets > MAX_HTTP_RESPONSE_PACKETS)
+	     ptp->state = IGNORE_FURTHER_PACKETS;
+	 }
+
         break;
 #ifdef RTSP_CLASSIFIER
      case RTSP_COMMAND:
