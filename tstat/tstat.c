@@ -147,6 +147,7 @@ struct L4_bitrates L4_bitrate;
 struct L7_bitrates L7_bitrate;
 struct L7_bitrates L7_udp_bitrate;
 struct HTTP_bitrates HTTP_bitrate;
+struct WEB_bitrates WEB_bitrate;
 
 #ifdef L3_BITRATE
 unsigned long long L3_bitrate_in;
@@ -617,6 +618,7 @@ main (int argc, char *argv[]) {
   memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
+  memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
 
   /* init profile variables */
   prof_last_clk = (int)clock();
@@ -1220,6 +1222,7 @@ void InitAfterFirstPacketReaded(char *filename, int file_count) {
       memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
       memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
       memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
+      memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
       
       tot_conn_TCP = 0;
       tot_conn_UDP = 0;
@@ -2990,4 +2993,5 @@ void flush_histo_engine(void) {
     memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
+    memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
 }

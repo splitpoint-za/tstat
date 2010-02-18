@@ -722,6 +722,11 @@ void make_tcpL7_rate_stats (tcp_pair *thisflow, int len);
 void make_udpL7_rate_stats (ucb * thisflow, int len);
 void mse_protocol_check(tcp_pair *thisflow);
 
+/* web */
+enum http_content classify_http_get(void *pdata,int data_length);
+enum http_content classify_http_post(void *pdata,int data_length);
+enum web_category map_http_to_web(enum http_content http_type);
+
 tstat_report * get_stats_report(tstat_report *report);
 void log_parse_ini_arg(char *param_name, int param_value);
 

@@ -552,6 +552,15 @@ struct double_histo_list *http_bitrate_out;
 struct double_histo_list *http_bitrate_in;
 struct double_histo_list *http_bitrate_loc;
 
+struct double_histo_list *L7_WEB_num_out;
+struct double_histo_list *L7_WEB_num_in;
+struct double_histo_list *L7_WEB_num_loc;
+
+struct double_histo_list *web_bitrate_out;
+struct double_histo_list *web_bitrate_in;
+struct double_histo_list *web_bitrate_loc;
+
+
 /* profiling */
 #define PROFILE_CPU_MAX 1
 #define PROFILE_CPU_USR 2

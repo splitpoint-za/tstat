@@ -1063,32 +1063,61 @@ search_bittorrent (const unsigned char *payload, const int plen,
        * then it can follow: scrape| announce
        * and then ?hash_info=
        */
-      if (memcmp (payload, "GET /", 5) == 0 && 
-            (payload[5]==0x61 || payload[5]==0x73)) /* either 'a' or 's' */ 
-	{
-	  /* message scrape */
-	  if (memcmp
-	      (payload + 5, "scrape?info_hash=",
-	       ((payload_len - 5) < 17 ? payload_len - 5 : 17)) == 0)
-	    return (IPP2P_BIT * 100 + 1);
-	  /* message announce */
-	  if (memcmp
-	      (payload + 5, "announce?info_hash=",
-	       ((payload_len - 5) < 19 ? payload_len - 5 : 19)) == 0)
-	    return (IPP2P_BIT * 100 + 2);
-	  /* Private torrent messages */
-	  if (memcmp
-	      (payload + 5, "announce.php?info_hash=",
-	       ((payload_len - 5) < 23 ? payload_len - 5 : 23)) == 0)
-	    return (IPP2P_BIT * 100 + 3);
-	  if (memcmp
-	      (payload + 5, "announce.php?passkey=",
-	       ((payload_len - 5) < 21 ? payload_len - 5 : 21)) == 0)
-	    return (IPP2P_BIT * 100 + 4);
-	  if (memcmp
-	      (payload + 5, "announce.php?pid=",
-	       ((payload_len - 5) < 17 ? payload_len - 5 : 17)) == 0)
-	    return (IPP2P_BIT * 100 + 5);
+
+      if (memcmp (payload, "GET /", 5) == 0)
+        { 
+	  if (payload[5]==0x61 || payload[5]==0x73) /* either 'a' or 's' */ 
+	   {
+	     /* message scrape */
+	     if (memcmp
+	     	 (payload + 5, "scrape?info_hash=",
+	     	  ((payload_len - 5) < 17 ? payload_len - 5 : 17)) == 0)
+	       return (IPP2P_BIT * 100 + 1);
+	     /* message announce */
+	     if (memcmp
+	     	 (payload + 5, "announce?info_hash=",
+	     	  ((payload_len - 5) < 19 ? payload_len - 5 : 19)) == 0)
+	       return (IPP2P_BIT * 100 + 2);
+	     /* Private torrent messages */
+	     if (memcmp
+	     	 (payload + 5, "announce.php?info_hash=",
+	     	  ((payload_len - 5) < 23 ? payload_len - 5 : 23)) == 0)
+	       return (IPP2P_BIT * 100 + 3);
+	     if (memcmp
+	     	 (payload + 5, "announce.php?passkey=",
+	     	  ((payload_len - 5) < 21 ? payload_len - 5 : 21)) == 0)
+	       return (IPP2P_BIT * 100 + 4);
+	     if (memcmp
+	     	 (payload + 5, "announce.php?pid=",
+	     	  ((payload_len - 5) < 17 ? payload_len - 5 : 17)) == 0)
+	       return (IPP2P_BIT * 100 + 5);
+	   }
+         else if ( payload_len>45 &&(payload[38]==0x61 || payload[38]==0x73))
+	   {
+	     /* message scrape */
+	     if (memcmp
+	     	 (payload + 38, "scrape?info_hash=",
+	     	  ((payload_len - 38) < 17 ? payload_len - 38 : 17)) == 0)
+	       return (IPP2P_BIT * 100 + 1);
+	     /* message announce */
+	     if (memcmp
+	     	 (payload + 38, "announce?info_hash=",
+	     	  ((payload_len - 38) < 19 ? payload_len - 38 : 19)) == 0)
+	       return (IPP2P_BIT * 100 + 2);
+	     /* Private torrent messages */
+	     if (memcmp
+	     	 (payload + 38, "announce.php?info_hash=",
+	     	  ((payload_len - 38) < 23 ? payload_len - 38 : 23)) == 0)
+	       return (IPP2P_BIT * 100 + 3);
+	     if (memcmp
+	     	 (payload + 38, "announce.php?passkey=",
+	     	  ((payload_len - 38) < 21 ? payload_len - 38 : 21)) == 0)
+	       return (IPP2P_BIT * 100 + 4);
+	     if (memcmp
+	     	 (payload + 38, "announce.php?pid=",
+	     	  ((payload_len - 38) < 17 ? payload_len - 38 : 17)) == 0)
+	       return (IPP2P_BIT * 100 + 5);
+	   }
 	}
     }
   else

@@ -33,6 +33,7 @@ extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
+extern struct WEB_bitrates WEB_bitrate;
 
 extern unsigned long tot_conn_TCP;
 extern unsigned long tot_conn_UDP;
@@ -2068,6 +2069,30 @@ create_all_histo (void)
 				   "HTTP content bitrate [bit/s] - local segments", 0,
 				   HTTP_LAST_TYPE, 1);
 
+  L7_WEB_num_out =
+    create_histo ("L7_WEB_num_out",
+		  "Number of tracked Web 2.0 flows - outgoing flows",
+                  0, WEB_LAST_TYPE, 1);
+
+  L7_WEB_num_in =
+    create_histo ("L7_WEB_num_in",
+		  "Number of tracked Web 2.0 flows - incoming flows ",
+                   0, WEB_LAST_TYPE, 1);
+
+  L7_WEB_num_loc =
+    create_histo ("L7_WEB_num_loc",
+		  "Number of tracked Web 2.0 flows - local flows",
+                   0, WEB_LAST_TYPE, 1);
+
+  web_bitrate_in = create_histo ("web_bitrate_in",
+				  "Web 2.0 content bitrate [bit/s] - incoming segments", 0,
+				  WEB_LAST_TYPE, 1);
+  web_bitrate_out = create_histo ("web_bitrate_out",
+				   "Web 2.0 content bitrate [bit/s] - outgoing segments", 0,
+				   WEB_LAST_TYPE, 1);
+  web_bitrate_loc = create_histo ("web_bitrate_loc",
+				   "Web 2.0 content bitrate [bit/s] - local segments", 0,
+				   WEB_LAST_TYPE, 1);
 
   /* Microsoft messenger  classification */
 
@@ -2156,6 +2181,10 @@ update_fake_histos ()
   fake_histo_bitrate_update (http_bitrate_in, elapsed_time, HTTP_bitrate.in, HTTP_LAST_TYPE);
   fake_histo_bitrate_update (http_bitrate_out, elapsed_time, HTTP_bitrate.out, HTTP_LAST_TYPE);
   fake_histo_bitrate_update (http_bitrate_loc, elapsed_time, HTTP_bitrate.loc, HTTP_LAST_TYPE);
+
+  fake_histo_bitrate_update (web_bitrate_in, elapsed_time, WEB_bitrate.in, WEB_LAST_TYPE);
+  fake_histo_bitrate_update (web_bitrate_out, elapsed_time, WEB_bitrate.out, WEB_LAST_TYPE);
+  fake_histo_bitrate_update (web_bitrate_loc, elapsed_time, WEB_bitrate.loc, WEB_LAST_TYPE);
 
 #ifdef MSN_CLASSIFIER
   msn_get_average ();

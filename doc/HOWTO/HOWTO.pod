@@ -1100,7 +1100,7 @@ The configuration file has an C<ini> file syntax:
 
 The file in composed of the two sections C<log> and C<dump> which indicate which
 type of log and dump trace to create.
-Except for C<snap_len> all features are on/off type i.e. 0 and 1 values are used to 
+Except for C<snap_len> all features are on/off type i.e. 1 and 0 values are used to 
 enable/disable them. Instead C<snap_len> indicate the maximum number of bytes
 dump from the input packet starting from IP level included. For example, supposing
 to have a simple IP + UDP packet, using C<snap_len> = 40 it will be written a

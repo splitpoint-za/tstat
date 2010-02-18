@@ -496,22 +496,41 @@ enum state_type
 
 enum http_content
 {
-  HTTP_GET = 0,		/* Unclassified GET command 			*/
-  HTTP_POST,		/* Unclassified POST command 			*/
-  HTTP_MSN,		/* MSN Chat command tunneled over HTTP (POST) 	*/
-  HTTP_RTMPT,		/* RTMPT - RTMP over HTTP Tunnel (POST) 	*/
-  HTTP_YOUTUBE,		/* YouTube video content download (GET) 	*/
-  HTTP_GOOGLEVIDEO,	/* GoogleVideo video content download (GET) 	*/
-  HTTP_VIMEO,		/* Vimeo video content download (GET) 		*/
-  HTTP_WIKI,		/* Wikipedia (GET) 				*/
-  HTTP_RAPIDSHARE,	/* RapidShare file download (GET) 		*/
-  HTTP_MEGAUPLOAD,	/* MegaUpload file download (GET) 		*/
-  HTTP_FACEBOOK,	/* Facebook-related connections (GET/POST) 	*/
-  HTTP_ADV,		/* Site advertisement (GET) 			*/
-  HTTP_FLICKR,		/* Flickr photo download (GET) 			*/
-  HTTP_GMAPS,		/* GoogleMaps images (GET) 			*/
-  HTTP_VOD,             /* Video-On-Demand (GET) [internal use only]    */
+  HTTP_GET = 0,		/*  0 - Unclassified GET command 		*/
+  HTTP_POST,		/*  1 - Unclassified POST command 		*/
+  HTTP_MSN,		/*  2 - MSN Chat command tunneled over HTTP (POST) */
+  HTTP_RTMPT,		/*  3 - RTMPT - RTMP over HTTP Tunnel (POST) 	*/
+  HTTP_YOUTUBE_VIDEO,	/*  4 - YouTube video content download (GET) 	*/
+  HTTP_GOOGLEVIDEO,	/*  5 - GoogleVideo video content download (GET) */
+  HTTP_VIMEO,		/*  6 - Vimeo video content download (GET) 	*/
+  HTTP_WIKI,		/*  7 - Wikipedia (GET) 			*/
+  HTTP_RAPIDSHARE,	/*  8 - RapidShare file download (GET) 		*/
+  HTTP_MEGAUPLOAD,	/*  9 - MegaUpload file download (GET) 		*/
+  HTTP_FACEBOOK,	/* 10 - Facebook-related connections (GET/POST) */
+  HTTP_ADV,		/* 11 - Site advertisement (GET) 		*/
+  HTTP_FLICKR,		/* 12 - Flickr photo download (GET) 		*/
+  HTTP_GMAPS,		/* 13 - GoogleMaps images (GET) 		*/
+  HTTP_VOD,             /* 14 - Video-On-Demand (GET) [internal use only] */
+  HTTP_YOUTUBE_SITE,	/* 15 - YouTube site content download (GET) 	*/
+  HTTP_SOCIAL,      	/* 16 - Localized social-networking connections */
+                        /*      Nasza-Klasa (PL), IWIW (HU) (GET/POST) 	*/
+  HTTP_FLASHVIDEO,      /* 17 - Generic FLV video download (GET) 	*/
+  HTTP_MEDIAFIRE,       /* 18 - MediaFire file download (GET) 		*/
+  HTTP_HOTFILE,      	/* 19 - Hotfile.com file download (GET) 	*/
+  HTTP_STORAGE,       	/* 20 - Storage.to file download (GET) 		*/
   HTTP_LAST_TYPE
+};
+
+enum web_category
+{
+  WEB_GET = 0,	      /* 0 - Unclassified GET command 			*/
+  WEB_POST,	      /* 1 - Unclassified POST command 			*/
+  WEB_STORAGE,        /* 2 - Rapidshare, Megaupload, Mediafire		*/
+  WEB_YOUTUBE,        /* 3 - YouTube only video 			*/
+  WEB_VIDEO,          /* 4 - Other Video services 			*/
+  WEB_SOCIAL,         /* 5 - Facebook, and other social networking 	*/ 
+  WEB_OTHER,          /* 6 - All other identified traffic 		*/             
+  WEB_LAST_TYPE
 };
 
 struct stcp_pair
@@ -830,6 +849,13 @@ struct HTTP_bitrates
   unsigned long long in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
   unsigned long long out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
   unsigned long long loc[HTTP_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+};
+
+struct WEB_bitrates
+{
+  unsigned long long in[WEB_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[WEB_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[WEB_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
 };
 
 

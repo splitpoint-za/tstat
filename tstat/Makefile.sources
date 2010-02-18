@@ -65,5 +65,6 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/ipp2p_tstat.c \
        $(top_srcdir)/tstat/p2p.c \
        $(top_srcdir)/tstat/tcpL7.c \
+       $(top_srcdir)/tstat/web.c \
 	   $(top_srcdir)/tstat/dump.c\
        $(top_srcdir)/tstat/inireader.c

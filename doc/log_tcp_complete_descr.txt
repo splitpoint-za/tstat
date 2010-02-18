@@ -202,23 +202,29 @@ so they might never appear in log_tcp_(no)complete.
 HTTP Web2.0 type (Column no. 105) description (from struct.h)
 ---------------------------------------------------------
 ##########################################################################
-# Value	# Internal          # Description				 #
+# Value	# Internal           # Description				 #
 ##########################################################################
-# 1	# HTTP_GET	    # Unclassified GET command  		 #
-# 2	# HTTP_POST	    # Unclassified POST command 		 #
-# 3	# HTTP_MSN          # MSN Chat command tunneled over HTTP (POST) #
-# 4	# HTTP_RTMPT        # RTMPT - RTMP over HTTP Tunnel (POST)	 #
-# 5	# HTTP_YOUTUBE      # YouTube video content download (GET)	 #
-# 6	# HTTP_GOOGLEVIDEO  # GoogleVideo video content download (GET)   #
-# 7	# HTTP_VIMEO        # Vimeo video content download (GET)	 #
-# 8	# HTTP_WIKI         # Wikipedia (GET)				 #
-# 9	# HTTP_RAPIDSHARE   # RapidShare file download (GET)		 #
-# 10	# HTTP_MEGAUPLOAD   # MegaUpload file download (GET)		 #
-# 11	# HTTP_FACEBOOK     # Facebook-related connections (GET/POST)	 #
-# 12	# HTTP_ADV          # Site advertisement (GET)  		 #
-# 13	# HTTP_FLICKR       # Flickr photo download (GET)		 #
-# 14	# HTTP_GMAPS        # GoogleMaps images (GET)			 #
-# 15	# HTTP_VOD          # Video-on-Demand download (GET) [*]	 #
+# 1	# HTTP_GET	     # Unclassified GET command  		 #
+# 2	# HTTP_POST	     # Unclassified POST command 		 #
+# 3	# HTTP_MSN           # MSN Chat command tunneled over HTTP (POST)#
+# 4	# HTTP_RTMPT         # RTMPT - RTMP over HTTP Tunnel (POST)	 #
+# 5	# HTTP_YOUTUBE_VIDEO # YouTube video content download (GET)	 #
+# 6	# HTTP_GOOGLEVIDEO   # GoogleVideo video content download (GET)  #
+# 7	# HTTP_VIMEO         # Vimeo video content download (GET)	 #
+# 8	# HTTP_WIKI          # Wikipedia (GET)				 #
+# 9	# HTTP_RAPIDSHARE    # RapidShare file download (GET)		 #
+# 10	# HTTP_MEGAUPLOAD    # MegaUpload file download (GET)		 #
+# 11	# HTTP_FACEBOOK      # Facebook-related connections (GET/POST)	 #
+# 12	# HTTP_ADV           # Site advertisement (GET)  		 #
+# 13	# HTTP_FLICKR        # Flickr photo download (GET)		 #
+# 14	# HTTP_GMAPS         # GoogleMaps images (GET)			 #
+# 15	# HTTP_VOD           # Video-on-Demand download (GET) [*]	 #
+# 16	# HTTP_YOUTUBE_SITE  # YouTube site content download (GET)	 #
+# 17	# HTTP_SOCIAL        # Localized social-networking (GET/POST) [+]#
+# 18	# HTTP_FLASHVIDEO    # Generic FLV video download (GET)	[=]	 #
+# 19	# HTTP_MEDIAFIRE     # MediaFire file download (GET) 		 #
+# 20	# HTTP_HOTFILE       # Hotfile.com file download (GET) 		 #
+# 21	# HTTP_STORAGE       # Storage.to file download (GET)		 #
 ##########################################################################
 
 These values are different from 0 only for identified HTTP connections 
@@ -226,3 +232,9 @@ These values are different from 0 only for identified HTTP connections
 histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).
 [*] HTTP_VOD connection identification is experimental and not valid for
 usage outside Politecnico di Torino.
+[+] HTTP_SOCIAL is a set of matchings tailored for Nasza-Klasa (PL) and IWIW
+(HU). Since IWIW seems to be based on OpenSocial (http://www.opensocial.org/),
+it should match also generic OpenSocial traffic. Probably not useful outside
+Poland or Hungary.
+[=] HTTP_FLASHVIDEO identify traffic from a few popular flash-based video
+distribution sites.

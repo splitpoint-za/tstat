@@ -23,6 +23,12 @@ require 'check_internal.pl';
          13=>"FLICKR",
          14=>"GMAPS",
          15=>"VOD",
+         16=>"YOUTUBESITE",
+	 17=>"SOCIAL",
+	 18=>"FLASHVIDEO",
+	 19=>"MEDIAFIRE",
+	 20=>"HOTFILE",
+	 21=>"STORAGE",
 );
 
 # substitute here the CSV filename, that must be the same than the
