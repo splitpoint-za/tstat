@@ -1202,10 +1202,10 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     {
       u_long cwin = end - otherdir->ack;
 
-      if (cwin > thisdir->cwin_max)
+      if ((long) cwin > 0 && cwin > thisdir->cwin_max) {
 	thisdir->cwin_max = cwin;
-      if ((cwin > 0) &&
-	  ((thisdir->cwin_min == 0) || (cwin < thisdir->cwin_min)))
+        }
+      if ((long) cwin > 0 && ((thisdir->cwin_min == 0) || (cwin < thisdir->cwin_min)))
 	thisdir->cwin_min = cwin;
     }
 
