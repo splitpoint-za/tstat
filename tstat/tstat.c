@@ -1774,14 +1774,15 @@ ProcessFile (char *filename, Bool last)
       ret = (*ppread) (&current_time, &len, &tlen, &phys, &phystype, &pip,
 		       &plast);
     }
-  while ((ret != -1)
+  while ((ret > 0)
 	 && (current_time.tv_sec == 0 && current_time.tv_usec == 0));
 
-  if (ret == -1)
+  if (ret <= 0)
     {
       fprintf(fp_stderr,
-	       "Not even a single packet read (check tcpdump filter)! Aborting...\n");
-      exit (1);
+	       "Not even a single packet read (check tcpdump filter)! "
+               "Skipping current file.\n");
+      return;
     }
 
     InitAfterFirstPacketReaded(filename, file_count);
@@ -1822,7 +1823,7 @@ ProcessFile (char *filename, Bool last)
     }
   while ((ret =
 	  (*ppread) (&current_time, &len, &tlen, &phys, &phystype, &pip,
-		     &plast)));
+		     &plast)) > 0);
 
   ProcessFileCompleted(last);
 }
