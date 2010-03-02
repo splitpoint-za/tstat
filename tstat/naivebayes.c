@@ -20,16 +20,7 @@
 #include <libgen.h>
 #include <limits.h>
 
-// we need isfinite(x), etc. macros
 #include "tstat.h"
-
-/* Return nonzero value if X is not +-Inf or NaN.  */
-#define isfinite(x) \
-     (sizeof (x) == sizeof (float)                                            \
-      ? __finitef (x)                                                         \
-      : sizeof (x) == sizeof (double)                                         \
-      ? __finite (x) : __finitel (x))
-
 
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -1021,8 +1012,8 @@ bayes_sample (struct bayes_classifier *classifier, int sample)
       // maximum belief
       double x =
 	classifier->belief[class_num] / ((double) classifier->sample_num);
-      argmax = isfinite (x) && (x > max) ? class_num : argmax;
-      max = isfinite (x) && (x > max) ? x : max;
+      argmax = finite (x) && (x > max) ? class_num : argmax;
+      max = finite (x) && (x > max) ? x : max;
 
       // mean beliefs
       classifier->mean_belief[class_num] +=

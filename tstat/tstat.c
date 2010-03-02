@@ -38,6 +38,9 @@ char *tstat_version = VERSION;
 
 /* seem to be missing from pthread.h */
 int pthread_mutexattr_settype (pthread_mutexattr_t * attr, int kind);
+#if !(defined PTHREAD_MUTEX_ERRORCHECK || defined __USE_UNIX98)
+#define PTHREAD_MUTEX_ERRORCHECK PTHREAD_MUTEX_ERRORCHECK_NP
+#endif
 
 /* local routines */
 void QuitSig (int);
@@ -589,7 +592,7 @@ main (int argc, char *argv[]) {
     {
       /* Initialize mutex and condition variable objects */
       pthread_mutexattr_init (&attr);
-      pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+      pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_ERRORCHECK);
       pthread_mutex_init (&ttp_lock_mutex, &attr);
 
 
