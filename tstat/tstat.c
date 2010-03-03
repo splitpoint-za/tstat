@@ -38,8 +38,10 @@ char *tstat_version = VERSION;
 
 /* seem to be missing from pthread.h */
 int pthread_mutexattr_settype (pthread_mutexattr_t * attr, int kind);
+#ifndef __FreeBSD__
 #if !(defined PTHREAD_MUTEX_ERRORCHECK || defined __USE_UNIX98)
 #define PTHREAD_MUTEX_ERRORCHECK PTHREAD_MUTEX_ERRORCHECK_NP
+#endif
 #endif
 
 /* local routines */

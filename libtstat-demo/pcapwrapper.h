@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <pcap.h>
+#include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <arpa/inet.h>
