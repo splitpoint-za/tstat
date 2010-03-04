@@ -27,7 +27,7 @@ typedef long int llong;
 #endif /* LONG LONG */
 
 /* type for a TCP sequence number, ACK, FIN, or SYN */
-typedef u_long seqnum;
+typedef u_int32_t seqnum;
 
 /* length of a segment */
 typedef u_long seglen;

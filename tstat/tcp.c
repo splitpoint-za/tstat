@@ -1200,12 +1200,12 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   /* un-acked bytes */
   if (!SYN_SET (ptcp) && !out_order && !retrans)
     {
-      u_long cwin = end - otherdir->ack;
+      u_int32_t cwin = end - otherdir->ack;
 
-      if ((long) cwin > 0 && cwin > thisdir->cwin_max) {
+      if ((int32_t) cwin > 0 && cwin > thisdir->cwin_max) {
 	thisdir->cwin_max = cwin;
         }
-      if ((long) cwin > 0 && ((thisdir->cwin_min == 0) || (cwin < thisdir->cwin_min)))
+      if ((int32_t) cwin > 0 && ((thisdir->cwin_min == 0) || (cwin < thisdir->cwin_min)))
 	thisdir->cwin_min = cwin;
     }
 
