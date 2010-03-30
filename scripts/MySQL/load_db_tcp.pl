@@ -5,12 +5,36 @@ use strict;
 
 require 'check_internal.pl';
 
+%main::html = ( 0=>"NONE",
+         1=>"GET",
+         2=>"POST",
+         3=>"MSN",
+         4=> "RTMPT",
+         5=> "YOUTUBE",
+         6=> "GOOGLEVIDEO",
+         7=> "VIMEO",
+         8=> "WIKI",
+         9=> "RAPIDSHARE",
+         10=>"MEGAUPLOAD",
+         11=>"FACEBOOK",
+         12=>"ADV",
+         13=>"FLICKR",
+         14=>"GMAPS",
+         15=>"VOD",
+         16=>"YOUTUBESITE",
+	 17=>"SOCIAL",
+	 18=>"FLASHVIDEO",
+	 19=>"MEDIAFIRE",
+	 20=>"HOTFILE",
+	 21=>"STORAGE",
+);
+
 # substitute here the database name, username and password
 # the user must have complete rights on the DB (or at least INSERT)
 $main::dbh = DBI->connect("DBI:mysql:database","username","password");
 
 $main::sth_tcp   = $main::dbh->prepare(
-             "INSERT INTO tcp values (NULL,INET_ATON(?),?,?,?,INET_ATON(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");    
+             "INSERT INTO tcp values (NULL,INET_ATON(?),?,?,?,INET_ATON(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");    
  
 # We need to disable indexes and keys while loading the data,
 # otherwise operations can be very slow for big files
@@ -44,6 +68,7 @@ $main::dbh->do("ALTER TABLE tcp DISABLE KEYS;");
 		       $main::field[103],      #ed2k_msg
 		       $main::field[20],       #src_max_seg_size
 		       $main::field[64],       #dst_max_seg_size
+                       $main::html{$main::field[104]},  # HTML classification
 		       );
   }
 }

@@ -861,6 +861,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/watch?v=",
         	       ( available_data < 9 ? available_data : 9)) == 0)
          return HTTP_YOUTUBE_SITE;
+       else if (memcmp(base, "/watch#!v=",
+        	       ( available_data < 10 ? available_data : 10)) == 0)
+         return HTTP_YOUTUBE_SITE;
        else if (memcmp(base, "/watched_events ",
         	       ( available_data < 16 ? available_data : 16)) == 0)
          return HTTP_SOCIAL;
