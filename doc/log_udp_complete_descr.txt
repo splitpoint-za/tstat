@@ -59,7 +59,7 @@ UDP type (Columns no. 8, 16) description (from struct.h)
 # 9	# P2P_KAD	# eMule KAD (Kamdelia) protocol 		#
 # 10	# P2P_KADU	# Adunanza (eMule mod) KAD (Kamdelia) protocol	#
 # 11	# P2P_GNU	# Gnutella protocol				#
-# 12	# P2P_BT	# BitTorrent DHT protocol			#
+# 12	# P2P_BT	# BitTorrent DHT and uTP protocols		#
 # 13	# P2P_DC	# DirectConnect protocol			#
 # 14	# P2P_KAZAA	# KaZaa protocol				#
 # 15	# P2P_PPLIVE	# PPLive IP-TV protocol				#

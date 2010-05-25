@@ -6,6 +6,12 @@ News in 2.1
   - Improved IMAP classification
   - Heuristics for identification of eMule/ED2K obfuscate TCP connections 
     and eMule/KAD obfuscate UDP flows 
+  - Heuristics for identification of Bittorrent encrypted connections
+  - HTTP flow content identification, based on the shallow matching of 
+    the URL path:
+     - Facebook
+     - YouTube and other video download services
+     - File Hosting services (RapidShare, MegaUpload, and other)
 * New format for subnet file (-N)
 * Changed bitrate RRDs and histograms from kbit/s to bit/s
 * Improved detection of duplicated TCP/UDP segments 
