@@ -1,0 +1,109 @@
+Tstat produces a "log_skype_complete" reporting every Skype possible flow 
+pair classified exploiting the methodology described into 
+D.Bonfiglio, M.Mellia, M.Meo, D.Rossi,P.Tofanelli, 
+"Revealing skype traffic: when randomness plays with you", 
+ACM SIGCOMM 2007, Kyoto, Japan.
+
+Both files have the same format with values separated by spaces.
+Columns are grouped according to C2S - Client-to-Server 
+and S2C - Server-to-Client traffic directions. 
+
+                        TCP flows
+############################################################################
+#Col.no.# Short descr      # Long description      
+############################################################################
+#  1    # Client IP addr   # IP address of the 'client' 
+#  2    # Client port      # TCP/UDP port address for the 'client'
+#  3    # Internal         # Internal address of client (0=no, 1=yes)
+#  4    # Flow Size        # Flow Size [Bytes]
+#  5    # Total packets    # No. of Total flow packets
+#  6    # E2E packets      # No. of End-to-End packets
+#  7    # E2O packets      # No. of SkypeOut packets
+#  8    # SIG packets      # No. of Signaling packets
+#  9    # UNK packets      # No. of Unknown packets
+# 10    # Audio/Video pkts # No. of audio or audio+video packets
+# 11    # Video only pkts  # No. of video only packets
+# 12    # Avg Pktsize      # Average Packet size 
+# 13    # Avg Pktsize: MMB # Average Packet Size: Max Mean Belief
+# 14    # Avg IPG          # Average Inter-packet Gap [ms]
+# 15    # Avg IPG: MMB     # Average IPG: Max Mean Belief
+# 16    # CHI HDR min      # Chi-square on Header: min value
+# 17    # CHI HDR max      # Chi-square on Header: max value of {1-4} & {7,8} blocks
+# 18    # CHI HDR min 5,6  # Chi-square on Header: min value of {5,6} blocks
+# 19    # CHI PAY max      # Chi-square on Payload: max value
+# 20    # DFT              # Deterministic Flow Type
+# 21    # BFT              # Bayesian Flow Type
+# 22    # CSFT             # Chi-square Flow Type
+# 23    # Video present    # Video present flag (0=no, 1=yes)
+###########################################################################
+# 24    # Server IP addr   # IP address of the 'server' 
+# 25    # Server port      # TCP/UDP port address for the 'server'
+# 26    # Internal         # Internal address of server (0=no, 1=yes)
+# 27    # Flow Size        # Flow Size [Bytes]
+# 28    # Total packets    # No. of Total flow packets
+# 29    # E2E packets      # No. of End-to-End packets
+# 30    # E2O packets      # No. of SkypeOut packets
+# 31    # SIG packets      # No. of Signaling packets
+# 32    # UNK packets      # No. of Unknown packets
+# 33    # Audio/Video pkts # No. of audio or audio+video packets
+# 34    # Video only pkts  # No. of video only packets
+# 35    # Avg Pktsize      # Average Packet size 
+# 36    # Avg Pktsize: MMB # Average Packet Size: Max Mean Belief
+# 37    # Avg IPG          # Average Inter-packet Gap [ms]
+# 38    # Avg IPG: MMB     # Average IPG: Max Mean Belief
+# 39    # CHI HDR min      # Chi-square on Header: min value
+# 40    # CHI HDR max      # Chi-square on Header: max value of {1-4} & {7,8} blocks
+# 41    # CHI HDR min 5,6  # Chi-square on Header: min value of {5,6} blocks
+# 42    # CHI PAY max      # Chi-square on Payload: max value
+# 43    # DFT              # Deterministic Flow Type
+# 44    # BFT              # Bayesian Flow Type
+# 45    # CSFT             # Chi-square Flow Type
+# 46    # Video present    # Video present flag (0=no, 1=yes)
+###########################################################################
+# 47    # Start Time       # Flow Start Time [in Unix Epoch Time] 
+# 48    # Elapsed Time     # Flow Elapsed Time [s]
+# 49    # L4 proto         # Label to state a UDP flow 
+############################################################################
+
+
+                            UDP flows
+################################################################################
+# Col.no.# Short Desc.         # Long Description
+################################################################################
+# 1      # IP address          # Client IP address
+# 2      # TCP Port            # Client TCP port
+# 3      # Internal            # Internal address of client (0=no, 1=yes)
+# 4      # Flow Size           # Flow Size
+# 5      # Total packets       # No. of Total flow packets
+# 6      # Audio/video pkts    # No. of audio or audio+video packets
+# 7      # Video only pkts     # No. of video only packets
+# 8      # Avg Pktsize         # Average Packet size
+# 9      # Avg Pktsize: MMB    # Average Packet Size: Max Mean Belief
+# 10     # Avg IPG             # Average Inter-packet Gap
+# 11     # Avg IPG: MMB        # Average IPG: Max Mean Belief
+# 12     # CHI HDR max         # Chi-square on Header: max value
+# 13     # CHI PAY max         # Chi-square on Payload: max value
+# 14     # BFT                 # Bayesian Flow Type
+# 15     # CSFT                # Chi-square Flow Type
+# 16     # Video present       # 0=no, 1=yes
+################################################################################
+# 17     # Server IP           # Server IP address
+# 18     # Server port         # Server TCP port
+# 19     # Internal            # Internal address of client (0=no, 1=yes)
+# 20     # Flow Size           # Flow Size
+# 21     # Total packets       # No. of Total flow packets
+# 22     # Audio/video pkts    # No. of audio or audio+video packets
+# 23     # Video only pkts     # No. of video only packets
+# 24     # Avg Pktsize         # Average Packet size
+# 25     # Avg Pktsize: MMB    # Average Packet Size: Max Mean Belief
+# 26     # Avg IPG             # Average Inter-packet Gap
+# 27     # Avg IPG: MMB        # Average IPG: Max Mean Belief
+# 28     # CHI HDR max         # Chi-square on Header: max value
+# 29     # CHI PAY max         # Chi-square on Payload: max value
+# 30     # BFT                 # Bayesian Flow Type
+# 31     # CSFT                # Chi-square Flow Type
+# 32     # Video present       # 0=no, 1=yes
+################################################################################  
+# 33     # Start Time          # Flow Start Time (EPOCH)
+# 34     # Elapsed Time        # Flow Elapsed Time
+# 35     # L4 proto            # Label to state a TCP flow 

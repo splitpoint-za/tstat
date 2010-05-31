@@ -1,163 +1,161 @@
-Tstat produces a "log_complete" and "log_nocomplete" files which log every TCP
-connection that has been tracked by tstat.
+Tstat produces "log_complete" and "log_nocomplete" files which log every TCP
+connection that has been tracked.
 
-A tcp connection is identified when the first SYN segment is observed, and
-is ended when either
-a) the FIN/ACK or RST segments are observer
-b) no packet has been observed (from both sides) for IDLE_TIME microsec
-(defined in param.h). By default is set to  1 min.
+A TCP connection is identified when the first SYN segment is observed, and
+is ended when either:
+  - the FIN/ACK or RST segments are observer;
+  - no data packet has been observed (from both sides) for a default timeout 
+    of 10s after the thress-way handshake or 5min after the last data packet 
+    (see TCP_SINGLETON_TIME and TCP_IDLE_TIME in param.h);
 
-if the three way handshake succeeded and if the connection tear-down a
-case) is observed, then a line in the log_complete file is added.
-Otherwise, the connection is logged in the log_nocomplete file.
+Tstat discards all the connections for which the three way handshake is not 
+properly seen. Then, in case a connection is correctly closed it is stored in 
+log_tcp_complete, otherwise in log_tcp_nocomplete. 
 
-Both files have the same format. Values are separated by spaces.
-
-Each line is composed of three main parts: values referring to the client
-host, values referring to the server hosts, and flow information (time 
-references and flow type).
+Both files have the same format with values separated by spaces.
+Columns are grouped according to C2S - Client-to-Server 
+and S2C - Server-to-Client traffic directions. 
 
 Here it follows a brief description of the columns.
 
 ############################################################################
-#Col n# Short desc      # Long descr                                      #
+#Col n# Short desc      # Long descr                                       #
 ############################################################################
-#  1  # Client IP addr # IP addresses of the client 
+#  1  # Client IP addr  # IP addresses of the client 
 #  2  # Client TCP port # TCP port addresses for the client
-#  3  # packets        # total number of packets observed form the client
-#  4  # RST sent       # 0 if no RST segment has been sent by the client, 1 otherwise
-#  5  # ACK sent       # number of segments with the ACK field set to 1
-#  6  # PURE ACK sent  # number of segments with ACK field set to 1 and no data
-#  7  # unique bytes   # number of bytes sent in the payload
-#  8  # data pkts      # number of segments with payload
-#  9  # data bytes     # number of bytes transmitted in the payload, including retransmissions
-# 10  # rexmit pkts    # number of retransmitted segments
-# 11  # rexmit bytes   # number of retransmitted bytes
-# 12  # out seq pkts   # number of segments observed out of sequence
-# 13  # SYN count      # number of SYN segments observed (including rtx)
-# 14  # FIN count      # number of FIN segments observed (including rtx)
-# 15  # RFC1323 ws     # Window scale option sent [boolean]
-# 16  # RFC1323 ts     # Timestamp option sent [boolean]
-# 17  # window scale   # Scaling values negotiated [scale factor]
-# 18  # SACK req       # SACK option set [boolean]
-# 19  # SACK sent      # number of SACK messages sent
-# 20  # MSS            # MSS declared [bytes]
-# 21  # max seg size   # Maximum segment size observed [bytes]
-# 22  # min seg size   # Minimum segment size observed [bytes]
-# 23  # win max        # Maximum receiver window announced (already scale by the window scale factor) [bytes]
-# 24  # win min        # Maximum receiver windows announced (already scale by the window scale factor) [bytes]
-# 25  # win zero       # Total number of segments declaring zero as receiver window
-# 26  # cwin max       # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
-# 27  # cwin min       # Minimum in-flight-size [bytes]
-# 28  # initial cwin   # First in-flight size, or total number of unack-ed bytes sent before receiving the first ACK segment [bytes]
-# 29  # Average rtt    # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
-# 30  # rtt min        # Minimum RTT observed during connection lifetime [ms]
-# 31  # rtt max        # Maximum RTT observed during connection lifetime [ms]
-# 32  # Stdev rtt      # Standard deviation of the RTT [ms]
-# 33  # rtt count      # Number of valid RTT observation
-# 34  # ttl_min        # Minimum Time To Live
-# 35  # ttl_max        # Maximum Time To Live
-# 36  # rtx RTO        # Number of retransmitted segments due to timeout expiration
-# 37  # rtx FR         # Number of retransmitted segments due to Fast Retransmit (three dup-ack)
-# 38  # reordering     # Number of packet reordering observed
-# 39  # net dup        # Number of network duplicates observed
-# 40  # unknown        # Number of segments not in sequence or duplicate which are not classified as specific events
-# 41  # flow control   # Number of retransmitted segments to probe the receiver window
-# 42  # unnece rtx RTO # Number of unnecessary transmissions following a timeout expiration
-# 43  # unnece rtx FR  # Number of unnecessary transmissions following a fast retransmit
-# 44  # != SYN seqno   # Set to 1 if the eventual retransmitted SYN segments have different initial seqno
+#  3  # packets         # total number of packets observed form the client
+#  4  # RST sent        # 0 if no RST segment has been sent by the client, 1 otherwise
+#  5  # ACK sent        # number of segments with the ACK field set to 1
+#  6  # PURE ACK sent   # number of segments with ACK field set to 1 and no data
+#  7  # unique bytes    # number of bytes sent in the payload
+#  8  # data pkts       # number of segments with payload
+#  9  # data bytes      # number of bytes transmitted in the payload, including retransmissions
+# 10  # rexmit pkts     # number of retransmitted segments
+# 11  # rexmit bytes    # number of retransmitted bytes
+# 12  # out seq pkts    # number of segments observed out of sequence
+# 13  # SYN count       # number of SYN segments observed (including rtx)
+# 14  # FIN count       # number of FIN segments observed (including rtx)
+# 15  # RFC1323 ws      # Window scale option sent [boolean]
+# 16  # RFC1323 ts      # Timestamp option sent [boolean]
+# 17  # window scale    # Scaling values negotiated [scale factor]
+# 18  # SACK req        # SACK option set [boolean]
+# 19  # SACK sent       # number of SACK messages sent
+# 20  # MSS             # MSS declared [bytes]
+# 21  # max seg size    # Maximum segment size observed [bytes]
+# 22  # min seg size    # Minimum segment size observed [bytes]
+# 23  # win max         # Maximum receiver window announced (already scale by the window scale factor) [bytes]
+# 24  # win min         # Maximum receiver windows announced (already scale by the window scale factor) [bytes]
+# 25  # win zero        # Total number of segments declaring zero as receiver window
+# 26  # cwin max        # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
+# 27  # cwin min        # Minimum in-flight-size [bytes]
+# 28  # initial cwin    # First in-flight size, or total number of unack-ed bytes sent before receiving the first ACK segment [bytes]
+# 29  # Average rtt     # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
+# 30  # rtt min         # Minimum RTT observed during connection lifetime [ms]
+# 31  # rtt max         # Maximum RTT observed during connection lifetime [ms]
+# 32  # Stdev rtt       # Standard deviation of the RTT [ms]
+# 33  # rtt count       # Number of valid RTT observation
+# 34  # ttl_min         # Minimum Time To Live
+# 35  # ttl_max         # Maximum Time To Live
+# 36  # rtx RTO         # Number of retransmitted segments due to timeout expiration
+# 37  # rtx FR          # Number of retransmitted segments due to Fast Retransmit (three dup-ack)
+# 38  # reordering      # Number of packet reordering observed
+# 39  # net dup         # Number of network duplicates observed
+# 40  # unknown         # Number of segments not in sequence or duplicate which are not classified as specific events
+# 41  # flow control    # Number of retransmitted segments to probe the receiver window
+# 42  # unnece rtx RTO  # Number of unnecessary transmissions following a timeout expiration
+# 43  # unnece rtx FR   # Number of unnecessary transmissions following a fast retransmit
+# 44  # != SYN seqno    # Set to 1 if the eventual retransmitted SYN segments have different initial seqno
 ############################################################################
-# 45  # Server IP addr # IP addresses of the server 
-# 46  # Server TCP port# TCP port addresses for the server 
-# 47  # packets        # total number of packets observed form the server
-# 48  # RST sent       # 0 if no RST segment has been sent by the server, 1 otherwise
-# 49  # ACK sent       # number of segments with the ACK field set to 1
-# 50  # PURE ACK sent  # number of segments with ACK field set to 1 and no data
-# 51  # unique bytes   # number of bytes sent in the payload
-# 52  # data pkts      # number of segments with payload
-# 53  # data bytes     # number of bytes transmitted in the payload, including retransmissions
-# 54  # rexmit pkts    # number of retransmitted segments
-# 55  # rexmit bytes   # number of retransmitted bytes
-# 56  # out seq pkts   # number of segments observed out of sequence
-# 57  # SYN count      # number of SYN segments observed (including rtx)
-# 58  # FIN count      # number of FIN segments observed (including rtx)
-# 59  # RFC1323 ws     # Window scale option sent [boolean]
-# 60  # RFC1323 ts     # Timestamp option sent [boolean]
-# 61  # window scale   # Scaling values negotiated [scale factor]
-# 62  # SACK req       # SACK option set [boolean]
-# 63  # SACK sent      # number of SACK messages sent
-# 64  # MSS	       # MSS declared [bytes]
-# 65  # max seg size   # Maximum segment size observed [bytes]
-# 66  # min seg size   # Minimum segment size observed [bytes]
-# 67  # win max        # Maximum receiver window announced (already scale by the window scale factor) [bytes]
-# 68  # win min        # Maximum receiver window announced (already scale by the window scale factor) [bytes]
-# 69  # win zero       # Total number of segments declaring zero as receiver window
-# 70  # cwin max       # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
-# 71  # cwin min       # Minimum in-flight-size [bytes]
-# 72  # initial cwin   # First in-flight size, or total number of unack-ed bytes sent before receiving the first ACK segment [bytes]
-# 73  # Average rtt    # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
-# 74  # rtt min        # Minimum RTT observed during connection lifetime [ms]
-# 75  # rtt max        # Maximum RTT observed during connection lifetime [ms]
-# 76  # Stdev rtt      # Standard deviation of the RTT [ms]
-# 77  # rtt count      # Number of valid RTT observation
-# 78  # ttl_min        # Minimum Time To Live
-# 79  # ttl_max        # Maximum Time To Live
-# 80  # rtx RTO        # Number of retransmitted segments due to timeout expiration
-# 81  # rtx FR         # Number of retransmitted segments due to Fast Retransmit (three dup-ack)
-# 82  # reordering     # Number of packet reordering observed
-# 83  # net dup        # Number of network duplicates observed
-# 84  # unknown        # Number of segments not in sequence or duplicate which are not classified as specific events
-# 85  # flow control   # Number of retransmitted segments to probe the receiver window
-# 86  # unnece rtx RTO # Number of unnecessary transmissions following a timeout expiration
-# 87  # unnece rtx FR  # Number of unnecessary transmissions following a fast retransmit
-# 88  # != SYN seqno   # Set to 1 if the eventual retransmitted SYN segments have different initial seqno
+# 45  # Server IP addr  # IP addresses of the server 
+# 46  # Server TCP port # TCP port addresses for the server 
+# 47  # packets         # total number of packets observed form the server
+# 48  # RST sent        # 0 if no RST segment has been sent by the server, 1 otherwise
+# 49  # ACK sent        # number of segments with the ACK field set to 1
+# 50  # PURE ACK sent   # number of segments with ACK field set to 1 and no data
+# 51  # unique bytes    # number of bytes sent in the payload
+# 52  # data pkts       # number of segments with payload
+# 53  # data bytes      # number of bytes transmitted in the payload, including retransmissions
+# 54  # rexmit pkts     # number of retransmitted segments
+# 55  # rexmit bytes    # number of retransmitted bytes
+# 56  # out seq pkts    # number of segments observed out of sequence
+# 57  # SYN count       # number of SYN segments observed (including rtx)
+# 58  # FIN count       # number of FIN segments observed (including rtx)
+# 59  # RFC1323 ws      # Window scale option sent [boolean]
+# 60  # RFC1323 ts      # Timestamp option sent [boolean]
+# 61  # window scale    # Scaling values negotiated [scale factor]
+# 62  # SACK req        # SACK option set [boolean]
+# 63  # SACK sent       # number of SACK messages sent
+# 64  # MSS             # MSS declared [bytes]
+# 65  # max seg size    # Maximum segment size observed [bytes]
+# 66  # min seg size    # Minimum segment size observed [bytes]
+# 67  # win max         # Maximum receiver window announced (already scale by the window scale factor) [bytes]
+# 68  # win min         # Maximum receiver window announced (already scale by the window scale factor) [bytes]
+# 69  # win zero        # Total number of segments declaring zero as receiver window
+# 70  # cwin max        # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
+# 71  # cwin min        # Minimum in-flight-size [bytes]
+# 72  # initial cwin    # First in-flight size, or total number of unack-ed bytes sent before receiving the first ACK segment [bytes]
+# 73  # Average rtt     # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
+# 74  # rtt min         # Minimum RTT observed during connection lifetime [ms]
+# 75  # rtt max         # Maximum RTT observed during connection lifetime [ms]
+# 76  # Stdev rtt       # Standard deviation of the RTT [ms]
+# 77  # rtt count       # Number of valid RTT observation
+# 78  # ttl_min         # Minimum Time To Live
+# 79  # ttl_max         # Maximum Time To Live
+# 80  # rtx RTO         # Number of retransmitted segments due to timeout expiration
+# 81  # rtx FR          # Number of retransmitted segments due to Fast Retransmit (three dup-ack)
+# 82  # reordering      # Number of packet reordering observed
+# 83  # net dup         # Number of network duplicates observed
+# 84  # unknown         # Number of segments not in sequence or duplicate which are not classified as specific events
+# 85  # flow control    # Number of retransmitted segments to probe the receiver window
+# 86  # unnece rtx RTO  # Number of unnecessary transmissions following a timeout expiration
+# 87  # unnece rtx FR   # Number of unnecessary transmissions following a fast retransmit
+# 88  # != SYN seqno    # Set to 1 if the eventual retransmitted SYN segments have different initial seqno
 ############################################################################
-# 89  # Completion time# Flow duration since first packet to last packet [ms]
-# 90  # First time     # Flow first packet since first segment ever [ms]
-# 91  # Last time      # Flow last segment since first segment ever [ms]
-# 92  # C first payload# Client first segment with payload since the first flow segment [ms]
-# 93  # S first payload# Server first segment with payload since the first flow segment [ms]
-# 94  # C last payload # Client last segment with payload since the first flow segment [ms]
-# 95  # S last payload # Server last segment with payload since the first flow segment [ms]
-# 96  # Internal       # Bool set to 1 if the client has internal IP
-# 97  # Connection type# Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 98  # P2P type       # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 99  # P2P subtype    # P2P protocol message type, as identified by the IPP2P engine. Application dependent. See ipp2p_tstat.c.
+# 89  # Completion time # Flow duration since first packet to last packet [ms]
+# 90  # First time      # Flow first packet since first segment ever [ms]
+# 91  # Last time       # Flow last segment since first segment ever [ms]
+# 92  # C first payload # Client first segment with payload since the first flow segment [ms]
+# 93  # S first payload # Server first segment with payload since the first flow segment [ms]
+# 94  # C last payload  # Client last segment with payload since the first flow segment [ms]
+# 95  # S last payload  # Server last segment with payload since the first flow segment [ms]
+# 96  # Internal        # Bool set to 1 if the client has internal IP
+# 97  # Connection type # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 98  # P2P type        # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 99  # P2P subtype     # P2P protocol message type, as identified by the IPP2P engine. Application dependent. See ipp2p_tstat.c.
 ############################################################################
-# 100 # ED2K Data      # For P2P ED2K flows, the number of data messages
-# 101 # ED2K Signaling # For P2P ED2K flows, the number of signaling (not data) messages
-# 102 # ED2K C2S       # For P2P ED2K flows, the number of client<->server messages
-# 103 # ED2K C2C       # For P2P ED2K flows, the number of client<->client messages
-# 104 # ED2K Chat      # For P2P ED2K flows, the number of chat messages 
+# 100 # ED2K Data       # For P2P ED2K flows, the number of data messages
+# 101 # ED2K Signaling  # For P2P ED2K flows, the number of signaling (not data) messages
+# 102 # ED2K C2S        # For P2P ED2K flows, the number of client<->server messages
+# 103 # ED2K C2C        # For P2P ED2K flows, the number of client<->client messages
+# 104 # ED2K Chat       # For P2P ED2K flows, the number of chat messages 
 ############################################################################
-# 105 # HTTP type      # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 105 # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
 ############################################################################
 
 Connection type (Column no. 97) description (from protocol.h)
--------------------------------------------------------------
 #########################################
-# Bitmask # Protocol			#
-#  Value  # Description			#
+# Bitmask # Protocol                    #
+#  Value  # Description                 #
 #########################################
-# 	0 # Unknown protocol		#
-#	1 # HTTP protocol		#
-#	2 # RTSP protocol		#
-#	4 # RTP protocol		#
-#	8 # ICY protocol		#
-#      16 # RTCP protocol		#
-#      32 # MSN protocol		#
-#      64 # YMSG protocol		#
-#     128 # XMPP protocol		#
-#     256 # P2P protocol		#
-#     512 # SKYPE protocol		#
-#    1024 # SMTP protocol		#
-#    2048 # POP3 protocol		#
-#    4096 # IMAP4 protocol		#
-#    8192 # SSL/TLS protocol		#
-#   16384 # ED2K protocol (obfuscated)	# 
-#   32768 # SSH 2.0/1.99 protocol	# 
-#   65536 # RTMP protocol		# 
-#  131072 # Bittorrent MSE/PE protocol	# 
+#       0 # Unknown protocol            #
+#       1 # HTTP protocol               #
+#       2 # RTSP protocol               #
+#       4 # RTP protocol                #
+#       8 # ICY protocol                #
+#      16 # RTCP protocol               #
+#      32 # MSN protocol                #
+#      64 # YMSG protocol               #
+#     128 # XMPP protocol               #
+#     256 # P2P protocol                #
+#     512 # SKYPE protocol              #
+#    1024 # SMTP protocol               #
+#    2048 # POP3 protocol               #
+#    4096 # IMAP4 protocol              #
+#    8192 # SSL/TLS protocol            #
+#   16384 # ED2K protocol (obfuscated)  # 
+#   32768 # SSH 2.0/1.99 protocol       # 
+#   65536 # RTMP protocol               # 
+#  131072 # Bittorrent MSE/PE protocol  # 
 #########################################
 
 Since the connection type is a bitmask, it's possible to have combinated
@@ -165,66 +163,56 @@ values. Common combinations are 257 (HTML and P2P), or 16640 (P2P and OBF).
 
 
 P2P type (Column no. 98) description (from ipp2p_tstat.h)
----------------------------------------------------------
-#################################################
-# Set-to-1  # Protocol				#
-# n-th bit  # Description			#
-# of Bitmask#					#
-#################################################
-# 1	    # IPP2P_ED2K - eMule		#
-# 2	    # IPP2P_DATA_KAZAA			#
-# 3	    # IPP2P_DATA_ED2K			#
-# 4	    # IPP2P_DATA_DC			#
-# 5	    # IPP2P_DC - DirectConnect++       	#
-# 6	    # IPP2P_DATA_GNU		       	#
-# 7	    # IPP2P_GNU - Gnutella	       	#
-# 8	    # IPP2P_KAZAA		       	#
-# 9	    # IPP2P_BIT - BitTorrent	       	#
-# 10	    # IPP2P_APPLE		       	#
-# 11	    # IPP2P_SOUL - SoulSeek	       	#
-# 12	    # IPP2P_WINMX		       	#
-# 13	    # IPP2P_ARES		       	#
-# 14	    # IPP2P_MUTE		       	#
-# 15	    # IPP2P_WASTE		       	#
-# 16	    # IPP2P_XDCC		       	#
-# 17	    # IPP2P_KAD - eMule KAD	       	#
-# 18	    # IPP2P_KADU - Adunanza (eMule mod)	#
-# 19	    # IPP2P_PPLIVE		       	#
-# 20	    # IPP2P_SOPCAST		       	#
-# 21	    # IPP2P_TVANTS		       	#
-# 22	    # IPP2P_DNS			       	#
-#################################################
-
-Some of these values are actually internally used for UDP only, 
-or correspond to currently disabled alternate matching rules,
-so they might never appear in log_tcp_(no)complete. 
+#############################################################
+# Set-to-1      # Internal         # Protocol               #
+# n-th bit      #                  #                        #
+# of Bitmask    #                  #                        #
+#############################################################
+# 1             # IPP2P_ED2K       # eMule                  #
+# 2             # IPP2P_DATA_KAZAA # Kazaa Data             #
+# 3             # IPP2P_DATA_ED2K  # Ed2k Data              #
+# 4             # IPP2P_DATA_DC    # DirectConnect++ Data   #
+# 5             # IPP2P_DC         # DirectConnect++        #
+# 6             # IPP2P_DATA_GNU   # Gnutella Data          #
+# 7             # IPP2P_GNU        # Gnutella               #
+# 8             # IPP2P_KAZAA      # Kazaa                  #
+# 9             # IPP2P_BIT        # BitTorrent             #
+# 10            # IPP2P_APPLE      # Apple                  #
+# 11            # IPP2P_SOUL       # SoulSeek               #
+# 12            # IPP2P_WINMX      # WinMX                  #
+# 13            # IPP2P_ARES       # Ares                   #
+# 14            # IPP2P_MUTE       # Mute                   #
+# 15            # IPP2P_WASTE      # Waste                  #
+# 16            # IPP2P_XDCC       # XDCC                   #
+# 17            # IPP2P_KAD        # eMule KAD              #
+# 18            # IPP2P_KADU       # Adunanza (eMule mod)   #
+#############################################################
 
 HTTP Web2.0 type (Column no. 105) description (from struct.h)
----------------------------------------------------------
 ##########################################################################
-# Value	# Internal           # Description				 #
+# Value # Internal           # Description                               #
 ##########################################################################
-# 1	# HTTP_GET	     # Unclassified GET command  		 #
-# 2	# HTTP_POST	     # Unclassified POST command 		 #
-# 3	# HTTP_MSN           # MSN Chat command tunneled over HTTP (POST)#
-# 4	# HTTP_RTMPT         # RTMPT - RTMP over HTTP Tunnel (POST)	 #
-# 5	# HTTP_YOUTUBE_VIDEO # YouTube video content download (GET)	 #
-# 6	# HTTP_GOOGLEVIDEO   # GoogleVideo video content download (GET)  #
-# 7	# HTTP_VIMEO         # Vimeo video content download (GET)	 #
-# 8	# HTTP_WIKI          # Wikipedia (GET)				 #
-# 9	# HTTP_RAPIDSHARE    # RapidShare file download (GET)		 #
-# 10	# HTTP_MEGAUPLOAD    # MegaUpload file download (GET)		 #
-# 11	# HTTP_FACEBOOK      # Facebook-related connections (GET/POST)	 #
-# 12	# HTTP_ADV           # Site advertisement (GET)  		 #
-# 13	# HTTP_FLICKR        # Flickr photo download (GET)		 #
-# 14	# HTTP_GMAPS         # GoogleMaps images (GET)			 #
-# 15	# HTTP_VOD           # Video-on-Demand download (GET) [*]	 #
-# 16	# HTTP_YOUTUBE_SITE  # YouTube site content download (GET)	 #
-# 17	# HTTP_SOCIAL        # Localized social-networking (GET/POST) [+]#
-# 18	# HTTP_FLASHVIDEO    # Generic FLV video download (GET)	[=]	 #
-# 19	# HTTP_MEDIAFIRE     # MediaFire file download (GET) 		 #
-# 20	# HTTP_HOTFILE       # Hotfile.com file download (GET) 		 #
-# 21	# HTTP_STORAGE       # Storage.to file download (GET)		 #
+# 1     # HTTP_GET           # Unclassified GET command                  #
+# 2     # HTTP_POST          # Unclassified POST command                 #
+# 3     # HTTP_MSN           # MSN Chat command tunneled over HTTP (POST)#
+# 4     # HTTP_RTMPT         # RTMPT - RTMP over HTTP Tunnel (POST)      #
+# 5     # HTTP_YOUTUBE_VIDEO # YouTube video content download (GET)      #
+# 6     # HTTP_GOOGLEVIDEO   # GoogleVideo video content download (GET)  #
+# 7     # HTTP_VIMEO         # Vimeo video content download (GET)        #
+# 8     # HTTP_WIKI          # Wikipedia (GET)                           #
+# 9     # HTTP_RAPIDSHARE    # RapidShare file download (GET)            #
+# 10    # HTTP_MEGAUPLOAD    # MegaUpload file download (GET)            #
+# 11    # HTTP_FACEBOOK      # Facebook-related connections (GET/POST)   #
+# 12    # HTTP_ADV           # Site advertisement (GET)                  #
+# 13    # HTTP_FLICKR        # Flickr photo download (GET)               #
+# 14    # HTTP_GMAPS         # GoogleMaps images (GET)                   #
+# 15    # HTTP_VOD           # Video-on-Demand download (GET) [*]        #
+# 16    # HTTP_YOUTUBE_SITE  # YouTube site content download (GET)       #
+# 17    # HTTP_SOCIAL        # Localized social-networking (GET/POST) [+]#
+# 18    # HTTP_FLASHVIDEO    # Generic FLV video download (GET) [=]      #
+# 19    # HTTP_MEDIAFIRE     # MediaFire file download (GET)             #
+# 20    # HTTP_HOTFILE       # Hotfile.com file download (GET)           #
+# 21    # HTTP_STORAGE       # Storage.to file download (GET)            #
 ##########################################################################
 
 These values are different from 0 only for identified HTTP connections 

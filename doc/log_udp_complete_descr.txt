@@ -1,70 +1,60 @@
-Tstat produces a "log_udp_complete" file which logs every UDP possible flow 
-pair tracked by tstat. 
-Even if all UDP traffic is logged here, the file is mostly useful for P2P 
-UDP traffic. UDP information for application protocols other than P2P 
-(Skype, IM protocols, etc.) is logged also in the protocol own log_*_complete file. 
-It's possible to log only the P2P UDP traffic undefining LOG_ALL_UDP (currently
-enabled by default in tstat/Makefile.conf).
+Tstat procudes a "log_udp_complete" file reporting every tracked UDP flow pair. 
+An UDP flow pair is identified when the first UDP segment is observed for 
+a UDP socket pair, and is ended when no packet has been observed (from both sides) 
+for 10s after the first packet or 3min after the last data packet 
+(see UDP_SINGLETON_TIME and UDP_IDLE_TIME in param.h).
+By default, Skype and chat protocols running over UDP are reported 
+only in a separate file (see LOG_ALL_UDP in param.h). 
 
-An UDP flow pair is identified when the first UDP segment is observed for a 
-UDP socket pair, and is ended when no packet has been observed 
-(from both sides) for UDP_IDLE_TIME microsec (defined in param.h). 
-By default is set to 5 min.
-
-Values are separated by spaces.
-
-Each line is composed of two parts: values referring to the "client"
-host (i.e. the host source of the first segment for the flow), 
-and values referring to the "server" host (i.e. the destination of the first
-segment of the flow).
-
-Here it follows a brief description of the columns.
+Columns are grouped according to C2S - Client-to-Server 
+and S2C - Server-to-Client traffic directions and values
+are separated by spaces.
 
 ############################################################################
 #Col n# Short desc      # Long descr                                      #
 ############################################################################
-#  1  # Client IP addr # IP addresses of the 'client' 
-#  2  # Client UDP port# UDP port addresses for the 'client'
-#  3  # First time     # 'Client' first packet time since first segment ever [ms]
-#  4  # Completion time# Time between the first and the last packet from the 'client' [s]
-#  5  # Data bytes     # Number of bytes transmitted in the payload
-#  6  # Packets        # Total number of packets observed from the 'client'
-#  7  # Internal       # Bool set to 1 if the 'client' has internal IP
-#  8  # UDP Type       # Protocol type for the 'client'->'server' semiflow. See the udp_type enum in struct.h
+#  1  # Client IP addr  # IP addresses of the 'client' 
+#  2  # Client UDP port # UDP port addresses for the 'client'
+#  3  # First time      # 'Client' first packet time since first segment ever [ms]
+#  4  # Completion time # Time between the first and the last packet from the 'client' [s]
+#  5  # Data bytes      # Number of bytes transmitted in the payload
+#  6  # Packets         # Total number of packets observed from the 'client'
+#  7  # Internal        # Bool set to 1 if the 'client' has internal IP
+#  8  # UDP Type        # Protocol type for the 'client'->'server' semiflow. See the udp_type enum in struct.h
 ############################################################################
-#  9  # Server IP addr # IP addresses of the 'server' 
-# 10  # Server UDP port# UDP port addresses for the 'server'
-# 11  # First time     # 'Server' first packet time since first segment ever [ms]
-# 12  # Completion time# Time between the first and the last packet from the 'server' [s]
-# 13  # Data bytes     # Number of bytes transmitted in the payload
-# 14  # Packets        # Total number of packets observed from the 'server'
-# 15  # Internal       # Bool set to 1 if the 'server' has internal IP
-# 16  # UDP Type       # Protocol type for the 'server'->'client' semiflow. See the udp_type enum in struct.h
+#  9  # Server IP addr  # IP addresses of the 'server' 
+# 10  # Server UDP port # UDP port addresses for the 'server'
+# 11  # First time      # 'Server' first packet time since first segment ever [ms]
+# 12  # Completion time # Time between the first and the last packet from the 'server' [s]
+# 13  # Data bytes      # Number of bytes transmitted in the payload
+# 14  # Packets         # Total number of packets observed from the 'server'
+# 15  # Internal        # Bool set to 1 if the 'server' has internal IP
+# 16  # UDP Type        # Protocol type for the 'server'->'client' semiflow. See the udp_type enum in struct.h
 ############################################################################
 
 UDP type (Columns no. 8, 16) description (from struct.h)
 --------------------------------------------------------
 #########################################################################
-# Value	# Internal      # Description                                   #
+# Value # Internal      # Description                                   #
 #########################################################################
-# 0	# UDP UNKNOWN   # Unknown (unclassified)			#
-# 1	# FIRST_RTP	# Unknown (possible unclassified RTP flow)	#
-# 2	# FIRST_RTCP	# Unknown (possible unclassified RTCP flow)	#
-# 3	# RTP		# RTP protocol					#
-# 4	# RTCP		# RTCP protocol					#
-# 5	# SKYPE_E2E	# Skype End-to-End				#
-# 6	# SKYPE_E2O	# SkypeOut					#
-# 7	# SKYPE_SIG	# Skype signalling				#
-# 8	# P2P_ED2K	# eMule ED2K protocol				#
-# 9	# P2P_KAD	# eMule KAD (Kamdelia) protocol 		#
-# 10	# P2P_KADU	# Adunanza (eMule mod) KAD (Kamdelia) protocol	#
-# 11	# P2P_GNU	# Gnutella protocol				#
-# 12	# P2P_BT	# BitTorrent DHT and uTP protocols		#
-# 13	# P2P_DC	# DirectConnect protocol			#
-# 14	# P2P_KAZAA	# KaZaa protocol				#
-# 15	# P2P_PPLIVE	# PPLive IP-TV protocol				#
-# 16	# P2P_SOPCAST	# SopCast IP-TV protocol			#
-# 17	# P2P_TVANTS	# TV-Ants IPTV protocol				#
-# 18	# P2P_OKAD	# eMule obfuscated KAD protocol			#
-# 19	# DNS		# DNS protocol					#
+# 0     # UDP UNKNOWN   # Unknown (unclassified)                        #
+# 1     # FIRST_RTP     # Unknown (possible unclassified RTP flow)      #
+# 2     # FIRST_RTCP    # Unknown (possible unclassified RTCP flow)     #
+# 3     # RTP           # RTP protocol                                  #
+# 4     # RTCP          # RTCP protocol                                 #
+# 5     # SKYPE_E2E     # Skype End-to-End                              #
+# 6     # SKYPE_E2O     # SkypeOut                                      #
+# 7     # SKYPE_SIG     # Skype signalling                              #
+# 8     # P2P_ED2K      # eMule ED2K protocol                           #
+# 9     # P2P_KAD       # eMule KAD (Kamdelia) protocol                 #
+# 10    # P2P_KADU      # Adunanza (eMule mod) KAD (Kamdelia) protocol  #
+# 11    # P2P_GNU       # Gnutella protocol                             #
+# 12    # P2P_BT        # BitTorrent DHT and uTP protocols              #
+# 13    # P2P_DC        # DirectConnect protocol                        #
+# 14    # P2P_KAZAA     # KaZaa protocol                                #
+# 15    # P2P_PPLIVE    # PPLive IP-TV protocol                         #
+# 16    # P2P_SOPCAST   # SopCast IP-TV protocol                        #
+# 17    # P2P_TVANTS    # TV-Ants IPTV protocol                         #
+# 18    # P2P_OKAD      # eMule obfuscated KAD protocol                 #
+# 19    # DNS           # DNS protocol                                  #
 #########################################################################
