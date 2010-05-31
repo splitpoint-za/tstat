@@ -609,6 +609,34 @@ the same measured quantity by I<appending> a specific tag (see L<"Histograms">) 
 (see L<Logs>).
 
 
+
+
+=head2 Logs 
+
+
+=for html <a name="logs"></a>
+
+
+Tstat creates a set of TXT flow files in the main output directory: C<log_tcp_complete>,
+C<log_tcp_nocomplete>, C<log_udp_complete>, C<log_mm_complete>,
+C<log_skype_complete>, C<log_chat_complete> and C<log_chat_messages>.
+TCP flows can be either completed or not depending whether Tstat observed the
+3-way handshaking or not; in the first case, all the measured indexes relatively
+to each flow will be collected in the C<log_tcp_complete>; in the latter
+case,  flows are considered as garbage and stored in C<log_tcp_nocomplete>;
+Similarly, a complete log keeping track of each UDP flow measured indexes is
+maintained in the C<log_udp_complete> file. Being UDP basically a
+connectionless protocol, it is impossible to distinguish among C<complete> and
+C<nocomplete> flows in this case.
+
+Furthermore the following log files are created: C<log_mm_complete> for multimedia flows
+(i.e. RTP, RTCP, etc), C<log_chat_complete> for IM protocols (i.e. MSN, Jabber, etc) and
+C<log_skype_complete> for Skype traffic.
+
+Description of the file format of each log file can be found in
+L<http://tstat.polito.it/measure.shtml>.
+
+
 =head2 Histograms
 
 
@@ -740,32 +768,6 @@ The RRD can then be queried with the standard RRDtool commands, such as
 C<rrdcreate>, C< rrdupdate>,  C< rrdgraph>, C< rrddump>, C< rrdfetch>, 
 C< rrdtune>, C< rrdlast>, C< rrdxport>, to whose manual pages we refer 
 the reader for further informations.
-
-
-=head2 Logs 
-
-
-=for html <a name="logs"></a>
-
-
-Tstat creates three transport-layer log-files: C<log_tcp_complete>,
-C<log_tcp_nocomplete> and C<log_udp_complete>. 
-Log files are placed in the main database directory.
-TCP flows can be either completed or not depending whether Tstat observed the
-3-way handshaking or not; in the first case, all the measured indexes relatively
-to each flow will be collected in the C<log_tcp_complete>; in the latter
-case,  flows are considered as garbage and stored in C<log_tcp_nocomplete>;
-Similarly, a complete log keeping track of each UDP flow measured indexes is
-maintained in the C<log_udp_complete> file. Being UDP basically a
-connectionless protocol, it is impossible to distinguish among C<complete> and
-C<nocomplete> flows in this case.
-
-Furthermore the following log files are created: C<log_mm_complete> for multimedia flows
-(i.e. RTP, RTCP, etc), C<log_chat_complete> for IM protocols (i.e. MSN, Jabber, etc) and
-C<log_skype_complete> for Skype traffic.
-
-Description of the file format of each log file can be found in
-L<http://tstat.polito.it/measure.shtml>.
 
 =head2 Packet Level Traces
 
