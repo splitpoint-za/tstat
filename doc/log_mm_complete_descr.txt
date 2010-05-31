@@ -27,11 +27,6 @@ For RTCP flows, a simpler heuristic is used:
 
 If so, the flow is considered a RTCP flow and its analysis may start.
 
-For each RTP flow which is successfully tracked, a line in the
-log_mm_complete file will be written when the flows ends.
-
-Here it follows a brief description of the columns.
-
 ###############################################################################################
 #Col.no.# Short Desc.      # Long Description                                        # Protocol
 ##########################################################################################
