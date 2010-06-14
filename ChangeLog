@@ -1,3 +1,8 @@
+14/06/10 - MMM 
+- Main changes since 2.1:
+  * Modified IPv6 behavior: all traffic is internal if no network is defined
+    (to mirror IPv4 default behavior)
+  
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:
   * Libtstat: Changed the API for tstat_next_pckt()

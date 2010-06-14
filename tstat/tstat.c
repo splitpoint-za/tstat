@@ -269,6 +269,7 @@ FILE *fp_dup_ooo_log;
 Bool coming_in;
 Bool internal_wired = FALSE;
 Bool net_conf = FALSE;
+Bool net6_conf = FALSE;
 long int tcp_packet_count;
 
 extern long not_id_p;
@@ -2219,6 +2220,13 @@ CheckArguments (int *pargc, char *argv[])
             "Warning: -N option not specified.\n"
             "         All subnets are assumed to be internal\n");
     }
+#ifdef SUPPORT_IPV6
+    if (net6_conf == FALSE) {
+        fprintf(fp_stdout, 
+            "Warning: IPv6 support enabled and -6 option not specified.\n"
+            "         All IPv6 subnets are assumed to be internal\n");
+    }
+#endif
 #ifdef HAVE_RRDTOOL
     /*-----------------------------------------------------------*/
     /* RRDtools                                                */
@@ -2352,6 +2360,7 @@ ParseArgs (int *pargc, char *argv[])
 	      fprintf (fp_stdout, "Could not open %s\n", internal_net_filev6);
 	      exit (1);
 	    }
+	  net6_conf = TRUE;
 	  break;
 #endif
 	case 'p':

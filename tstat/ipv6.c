@@ -18,6 +18,7 @@
 
 #include "tstat.h"
 extern Bool coming_in;
+extern Bool net6_conf;
 
 /* the names of IPv6 extensions that we understand */
 char *
@@ -173,6 +174,11 @@ IPv6_support (struct ip *pip, struct in6_addr internal_netv6, void *pplast)
     {
       internal_srcv6 = coming_in;
       internal_dstv6 = !coming_in;
+    }
+  else if (!net6_conf)
+    {
+      internal_srcv6 = 1;
+      internal_dstv6 = 1;
     }
   else
     {
