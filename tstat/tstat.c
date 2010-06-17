@@ -195,6 +195,8 @@ Bool histo_engine_log = TRUE;
 #ifdef L3_BITRATE
 Bool l3_engine_log = FALSE;   /* -3 */
 #endif
+Bool zlib_logs = FALSE;   /* -Z */
+Bool zlib_dump = FALSE;   /* -P */
 
 int log_version = 2;            /* -1 */
 
@@ -324,6 +326,9 @@ Help (void)
 #ifdef SUPPORT_IPV6
     "\t      [-y] [-6 file]\n"
 #endif
+#ifdef HAVE_ZLIB
+    "\t      [-Z] [-P]\n"
+#endif
 #ifdef HAVE_RRDTOOL
     "\t      [-r RRD_out_dir] [-R rrd_conf]\n"
 #endif
@@ -391,9 +396,12 @@ Help (void)
     "\t                 of traces and logs at runtime\n" 
     "\t-z file: redirect all the stdout/stderr messages to the file specified\n"
 #ifdef SUPPORT_IPV6
-	"\t-y: to activate the security controls on 6to4 tunnels \n"
     "\t-6 file: specify the file name which contains the\n"
     "\t         description of the internal IPv6 network.\n"
+#endif
+#ifdef HAVE_ZLIB
+    "\t-Z: Create gzip compressed (.gz) log files.\n"
+    "\t-P: Create gzip compressed (.gz) pcap dump files.\n"
 #endif
 #ifdef HAVE_RRDTOOL
 /*----------------------------------------------------------- 
@@ -700,6 +708,34 @@ main (int argc, char *argv[]) {
 #endif //TSTAT_RUNASLIB
 }
 
+void reopen_logfile(FILE **fp_ref,
+                    const char *basename, 
+		    const char *filename)
+{
+  static char logfile[200];
+
+#ifdef HAVE_ZLIB
+  if (zlib_logs)
+   {
+    snprintf (logfile,200,"%s/%s.gz", basename, filename);
+    if (*fp_ref != NULL)
+      gzclose (*fp_ref);
+    *fp_ref = gzopen (logfile, "w");
+   }
+  else
+#endif
+   {
+    snprintf (logfile,200,"%s/%s", basename, filename);
+    if (*fp_ref != NULL)
+      fclose (*fp_ref);
+    *fp_ref = fopen (logfile, "w");
+   }
+  
+  if (*fp_ref == NULL)
+    {
+      fprintf (fp_stderr, "Could not open file %s\n", logfile);
+    }
+}
 
 // MGM
 /* Create subdirs into which out files will be put */
@@ -709,7 +745,6 @@ create_new_outfiles (char *filename)
   char tmpstr[200];
   struct stat fbuf;
   char date[50];
-  char logfile[200] = "";
 
   if (!histo_engine && !log_engine && !global_histo && !runtime_engine)
     return;
@@ -753,49 +788,23 @@ create_new_outfiles (char *filename)
   if (log_engine)
     {
       /* Open the files for complete and uncomplete connection logging */
+      
+      reopen_logfile(&fp_logc,basename,"log_tcp_complete");
 
-      sprintf (logfile, "%s/%s", basename, "log_tcp_complete");
-      if (fp_logc != NULL)
-	fclose (fp_logc);
-      fp_logc = fopen (logfile, "w");
-      if (fp_logc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_lognc,basename,"log_tcp_nocomplete");
 
-      sprintf (logfile, "%s/%s", basename, "log_tcp_nocomplete");
-      if (fp_lognc != NULL)
-	fclose (fp_lognc);
-      fp_lognc = fopen (logfile, "w");
-      if (fp_lognc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
 #ifdef RTP_CLASSIFIER
       /* RTP log */
 
-      sprintf (logfile, "%s/%s", basename, "log_mm_complete");
-      if (fp_rtp_logc != NULL)
-	fclose (fp_rtp_logc);
-      fp_rtp_logc = fopen (logfile, "w");
-      if (fp_rtp_logc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_rtp_logc,basename,"log_mm_complete");
+
 #endif
 
 #ifdef SKYPE_CLASSIFIER
       /* skype log */
       if (bayes_engine)
        {
-      	 sprintf (logfile, "%s/%s", basename, "log_skype_complete");
-      	 if (fp_skype_logc != NULL)
-	   fclose (fp_skype_logc);
-      	 fp_skype_logc = fopen (logfile, "w");
-      	 if (fp_skype_logc == NULL)
-	   {
-	     fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	   }
+         reopen_logfile(&fp_skype_logc,basename,"log_skype_complete");
        }
 #endif
 
@@ -803,57 +812,23 @@ create_new_outfiles (char *filename)
 
       /* UDP log */
 
-      sprintf (logfile, "%s/%s", basename, "log_udp_complete");
-      if (fp_udp_logc != NULL)
-	fclose (fp_udp_logc);
-      fp_udp_logc = fopen (logfile, "w");
-      if (fp_udp_logc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_udp_logc,basename,"log_udp_complete");
+
 #endif 
 
       /* MSN+Yahoo+Jabber log */
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
-      sprintf (logfile, "%s/%s", basename, "log_chat_complete");
-      if (fp_chat_logc != NULL)
-	fclose (fp_chat_logc);
-      fp_chat_logc = fopen (logfile, "w");
-      if (fp_chat_logc == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
-      sprintf (logfile, "%s/%s", basename, "log_chat_messages");
-      if (fp_chat_log_msg != NULL)
-	fclose (fp_chat_log_msg);
-      fp_chat_log_msg = fopen (logfile, "w");
-      if (fp_chat_log_msg == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_chat_logc,basename,"log_chat_complete");
+      reopen_logfile(&fp_chat_log_msg,basename,"log_chat_messages");
 #ifdef MSN_OTHER_COMMANDS
-      sprintf (logfile, "%s/%s", basename, "log_msn_OtherCommands");
-      if (fp_msn_log_othercomm != NULL)
-	fclose (fp_msn_log_othercomm);
-      fp_msn_log_othercomm = fopen (logfile, "w");
-      if (fp_msn_log_othercomm == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_msn_log_othercomm,basename,"log_msn_OtherCommands");
 #endif
 #endif
 
 #ifdef L3_BITRATE
       if (l3_engine_log)
         {
-          sprintf (logfile, "%s/%s", basename, "log_l3_bitrate");
-          if (fp_l3bitrate != NULL)
-	    fclose (fp_l3bitrate);
-          fp_l3bitrate = fopen (logfile, "w");
-          if (fp_l3bitrate == NULL)
-	    {
-	      fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	    }
+          reopen_logfile(&fp_l3bitrate,basename,"log_l3_bitrate");
         }
 #endif
 
@@ -861,20 +836,85 @@ create_new_outfiles (char *filename)
       /* MGM start */
       /* Open the files for dup and ooo logging */
 
-      sprintf (logfile, "%s/%s", basename, "dup_ooo");
-      if (fp_dup_ooo_log != NULL)
-	fclose (fp_dup_ooo_log);
-      fp_dup_ooo_log = fopen (logfile, "w");
-      if (fp_dup_ooo_log == NULL)
-	{
-	  fprintf (fp_stderr, "Could not open file %s\n", logfile);
-	}
+      reopen_logfile(&fp_dup_ooo,basename,"dup_ooo");
       /* MGM stop */
 #endif
     }
 
     if (runtime_engine)
         dump_create_outdir(basename);
+}
+
+void close_all_logfiles()
+{
+#ifdef HAVE_ZLIB
+  if (zlib_logs)
+    {
+      if (fp_logc != NULL) gzclose(fp_logc);
+      if (fp_lognc != NULL) gzclose(fp_lognc);
+
+#ifdef RTP_CLASSIFIER
+      if (fp_rtp_logc != NULL) gzclose(fp_rtp_logc);
+#endif
+
+#ifdef SKYPE_CLASSIFIER
+      if (fp_skype_logc != NULL) gzclose(fp_skype_logc);
+#endif
+
+#ifdef P2P_CLASSIFIER
+      if (fp_udp_logc != NULL) gzclose(fp_udp_logc);
+#endif 
+
+#if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
+      if (fp_chat_logc != NULL) gzclose(fp_chat_logc);
+      if (fp_chat_log_msg != NULL) gzclose(fp_chat_log_msg);
+#ifdef MSN_OTHER_COMMANDS
+      if (fp_msn_log_othercomm != NULL) gzclose(fp_msn_log_othercomm);
+#endif
+#endif
+
+#ifdef L3_BITRATE
+      if (fp_l3bitrate != NULL) gzclose(fp_l3bitrate);
+#endif
+
+#ifdef LOG_OOO
+      if (fp_dup_ooo != NULL) gzclose(fp_dup_ooo);
+#endif
+    }
+  else
+#endif   /* HAVE_ZLIB */
+    {
+      if (fp_logc != NULL) fclose(fp_logc);
+      if (fp_lognc != NULL) fclose(fp_lognc);
+
+#ifdef RTP_CLASSIFIER
+      if (fp_rtp_logc != NULL) fclose(fp_rtp_logc);
+#endif
+
+#ifdef SKYPE_CLASSIFIER
+      if (fp_skype_logc != NULL) fclose(fp_skype_logc);
+#endif
+
+#ifdef P2P_CLASSIFIER
+      if (fp_udp_logc != NULL) fclose(fp_udp_logc);
+#endif 
+
+#if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
+      if (fp_chat_logc != NULL) fclose(fp_chat_logc);
+      if (fp_chat_log_msg != NULL) fclose(fp_chat_log_msg);
+#ifdef MSN_OTHER_COMMANDS
+      if (fp_msn_log_othercomm != NULL) fclose(fp_msn_log_othercomm);
+#endif
+#endif
+
+#ifdef L3_BITRATE
+      if (fp_l3bitrate != NULL) fclose(fp_l3bitrate);
+#endif
+
+#ifdef LOG_OOO
+      if (fp_dup_ooo != NULL) fclose(fp_dup_ooo);
+#endif
+    }
 }
 
 void ip_histo_stat(struct ip *pip)
@@ -1173,7 +1213,7 @@ ip_header_stat (int phystype,
    {
      double L3_delta = elapsed (L3_last_time, current_time);
      if (log_engine && l3_engine_log && fp_l3bitrate!=NULL)
-        fprintf(fp_l3bitrate,"%.6f %.2f %.2f %.2f %.2f %.2f %.2f\n",
+        wfprintf(fp_l3bitrate,"%.6f %.2f %.2f %.2f %.2f %.2f %.2f\n",
             (double)current_time.tv_sec + (double) current_time.tv_usec / 1000000.0,
              L3_bitrate_in*8.0/L3_delta*1000.,
              L3_bitrate_out*8.0/L3_delta*1000.,
@@ -1527,6 +1567,8 @@ void ProcessFileCompleted(Bool last) {
             /* dump engine */
             if (runtime_engine)
                 dump_flush(TRUE);
+            if (log_engine)
+                close_all_logfiles();
         }
     }
 
@@ -1888,6 +1930,8 @@ QuitSig (int signum)
 
   if (runtime_engine)
       dump_flush(TRUE);
+  if (log_engine)
+      close_all_logfiles();
   exit (EXIT_FAILURE);
 }
 
@@ -2269,6 +2313,13 @@ CheckArguments (int *pargc, char *argv[])
 #define SUPPORT_IPV6_OPT ""
 #endif
 
+#ifdef HAVE_ZLIB
+#define HAVE_ZLIB_OPT "ZP"
+#else
+#define HAVE_ZLIB_OPT ""
+#endif
+
+
 static void
 ParseArgs (int *pargc, char *argv[])
 {
@@ -2298,7 +2349,7 @@ ParseArgs (int *pargc, char *argv[])
   while(1) {
     c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
-		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT
+		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
 		     "B:N:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
     if (c == -1)
         break;
@@ -2322,7 +2373,7 @@ ParseArgs (int *pargc, char *argv[])
     {
       c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
-		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT
+		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
 		     "B:N:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
 
       if (c == -1) {
@@ -2366,6 +2417,14 @@ ParseArgs (int *pargc, char *argv[])
 	case 'p':
 	  threaded = TRUE;
 	  break;
+#ifdef HAVE_ZLIB
+	case 'Z':
+	  zlib_logs = TRUE;
+	  break;
+	case 'P':
+	  zlib_dump = TRUE;
+	  break;
+#endif
 	case 'd':
 	  ++debug;
 	  break;

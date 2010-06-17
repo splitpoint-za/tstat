@@ -28,7 +28,6 @@
 #include "p2p.h"
 #include "names.h"
 
-
 /* Note: 
  * is NOT possible to use libpcap writing functions because 
  * they use opaque structures that are availables only compiling
@@ -86,6 +85,7 @@ static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 Bool dump_engine = FALSE;
 extern Bool threaded;
+extern Bool zlib_dump;
 
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
     int i = 0;
@@ -108,18 +108,39 @@ FILE * new_dump_file(struct dump_file *dump_file) {
     * slice_window 1  :   udp_XXX"%02d".pcap  try to have ordered list of files
     * slice_window 2  :   udp_XXX"%d".pcap    
     */
-    if (slice_win != 0) {
-        if (dump_file->seq_num < 100)
-            fname = sprintf_safe("%s/%s%02d.pcap", outdir, 
-                dump_file->protoname, dump_file->seq_num);     
-        else
-            fname = sprintf_safe("%s/%s%d.pcap", outdir, 
-                dump_file->protoname, dump_file->seq_num);     
-    }
-    else
-        fname = sprintf_safe("%s/%s.pcap", outdir, dump_file->protoname);     
+#ifdef HAVE_ZLIB
+    if (zlib_dump)
+     {
+       if (slice_win != 0) {
+           if (dump_file->seq_num < 100)
+               fname = sprintf_safe("%s/%s%02d.pcap.gz", outdir, 
+        	   dump_file->protoname, dump_file->seq_num);	  
+           else
+               fname = sprintf_safe("%s/%s%d.pcap.gz", outdir, 
+        	   dump_file->protoname, dump_file->seq_num);	  
+       }
+       else
+           fname = sprintf_safe("%s/%s.pcap.gz", outdir, dump_file->protoname);  
 
-    fp = fopen(fname, "w");
+       fp = gzopen(fname, "w");
+      }
+    else
+#endif
+     {
+       if (slice_win != 0) {
+           if (dump_file->seq_num < 100)
+               fname = sprintf_safe("%s/%s%02d.pcap", outdir, 
+        	   dump_file->protoname, dump_file->seq_num);	  
+           else
+               fname = sprintf_safe("%s/%s%d.pcap", outdir, 
+        	   dump_file->protoname, dump_file->seq_num);	  
+       }
+       else
+           fname = sprintf_safe("%s/%s.pcap", outdir, dump_file->protoname);  
+
+       fp = fopen(fname, "w");
+      }
+    
     if (fp == NULL) {
         fprintf(fp_stderr, "dump engine: unable to create '%s'\n", fname);
         exit(1);
@@ -134,8 +155,16 @@ FILE * new_dump_file(struct dump_file *dump_file) {
     hdr.snaplen = 1000000;	        /* fake info */
     hdr.linktype = PCAP_DLT_EN10MB;	/* always Ethernet (10Mb) */
     hdr.sigfigs = 0;                /* fake info */
-    fwrite((char *) &hdr, sizeof(hdr), 1, fp);
-    
+#ifdef HAVE_ZLIB
+    if (zlib_dump)
+     { 
+       gzwrite(fp,(char *) &hdr, sizeof(hdr));
+     }
+    else 
+#endif
+     {   
+       fwrite((char *) &hdr, sizeof(hdr), 1, fp);
+     }
     return fp; 
 }
 
@@ -287,15 +316,36 @@ void dump_packet(FILE *fp,
     phdr.caplen = cap_bytes;
     phdr.caplen += sizeof(struct ether_header); /* add in the ether header */
     phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));	
-    fwrite(&phdr, sizeof(struct pcap_sf_pkthdr), 1, fp);
+#ifdef HAVE_ZLIB
+    if (zlib_dump)
+     { 
+       gzwrite(fp,&phdr, sizeof(struct pcap_sf_pkthdr));
+     }
+    else 
+#endif
+     {   
+       fwrite(&phdr, sizeof(struct pcap_sf_pkthdr), 1, fp);
+     }
 
     // write a (bogus) ethernet header
     memset(&eth_header, 0, sizeof(struct ether_header));
     eth_header.ether_type = htons (ETHERTYPE_IP);
-    fwrite (&eth_header, sizeof(struct ether_header), 1, fp);
+#ifdef HAVE_ZLIB
+    if (zlib_dump)
+     { 
+       gzwrite (fp,&eth_header, sizeof(struct ether_header));
 
-    // write the IP/TCP parts
-    fwrite(pip, phdr.caplen - sizeof(struct ether_header), 1, fp);
+       // write the IP/TCP parts
+       gzwrite(fp,pip, phdr.caplen - sizeof(struct ether_header));
+     }
+    else 
+#endif
+     {   
+       fwrite (&eth_header, sizeof(struct ether_header), 1, fp);
+
+       // write the IP/TCP parts
+       fwrite(pip, phdr.caplen - sizeof(struct ether_header), 1, fp);
+     }
 }
 
 void dump_to_file(struct dump_file *dump_file, 
@@ -313,8 +363,17 @@ void dump_to_file(struct dump_file *dump_file,
         //check if current dump window is ended
         double diff = elapsed(dump_file->win_start, current_time) / 1000000;
         if (diff >= slice_win) {
-            fflush(dump_file->fp);
-            fclose(dump_file->fp);
+#ifdef HAVE_ZLIB
+	    if (zlib_dump)
+             { 
+               gzclose(dump_file->fp);
+	     }
+	    else
+#endif
+             { 
+	       fflush(dump_file->fp);
+               fclose(dump_file->fp);
+	     }
             dump_file->seq_num++;
 
             // compute the current timestamp of dumping window
@@ -395,8 +454,17 @@ void dump_flush(Bool trace_completed) {
     //flush traces files
     for (i = 0; i < DUMP_PROTOS; i++) {
         if (proto2dump[i].enabled && proto2dump[i].fp) {
-            fflush(proto2dump[i].fp);
-            fclose(proto2dump[i].fp);
+#ifdef HAVE_ZLIB
+	    if (zlib_dump)
+             { 
+               gzclose(proto2dump[i].fp);
+	     }
+	    else
+#endif
+             { 
+               fflush(proto2dump[i].fp);
+               fclose(proto2dump[i].fp);
+	     }
             proto2dump[i].fp = NULL;
             proto2dump[i].win_start.tv_sec = -1;
             proto2dump[i].win_start.tv_usec = -1;

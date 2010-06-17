@@ -1,7 +1,7 @@
 General Information
 ===================
 
-This is version 2.1 of Tstat.
+This is version 2.2 of Tstat.
 
 Tstat is a a passive sniffer able to provide several insight on 
 the traffic patterns at both the the network and transport levels. 
@@ -14,7 +14,7 @@ You can download the latest Tstat tarball on its official site:
 Installation
 ============
 
-Tstat requires libm, libpcap, libpthread and optionally librrd.
+Tstat requires libm, libpcap, libpthread, and optionally librrd and libz.
 
 Simple install procedure:
 

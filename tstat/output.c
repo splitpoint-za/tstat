@@ -18,6 +18,9 @@
 
 
 #include "tstat.h"
+
+extern Bool zlib_logs;
+
 static inline void tv_sub (struct timeval *plhs, struct timeval rhs);
 void tv_add (struct timeval *plhs, struct timeval rhs);
 Bool tv_same (struct timeval lhs, struct timeval rhs);
@@ -179,3 +182,24 @@ get_basename (char *filename)
   strcat (base, ".out");
   return (base);
 }
+
+#ifdef HAVE_ZLIB
+int wfprintf(FILE *stream, const char* format, ... ) {
+static char buffer[8192];
+        int err;
+        va_list args;
+        va_start( args, format );
+        vsnprintf( buffer,8192, format, args );
+        va_end( args );
+	
+        if (!zlib_logs)
+	 {
+           err = fputs(buffer, (FILE *)stream);
+	 }
+	else
+	 {
+           err= gzputs( (gzFile*)stream, buffer );
+	 }
+  return err;
+}
+#endif

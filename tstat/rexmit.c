@@ -902,28 +902,28 @@ rules_test (tcb * thisdir, segment * pseg, seglen len, quadrant * pquad,
 #ifdef LOG_OOO
   if (type_of_segment != 0)
     {
-      fprintf (fp_dup_ooo_log, "T: %f ",
+      wfprintf (fp_dup_ooo_log, "T: %f ",
 	       (elapsed (first_packet, current_time) / 1000.0));
       if (dir == C2S)
 	{
-	  fprintf (fp_dup_ooo_log, "%s %s ",
+	  wfprintf (fp_dup_ooo_log, "%s %s ",
 		   HostName (thisdir->ptp->addr_pair.a_address),
 		   ServiceName (thisdir->ptp->addr_pair.a_port));
-	  fprintf (fp_dup_ooo_log, "%s %s ",
+	  wfprintf (fp_dup_ooo_log, "%s %s ",
 		   HostName (thisdir->ptp->addr_pair.b_address),
 		   ServiceName (thisdir->ptp->addr_pair.b_port));
 	}
       else
 	{
-	  fprintf (fp_dup_ooo_log, "%s %s ",
+	  wfprintf (fp_dup_ooo_log, "%s %s ",
 		   HostName (thisdir->ptp->addr_pair.b_address),
 		   ServiceName (thisdir->ptp->addr_pair.b_port));
-	  fprintf (fp_dup_ooo_log, "%s %s ",
+	  wfprintf (fp_dup_ooo_log, "%s %s ",
 		   HostName (thisdir->ptp->addr_pair.a_address),
 		   ServiceName (thisdir->ptp->addr_pair.a_port));
 	}
 
-      fprintf (fp_dup_ooo_log,
+      wfprintf (fp_dup_ooo_log,
 	       "%lu %lu %d %d %u %d %u %d %lf %lf %lu %lf %lf %lf %d",
 	       thisdir->data_pkts,
 	       thisdir->data_bytes,
@@ -937,7 +937,7 @@ rules_test (tcb * thisdir, segment * pseg, seglen len, quadrant * pquad,
 	       DeltaT2 / 1000.0,
 	       len, RTO / 1000.0, RTT_min / 1000.0, Mean_RTT / 1000.0,
 	       num_acked);
-      fprintf (fp_dup_ooo_log, " %f %f %f %f\n", thisdir->srtt / 1000.0,
+      wfprintf (fp_dup_ooo_log, " %f %f %f %f\n", thisdir->srtt / 1000.0,
 	       thisdir->rttvar / 1000.0, otherdir->srtt / 1000.0,
 	       otherdir->rttvar / 1000.0);
     }

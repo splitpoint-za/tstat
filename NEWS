@@ -1,3 +1,7 @@
+News in 2.2
+-------------
+* Direct generation of compressed (.gz) logs and dumps
+
 News in 2.1
 -------------
 * Bugfixes (see ChangeLog)

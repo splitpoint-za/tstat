@@ -52,6 +52,9 @@
 #include <math.h>
 #include <errno.h>
 
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #ifdef linux
 #ifdef strncpy
@@ -653,7 +656,11 @@ void make_udp_conn_stats (udp_pair * pup_save, Bool flusso_nc);
 void trace_done (void);
 void tcpdump_cleanup (FILE * wheref);
 
-
+#ifdef HAVE_ZLIB
+extern int wfprintf(FILE *stream, const char* format, ... );
+#else
+#define wfprintf fprintf
+#endif
 
 /* msn.c */
 #ifdef MSN_CLASSIFIER

@@ -236,6 +236,7 @@ the command is the following:
               [-T runtime.conf]
               [-z file]
               [-H ?|file ]
+              [-Z] [-P]
               [-r RRD_out_dir] [-R rrd_conf]
               [-l] [-i interface]
               [-f filterfile]
@@ -295,6 +296,8 @@ the command is the following:
         -T runtime.conf: configuration file to enable/disable dumping
                          of traces and logs at runtime
         -z file: redirect all the stdout/stderr messages to the file specified
+        -Z: Create gzip compressed (.gz) log files.
+        -P: Create gzip compressed (.gz) pcap dump files.
         -R conf: specify the configuration file for integration with
                  RRDtool. See README.RRDtool for further information
         -r path: path to use to create/update the RRDtool database
@@ -636,6 +639,10 @@ C<log_skype_complete> for Skype traffic.
 Description of the file format of each log file can be found in
 L<http://tstat.polito.it/measure.shtml>.
 
+If Tstat has been compiled with Zlib support, it will directly create gzip compressed 
+logs (.gz) when the command line option C<-Z> is used. Internal compression might be 
+CPU demanding: before enabling it, you should consider its possible effects on the Tstat 
+performance.
 
 =head2 Histograms
 
@@ -790,9 +797,13 @@ All the traces are in C<pcap> format and, because of the level 2 headers are in
 general useless for statistic purpose, each packet dumped is composed of a bogus
 Ethernet header (contains only zeros expect for the C<type> field which is IP)
 followed by the original packet starting from IP header. The input packets
-can also be trunkated after a specific amount of bytes which can be configured
+can also be truncated after a specific amount of bytes which can be configured
 using the C<snap_len> specific option in the configuration file.
 
+If Tstat has been compiled with Zlib support, it will directly create gzip compressed 
+traces (.pcap.gz) when the command line option C<-P> is used. Internal compression 
+of the packet traces is highly CPU demanding: before enabling it, you should consider 
+its possible effects on the Tstat performance.
 
 
 =head2 Post Processing
@@ -864,9 +875,9 @@ The total size of the log files amount to about 200MB, which
 gives  a 8x reduction factor w.r.t. the packet-level trace; or,
 the storage cost of each flow is about 400 bytes.
 
-Note that the C<log_*> can be further compressed, using C<gzip>
-to less than 50MB, which gives a further 4x size gain; 
-however, for a matter of performance, is preferable 
+Note that the C<log_*> can be further compressed, using the C<-Z> Tstat
+command line option or C<gzip> to less than 50MB, which gives a further 
+4x size gain; however, for a matter of performance, is preferable 
 to compress the log files I<offline>.
 
 

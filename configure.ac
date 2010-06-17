@@ -5,15 +5,15 @@
 
 # define variables for version numbers
 m4_define([_version_major], [2])
-m4_define([_version_minor], [1])
+m4_define([_version_minor], [2])
 m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Tue May 25 10:31:52 CEST 2010"])
-m4_define([_version_flavor], ["Granatina"])
+m4_define([_version_date], ["Thu Jun 17 16:28:14 CEST 2010"])
+m4_define([_version_flavor], ["Guaranito"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
         m4_esyscmd([echo _version_major._version_minor | tr -d '\n']),
-        [<mellia@mail.tlc.polito.it> <dario.rossi@enst.fr>])
+        [<mellia@mail.tlc.polito.it> <maurizio.munafo@polito.it>])
 
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE
@@ -180,14 +180,18 @@ fi
 
 #####################
 ## RRD library
-AC_SEARCH_LIBS(rrd_init, rrd, have_rrd=yes, have_rrd=no)
+AC_CHECK_LIB([rrd], [rrd_init], [AC_CHECK_HEADERS(rrd.h, have_rrd=yes, have_rrd=no)], [have_rrd=no])
 if test "x$have_rrd" = "xyes"; then
-    AC_CHECK_HEADERS(rrd.h, have_rrd=yes, have_rrd=no)
+    V_DEFINES="$V_DEFINES -DHAVE_RRD"
+    LIBS="$LIBS -lrrd"
 fi
-RRD_LDLINK=
-if test "x$have_rrd" = "xyes"; then
-    V_DEFINES="$V_DEFINES -DHAVE_RRDTOOL"
-    RRD_LDLINK="-lrrd"
+
+######################
+## ZLIB library
+AC_CHECK_LIB([z], [gzopen], [AC_CHECK_HEADERS(zlib.h, have_zlib=yes, have_zlib=no)], [have_zlib=no])
+if test "x$have_zlib" = "xyes"; then
+    V_DEFINES="$V_DEFINES -DHAVE_ZLIB"
+    LIBS="$LIBS -lz"
 fi
 
 
@@ -201,7 +205,7 @@ AC_SUBST(V_INCLS)
 AC_SUBST(V_DEFINES)
 AC_SUBST(LIBTSTAT_VERSION, _libtstat_version)
 AC_SUBST(PCAP_LDLINK)
-AC_SUBST(RRD_LDLINK)
+#AC_SUBST(RRD_LDLINK)
 AC_SUBST(PACKAGE_VERSION)
 
 AC_CONFIG_FILES([
@@ -224,6 +228,7 @@ echo \
 
   Package features:
     - pcap      yes
+    - zlib      ${have_zlib}
     - rrd       ${have_rrd}
     - libtstat  ${ENABLE_LIBTSTAT}
 --------------------------------------------------"

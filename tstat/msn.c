@@ -155,7 +155,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
       if (log_engine && fp_chat_log_msg != NULL)
 	{
 
-	  fprintf (fp_chat_log_msg,
+	  wfprintf (fp_chat_log_msg,
 		   "%ld MSG_%c %d %d %d '%s' %.3f %d\n",
 		   ptp->id_number,
 		   type,
@@ -176,7 +176,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
       if (log_engine && fp_chat_log_msg != NULL)
 	{
 
-	  fprintf (fp_chat_log_msg,
+	  wfprintf (fp_chat_log_msg,
 		   "%ld MSG_Y %d ? %d '%s' %.3f %d\n",
 		   ptp->id_number,
 		   dir,
@@ -193,7 +193,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
       tcp_stats->msn.MSN_MSG_Y_count++;
       if (log_engine && fp_chat_log_msg != NULL)
 	{
-	  fprintf (fp_chat_log_msg,
+	  wfprintf (fp_chat_log_msg,
 		   "%ld MSG_Y %d ? %d '%s' %.3f %d\n",
 		   ptp->id_number,
 		   dir,
@@ -209,7 +209,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 
       if (log_engine && fp_chat_log_msg != NULL)
 	{
-	  fprintf (fp_chat_log_msg,
+	  wfprintf (fp_chat_log_msg,
 		   "%ld ACK %d 0 %d '%s' %.3f\n",
 		   ptp->id_number,
 		   dir,
@@ -248,7 +248,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  sscanf ((char *) (pdata), "%3s", new_comm);
 	  if (log_engine && fp_msn_log_othercomm != NULL)
 	    {
-	      fprintf (fp_msn_log_othercomm,
+	      wfprintf (fp_msn_log_othercomm,
 		       "%ld %s %d %d '%s' %.3f\n",
 		       ptp->id_number,
 		       new_comm,
@@ -401,15 +401,15 @@ print_msn_conn_stats (tcp_pair *ptp)
   //     1   Client IP Address
   //     2   Client Port
 
-  fprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
+  wfprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
 	   ServiceName (ptp->addr_pair.a_port));
 
   //     3   Flow Size [Bytes] 
   /*                            sum of TCP payload length excluding SYN/FIN and rexmits */
-  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
+  wfprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     4   No. of Total flow packets
-  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
+  wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //     5   No. of total messages
   //     6   No. of MSG_A
@@ -418,7 +418,7 @@ print_msn_conn_stats (tcp_pair *ptp)
   //     9   No. of MSG_U
   //    10   No. of MSG_Y
 
-  fprintf (fp_chat_logc, " %d %d %d %d %d %d", pmsn->MSN_MSG_count,
+  wfprintf (fp_chat_logc, " %d %d %d %d %d %d", pmsn->MSN_MSG_count,
 	   pmsn->MSN_MSG_A_count, pmsn->MSN_MSG_D_count,
 	   pmsn->MSN_MSG_N_count, pmsn->MSN_MSG_U_count,
 	   pmsn->MSN_MSG_Y_count);
@@ -431,15 +431,15 @@ print_msn_conn_stats (tcp_pair *ptp)
   //    11   Server IP Address
   //    12   Server Port
 
-  fprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
+  wfprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
 	   ServiceName (ptp->addr_pair.b_port));
 
   //    13   Flow Size [Bytes] 
   //                            sum of TCP payload length excluding SYN/FIN and rexmits
-  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
+  wfprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //    14   No. of Total flow packets
-  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
+  wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //    15   No. of total messages
   //    16   No. of MSG_A
@@ -448,7 +448,7 @@ print_msn_conn_stats (tcp_pair *ptp)
   //    19   No. of MSG_U
   //    20   No. of MSG_Y
 
-  fprintf (fp_chat_logc, " %d %d %d %d %d %d", pmsn->MSN_MSG_count,
+  wfprintf (fp_chat_logc, " %d %d %d %d %d %d", pmsn->MSN_MSG_count,
 	   pmsn->MSN_MSG_A_count, pmsn->MSN_MSG_D_count,
 	   pmsn->MSN_MSG_N_count, pmsn->MSN_MSG_U_count,
 	   pmsn->MSN_MSG_Y_count);
@@ -456,30 +456,30 @@ print_msn_conn_stats (tcp_pair *ptp)
   //    21   Flow Start Time
   //    22   Flow End Time
 
-  fprintf (fp_chat_logc, " %f %.3f",
+  wfprintf (fp_chat_logc, " %f %.3f",
 	   1e-6 * time2double (ptp->first_time),
 	   elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
 
   //    23   MSN Flow Type
-  fprintf (fp_chat_logc, " %d", pmsn->MFT);
+  wfprintf (fp_chat_logc, " %d", pmsn->MFT);
 
   //    24   MSN Protocol Version
   if (pmsn->MFT == MSN_CHAT)
-    fprintf (fp_chat_logc, " %s", "UNK");
+    wfprintf (fp_chat_logc, " %s", "UNK");
   else
-    fprintf (fp_chat_logc, " %s", pmsn->MSNPversion);
+    wfprintf (fp_chat_logc, " %s", pmsn->MSNPversion);
 
   //    25  Client address is internal ? (0=no, 1=yes)
   //    26  TCP Flow ID Number
   //    27  T     [label to state a TCP flow]
   //    28  Type of Upper level Protocol
 
-  fprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
+  wfprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
 	   ptp->id_number, ptp->con_type);
 
 
   // if (debug > 2)
-  //   fprintf (fp_chat_logc, " %d %d", pmsn->arrived, pmsn->departed);
+  //   wfprintf (fp_chat_logc, " %d %d", pmsn->arrived, pmsn->departed);
 
 #ifdef MSN_DEBUG
 
@@ -498,7 +498,7 @@ print_msn_conn_stats (tcp_pair *ptp)
   //    23  MSN_BYE
   //    24  MSN_OUT
 
-  fprintf (fp_chat_logc, " VER: %d CVR: %d USR: %d XFR: %d GCF: %d PNG: %d QNG: %d CHL: %d QRY: %d CAL: %d JOI: %d RNG: %d ANS: %d IRO: %d MSG: %d BYE: %d OUT: %d POST: %d",
+  wfprintf (fp_chat_logc, " VER: %d CVR: %d USR: %d XFR: %d GCF: %d PNG: %d QNG: %d CHL: %d QRY: %d CAL: %d JOI: %d RNG: %d ANS: %d IRO: %d MSG: %d BYE: %d OUT: %d POST: %d",
      pmsn->MSN_VER_count,
      pmsn->MSN_CVR_count,
      pmsn->MSN_USR_count,
@@ -517,7 +517,7 @@ print_msn_conn_stats (tcp_pair *ptp)
      pmsn->POST_count);
 #endif
 
-  fprintf (fp_chat_logc, "\n");
+  wfprintf (fp_chat_logc, "\n");
 
 }
 

@@ -82,7 +82,7 @@ FindConTypeYmsg (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  if (log_engine && fp_chat_log_msg != NULL)
 	    {
 #if(BYTE_ORDER == BIG_ENDIAN)
-	      fprintf (fp_chat_log_msg,
+	      wfprintf (fp_chat_log_msg,
 		       "%ld MESSAGE %d %d %d '%s' %.3f %d\n", ptp->id_number,
 		       dir, *((u_int16_t *) (pdata + 8)), payload_len,
 		       ts2ascii (&ptp->first_time),
@@ -90,7 +90,7 @@ FindConTypeYmsg (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 				current_time) / 1000.0 / 1000.0,
 		       ptp->con_type);
 #else
-	      fprintf (fp_chat_log_msg,
+	      wfprintf (fp_chat_log_msg,
 		       "%ld MESSAGE %d %d %d '%s' %.3f %d\n", ptp->id_number,
 		       dir, *((u_int16_t *) (pdata + 9)), payload_len,
 		       ts2ascii (&ptp->first_time),
@@ -209,18 +209,18 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     1   Client IP Address
   //     2   Client Port
 
-  fprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
+  wfprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
 	   ServiceName (ptp->addr_pair.a_port));
 
   //     3   Flow Size [Bytes] 
   /*                            sum of TCP payload length excluding SYN/FIN and rexmits */
-  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
+  wfprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     4   No. of Total flow packets
-  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
+  wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //     5   No. of total messages
-  fprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
 
 
   /* S2C */
@@ -230,45 +230,45 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     6   Server IP Address
   //     7   Server Port
 
-  fprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
+  wfprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
 	   ServiceName (ptp->addr_pair.b_port));
 
   //     8   Flow Size [Bytes] 
   //                            sum of IP packets length (Hdr IP + Payload IP) 
-  //fprintf (fp_chat_logc, " %lu", thisTdir->ip_bytes);
+  //wfprintf (fp_chat_logc, " %lu", thisTdir->ip_bytes);
 
   //                            sum of TCP payload length excluding SYN/FIN and rexmits
-  fprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
+  wfprintf (fp_chat_logc, " %lu", thisTdir->unique_bytes);
 
   //     9   No. of Total flow packets
-  fprintf (fp_chat_logc, " %ld", thisTdir->packets);
+  wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //    10   No. of total messages
-  fprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
 
   //    11   Flow Start Time
   //    12   Flow End Time
 
-  fprintf (fp_chat_logc, " %f %.3f",
+  wfprintf (fp_chat_logc, " %f %.3f",
 	   1e-6 * time2double (ptp->first_time),
 	   elapsed (ptp->first_time, ptp->last_time) / 1000.0 / 1000.0);
 
   //    13   YMSG Flow Type
-  fprintf (fp_chat_logc, " %d", pymsg->YFT);
+  wfprintf (fp_chat_logc, " %d", pymsg->YFT);
 
   //    14   YMSG Protocol Version
-  fprintf (fp_chat_logc, " %d", pymsg->YMSGPversion);
+  wfprintf (fp_chat_logc, " %d", pymsg->YMSGPversion);
 
   //    15  Client address is internal ? (0=no, 1=yes)
   //    16  TCP Flow ID Number
   //    17  T     [label to state a TCP flow]
   //    18  Type of Upper level Protocol        
 
-  fprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
+  wfprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
 	   ptp->id_number, ptp->con_type);
 
 //  if (debug > 2)
-//    fprintf (fp_chat_logc, " %d %d", pymsg->arrived, pymsg->departed);
+//    wfprintf (fp_chat_logc, " %d %d", pymsg->arrived, pymsg->departed);
 
 #ifdef YMSG_DEBUG
 
@@ -278,14 +278,14 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //    14  YMSG_NOTIFY
   //    15  YMSG_MESSAGE
 
-  fprintf (fp_chat_logc, " AUTH_RESP: %d LIST: %d SKINNAME: %d NOTIFY: %d MESSAGE: %d",
+  wfprintf (fp_chat_logc, " AUTH_RESP: %d LIST: %d SKINNAME: %d NOTIFY: %d MESSAGE: %d",
      pymsg->YMSG_AUTH_RESP_count,
      pymsg->YMSG_LIST_count,
      pymsg->YMSG_SKINNAME_count,
      pymsg->YMSG_NOTIFY_count, pymsg->YMSG_MESSAGE_count);
 #endif
 
-  fprintf (fp_chat_logc, "\n");
+  wfprintf (fp_chat_logc, "\n");
 
 }
 

@@ -14,7 +14,7 @@ You can download the latest Tstat tarball on its official site:
 Installation
 ============
 
-Tstat requires libm, libpcap, libpthread and optionally librrd.
+Tstat requires libm, libpcap, libpthread, and optionally librrd and libz.
 
 Simple install procedure:
 
