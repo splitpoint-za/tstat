@@ -120,6 +120,35 @@ enum http_content classify_social(char *base, int available_data)
   return HTTP_GET;
 }
 
+enum http_content classify_vimeo(char *base, int available_data)
+{
+  char c;
+  int i;
+  int status1;
+
+  status1=0;
+  i = 3;
+  while (i<20)
+   {
+     c = *(char *)(base + i );
+     if (c!='/' && !isdigit(c)) 
+      {
+	status1=1;
+	break;
+      }
+     i++;
+   }
+  if (status1==1)
+   {
+     if ((memcmp(base + i,".mp4?token=",
+     	    ((available_data - i ) < 11 ? available_data - i : 11)) == 0)
+     	)
+     return HTTP_VIMEO;
+   }
+
+  return HTTP_GET;
+}
+
 
 enum http_content classify_http_get(void *pdata,int data_length)
 {
@@ -980,6 +1009,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 
           if (classify_flickr(base,available_data)==HTTP_FLICKR)
 	    return HTTP_FLICKR;
+	  else if (classify_vimeo(base,available_data)==HTTP_VIMEO)
+	    return HTTP_VIMEO;
 	  else if (classify_social(base,available_data)==HTTP_SOCIAL)
 	    return HTTP_SOCIAL;
 	}
