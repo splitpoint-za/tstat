@@ -1567,12 +1567,12 @@ struct tcpmatch matchlist[] = {
 };
 
 struct udpmatch udp_list[] = {
+  {IPP2P_DNS, SHORT_HAND_IPP2P, 22, &udp_search_dns},
   {IPP2P_KAZAA, SHORT_HAND_IPP2P, 14, &udp_search_kazaa},
   {IPP2P_BIT, SHORT_HAND_IPP2P, 23, &udp_search_bit},
   {IPP2P_GNU, SHORT_HAND_IPP2P, 11, &udp_search_gnu},
   {IPP2P_EDK, SHORT_HAND_IPP2P, 9, &udp_search_edk},
   {IPP2P_DC, SHORT_HAND_IPP2P, 12, &udp_search_directconnect},
-  {IPP2P_DNS, SHORT_HAND_IPP2P, 22, &udp_search_dns},
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},

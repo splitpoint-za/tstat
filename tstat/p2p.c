@@ -243,11 +243,11 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       udir = (ucb *) pdir;
 
 #ifndef P2P_DETAILS
-      if (udir->type!=UDP_UNKNOWN)
+      if (udir->type!=UDP_UNKNOWN && udir->type!=P2P_UTP)
         return;
 #endif
 
-      if (udir->type==UDP_UNKNOWN && 
+      if ((udir->type==UDP_UNKNOWN || udir->type==P2P_UTP ) && 
           udir->packets > MAX_UNKNOWN_PACKETS)
 	return;
 
@@ -276,7 +276,10 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               udir->type = P2P_GNU;
 	      break;
 	     case IPP2P_BIT:
-              udir->type = P2P_BT;
+               if (udir->type==P2P_UTP)
+                  udir->type = P2P_UTPBT;
+	       else
+                  udir->type = P2P_BT;
 	      break;
 	     case IPP2P_DC:
               udir->type = P2P_DC;
@@ -802,6 +805,10 @@ int UDP_p2p_to_L7type (ucb *thisflow)
       
     case P2P_BT:
       return L7_FLOW_BIT;
+
+    case P2P_UTP:
+    case P2P_UTPBT:
+      return L7_FLOW_UTP;
       
     case P2P_PPLIVE:
       return L7_FLOW_PPLIVE;

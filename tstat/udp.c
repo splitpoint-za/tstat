@@ -135,6 +135,9 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
   pup->c2s.kad_state = OUDP_UNKNOWN;
   pup->s2c.kad_state = OUDP_UNKNOWN;
 
+  pup->c2s.uTP_state = UTP_UNKNOWN;
+  pup->s2c.uTP_state = UTP_UNKNOWN;
+
   return (utp[num_udp_pairs]);
 }
 
@@ -392,6 +395,204 @@ void check_udp_obfuscate(ucb *thisdir, ucb *otherdir, u_short uh_ulen)
   return;
 }
 
+void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
+                ucb *thisdir, ucb *otherdir)
+{
+  int payload_len;
+  int data_len;
+  unsigned char *base;
+  tt_uint16 connection_id,seq_nr;
+
+  if (thisdir->is_uTP==1 && otherdir->is_uTP==1)
+    return;  /* Flow already classified */
+
+  payload_len = ntohs (pudp->uh_ulen);
+  /* This is the UDP complete length, included the header size */
+
+  base = (unsigned char *) pudp;
+  data_len = (unsigned char *) plast - (unsigned char *) base + 1;
+
+  if (data_len < 28 || payload_len == 0)
+    return;  /* Minimum uTP size is 8+20 bytes */
+  
+  if ( !( 
+  	  ((base[8] & 0x31) || (base[8]==0x41) ) &&
+     	  ( base[9]==0 || base[9]==1 || base[9]==2 )
+     	)
+     )  
+    return; /* Minimal protocol matching failed*/
+
+  switch(thisdir->uTP_state)
+   {
+/*
+  Unknown --0x41-> SYN_SEEN --0x21-> completed open
+  Unknown --0x41-> SYN_SEEN --0x11-> completed fin
+  Unknown --0x41-> SYN_SEEN --0x31-> completed reset
+  Unknown --0x01-> DATA_SEEN --0x21-> completed data_ack
+  Unknown --0x01-> DATA_SEEN --0x01-> completed data_data
+  Unknown --0x01-> DATA_SEEN --0x11-> completed data_fin
+  Unknown --0x01-> DATA_SEEN --0x31-> completed data_reset
+  Unknown --0x21-> ACK_SEEN --0x01-> completed ack_data
+  Unknown --0x21-> ACK_SEEN --0x11-> completed ack_fin
+  Unknown --0x21-> ACK_SEEN --0x31-> completed ack_reset
+*/
+     case UTP_UNKNOWN:
+     case UTP_DATA_SENT:
+     case UTP_SYN_SENT:
+     case UTP_ACK_SENT:
+       switch (base[8])
+        {
+	  case 0x01:
+	    thisdir->uTP_conn_id=ntohs(*(tt_uint16 *)(base+10));
+	    thisdir->uTP_state=UTP_DATA_SENT;
+	    otherdir->uTP_state=UTP_DATA_SEEN;
+	    break;
+	  case 0x21:
+	    thisdir->uTP_conn_id=ntohs(*(tt_uint16 *)(base+10));
+	    thisdir->uTP_state=UTP_ACK_SENT;
+	    otherdir->uTP_state=UTP_ACK_SEEN;
+	    break;
+	  case 0x41:
+	    thisdir->uTP_conn_id=ntohs(*(tt_uint16 *)(base+10));
+	    thisdir->uTP_syn_seq_nr=ntohs(*(tt_uint16 *)(base+24));
+	    thisdir->uTP_state=UTP_SYN_SENT;
+	    otherdir->uTP_state=UTP_SYN_SEEN;
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     case UTP_SYN_SEEN:
+       switch (base[8])
+        {
+	  case 0x11: /* SYN->FIN  check only the ID */ 
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  case 0x21:
+	    seq_nr=ntohs(*(tt_uint16 *)(base+26));
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if ( seq_nr==otherdir->uTP_syn_seq_nr &&
+	         connection_id==otherdir->uTP_conn_id)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  case 0x31: /* SYN->RESET  check only the ID */ 
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  case 0x41:
+	    thisdir->uTP_conn_id=ntohs(*(tt_uint16 *)(base+10));
+	    thisdir->uTP_syn_seq_nr=ntohs(*(tt_uint16 *)(base+24));
+	    thisdir->uTP_state=UTP_SYN_SENT;
+	    otherdir->uTP_state=UTP_SYN_SEEN;
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     case UTP_DATA_SEEN:
+       switch (base[8])
+        {
+	  case 0x01: /* DATA->DATA */
+	  case 0x11: /* DATA->FIN */
+	  case 0x21: /* DATA->ACK */
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id+1 || 
+	        connection_id==otherdir->uTP_conn_id-1)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  case 0x31: /* DATA->RESET */
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     case UTP_ACK_SEEN:
+       switch (base[8])
+        {
+	  case 0x01: /* ACK->DATA */
+	  case 0x11: /* ACK->FIN */
+	  case 0x21: /* ACK->ACK */
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id+1 || 
+	        connection_id==otherdir->uTP_conn_id-1)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  case 0x31: /* ACK->RESET */
+	    connection_id=ntohs(*(tt_uint16 *)(base+10));
+	    if (connection_id==otherdir->uTP_conn_id)
+	     {
+	       thisdir->uTP_conn_id=connection_id;
+	       otherdir->is_uTP=1;
+	       thisdir->is_uTP=1;
+	     }
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     default:
+       break;
+   }
+
+  if (thisdir->is_uTP==1 && otherdir->is_uTP==1)
+   {
+     if (thisdir->type==UDP_UNKNOWN ||
+    	 thisdir->type==FIRST_RTP || 
+    	 thisdir->type==FIRST_RTCP)
+      { thisdir->type=P2P_UTP; }
+     else if (thisdir->type==P2P_BT)
+      { thisdir->type=P2P_UTPBT; }
+     else
+      { 
+        // fprintf(fp_stderr, "uTP type overriding %d\n",thisdir->type);
+    	thisdir->type=P2P_UTP; 
+      }
+
+     if (otherdir->type==UDP_UNKNOWN ||
+    	 otherdir->type==FIRST_RTP || 
+    	 otherdir->type==FIRST_RTCP)
+      { otherdir->type=P2P_UTP; }
+     else if (otherdir->type==P2P_BT)
+      { otherdir->type=P2P_UTPBT; }
+     else
+      { 
+        // fprintf(fp_stderr, "uTP type overriding %d\n",otherdir->type);
+    	otherdir->type=P2P_UTP; 
+      }
+   }
+  return;
+}
+
 
 void
 udp_header_stat (struct udphdr * pudp, struct ip * pip)
@@ -526,6 +727,9 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     //fprintf(stderr, "BEFORE: %f\n", time2double(thisdir->skype->win.start));
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
     //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
+
+    // if (pup_save->packets<MAX_UDP_OBFUSCATE)
+       check_uTP(pip, pudp,plast,thisdir,otherdir);
 
     if (pup_save->packets<MAX_UDP_OBFUSCATE)
        check_udp_obfuscate(thisdir,otherdir,uh_ulen);

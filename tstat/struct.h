@@ -629,6 +629,8 @@ enum udp_type
   P2P_TVANTS,
   P2P_OKAD,
   DNS,
+  P2P_UTP,
+  P2P_UTPBT,
   LAST_UDP_PROTOCOL
 };
 
@@ -675,6 +677,10 @@ enum udp_type
  printf("P2P_OKAD = %d\n",temp); \
  temp = DNS; \
  printf("DNS = %d\n",temp); \
+ temp = P2P_UTP; \
+ printf("P2P_UTP = %d\n",temp); \
+ temp = P2P_UTPBT; \
+ printf("P2P_UTPBT = %d\n",temp); \
 }
 
 
@@ -755,6 +761,17 @@ enum obfuscate_udp_state
   OUDP_SIZE_IN_46_57
 };
 
+enum uTP_udp_state
+{
+  UTP_UNKNOWN=0,
+  UTP_SYN_SEEN,
+  UTP_DATA_SEEN,
+  UTP_ACK_SEEN,
+  UTP_SYN_SENT,
+  UTP_DATA_SENT,
+  UTP_ACK_SENT
+};
+
 /* minimal support for UDP "connections" */
 typedef struct ucb
 {
@@ -770,6 +787,10 @@ typedef struct ucb
   enum obfuscate_udp_state kad_state;
   Bool obfuscate_state;
   u_short obfuscate_last_len;
+  enum uTP_udp_state uTP_state;
+  int uTP_conn_id;
+  int uTP_syn_seq_nr;
+  Bool is_uTP;
 
   union
   {

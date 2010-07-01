@@ -40,7 +40,7 @@
 #define L7_FLOW_KADU            13
 #define L7_FLOW_GNU             14
 #define L7_FLOW_BIT             15
-#define L7_FLOW_KAZAA           16
+#define L7_FLOW_UTP             16
 #define L7_FLOW_DC              17
 #define L7_FLOW_APPLE           18
 #define L7_FLOW_SOUL            19
@@ -65,11 +65,12 @@
 #define L7_FLOW_SSL		33
 
 #define L7_FLOW_OBF_KAD		34
+
 /*
-// Temporary leave this ID unused, to maintain compatibility
-// between old RRDs and new RRDs in the CGI script
+// Redefined to L7_FLOW_KAZAA after being unused for a long time
 #define L7_FLOW_UNKNOWN         35
 */
+#define L7_FLOW_KAZAA           35
 
 #define L7_FLOW_DNS             36
 #define L7_FLOW_SSH             37
