@@ -3,6 +3,9 @@
   * Modified IPv6 behavior: all traffic is internal if no network is defined
     (to mirror IPv4 default behavior)
   * New feature: direct generation of compressed (.gz) logs and dumps
+  * Added explicit Bittorrent uTP classification 
+  * Changed RRD type 16 from Kazaa to uTP, and assigned unused RRD type 35 to
+    Kazaa
   
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:

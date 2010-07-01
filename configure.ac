@@ -182,7 +182,7 @@ fi
 ## RRD library
 AC_CHECK_LIB([rrd], [rrd_init], [AC_CHECK_HEADERS(rrd.h, have_rrd=yes, have_rrd=no)], [have_rrd=no])
 if test "x$have_rrd" = "xyes"; then
-    V_DEFINES="$V_DEFINES -DHAVE_RRD"
+    V_DEFINES="$V_DEFINES -DHAVE_RRDTOOL"
     LIBS="$LIBS -lrrd"
 fi
 
