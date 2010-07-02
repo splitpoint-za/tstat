@@ -728,7 +728,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
     //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
 
-    // if (pup_save->packets<MAX_UDP_OBFUSCATE)
+    if (pup_save->packets<MAX_UDP_UTP)
        check_uTP(pip, pudp,plast,thisdir,otherdir);
 
     if (pup_save->packets<MAX_UDP_OBFUSCATE)

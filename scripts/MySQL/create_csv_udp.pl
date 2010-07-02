@@ -25,6 +25,8 @@ use strict;
                17=>"tvants",
 	       18=>"okad",
 	       19=>"dns",    
+	       20=>"utp",    
+	       21=>"utpbt",    
 );
 	 
 # substitute here the CSV filename, that must be the same than the
