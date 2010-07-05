@@ -759,24 +759,24 @@ udptrace_init (void)
 void
 udptrace_done (void)
 {
-  udp_pair *pup;
-  int ix;
-  int dir;
+    udp_pair *pup;
+    int ix;
+    int dir = -1;
 
-  for (ix = 0; ix <= num_udp_pairs; ++ix)
-    {
-      pup = utp[ix];
-      if (pup == NULL)		/* already analized */
-	continue;
-      /* consider this udp connection */
-      if (!con_cat) {
-          //flush histos and call the garbage colletor
-          //Note: close_udp_flow() calls make_udp_conn_stats()
-          close_udp_flow(pup, ix, &dir);
-      }
-      else
-        //only flush histos
-        make_udp_conn_stats (pup, TRUE);
+    for (ix = 0; ix < MAX_UDP_PAIRS; ix++) {
+        pup = utp[ix];
+        // check if the flow has been already closed
+        if (pup == NULL)
+            continue;
+        /* consider this udp connection */
+        if (!con_cat) {
+            //flush histos and call the garbage colletor
+            //Note: close_udp_flow() calls make_udp_conn_stats()
+            close_udp_flow(pup, ix, dir);
+        }
+        else
+            //only flush histos
+            make_udp_conn_stats (pup, TRUE);
     }
 }
 
@@ -868,8 +868,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   unsigned int cleaned = 0;
   hash hval;
   int j;
-
-
+  int tmp;
 
   if (threaded)
     {
@@ -912,7 +911,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   for (puph = *ppuph_head; puph; puph = puph->next)
     {
       j++;
-      if (SameConn (&pup->addr_pair, &puph->addr_pair, &dir))
+      if (SameConn (&pup->addr_pair, &puph->addr_pair, &tmp))
 	{
 	  puph_tmp = puph;
 	  if (j == 1)
@@ -940,7 +939,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
 	  if ((utp[ix] == NULL))
 	    continue;
 
-	  if (SameConn (&pup->addr_pair, &utp[ix]->addr_pair, &dir))
+	  if (SameConn (&pup->addr_pair, &utp[ix]->addr_pair, &tmp))
 	    {
 	      break;
 	    }

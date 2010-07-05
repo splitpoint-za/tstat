@@ -858,8 +858,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	    fprintf (fp_stderr,
 		     "rexmitted SYN had diff. seqnum! (was %lu, now %lu, etime: %d sec)\n",
 		     thisdir->syn, start,
-		     (int) (elapsed (ptp_save->first_time, current_time) /
-			    1000000));
+		     (int) (elapsed (ptp_save->first_time, current_time) / 1000000));
 	  thisdir->bad_behavior = TRUE;
 	}
       thisdir->syn = start;
