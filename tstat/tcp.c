@@ -823,8 +823,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if (!ZERO_TIME (&thisdir->last_time))
     {
       u_llong itime = elapsed (thisdir->last_time, current_time);
-      if (itime > thisdir->idle_max)
-	thisdir->idle_max = itime;
+      //if (itime > thisdir->idle_max)
+	  //thisdir->idle_max = itime;
       delta_t = (double) itime;
     }
   thisdir->last_time = current_time;
@@ -1309,6 +1309,7 @@ trace_done (void)
   int ix;
 
   /* complete the "idle time" calculations using NOW */
+  /*
   for (ix = 0; ix <= num_tcp_pairs; ++ix)
     {
       tcb *thisdir;
@@ -1316,14 +1317,14 @@ trace_done (void)
 
       ptp = ttp[ix];
 
-      if (ptp == NULL)		/* already analyzed */
+      if (ptp == NULL)		// already analyzed
 	continue;
 
-      /* if it's CLOSED, skip it - shouldn't ever happen */
+      // if it's CLOSED, skip it - shouldn't ever happen
       if ((FinCount (ptp) >= 2) || (ConnReset (ptp)))
 	continue;
 
-      /* c2s direction */
+      // c2s direction
       thisdir = &ptp->c2s;
       if (!ZERO_TIME (&thisdir->last_time))
 	{
@@ -1333,7 +1334,7 @@ trace_done (void)
 	}
 
 
-      /* s2c direction */
+      // s2c direction
       thisdir = &ptp->s2c;
       if (!ZERO_TIME (&thisdir->last_time))
 	{
@@ -1342,15 +1343,17 @@ trace_done (void)
 	    thisdir->idle_max = itime;
 	}
     }
+  */
 
-  for (ix = 0; ix <= num_tcp_pairs; ++ix)
+  for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
     {
       ptp = ttp[ix];
-      if (ptp == NULL)		/* already analyzed */
+      if (ptp == NULL)		// already analyzed
 	continue;
 
-      /* do not consider this flow for the stats */
+      // do not consider this flow for the stats
       make_conn_stats (ptp, FALSE);
+      tot_conn_TCP--;
     }
 }
 
@@ -1441,7 +1444,8 @@ trace_done_periodic ()
 	  /* must be cleaned */
 	  cleaned++;
 
-	  /* c2s direction */
+      /* set idle_max time
+	  // c2s direction 
 	  thisdir = &ptp->c2s;
 	  if (!ZERO_TIME (&thisdir->last_time))
 	    {
@@ -1451,7 +1455,7 @@ trace_done_periodic ()
 	    }
 
 
-	  /* s2c direction */
+	  // s2c direction
 	  thisdir = &ptp->s2c;
 	  if (!ZERO_TIME (&thisdir->last_time))
 	    {
@@ -1459,6 +1463,7 @@ trace_done_periodic ()
 	      if (itime > thisdir->idle_max)
 		thisdir->idle_max = itime;
 	    }
+      */
 
 	  make_conn_stats (ptp, (ptp->s2c.syn_count > 0)
 			   && (ptp->c2s.syn_count > 0));

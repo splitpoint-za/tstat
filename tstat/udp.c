@@ -769,6 +769,8 @@ udptrace_done (void)
         if (pup == NULL)
             continue;
         /* consider this udp connection */
+            close_udp_flow(pup, ix, dir);
+/*
         if (!con_cat) {
             //flush histos and call the garbage colletor
             //Note: close_udp_flow() calls make_udp_conn_stats()
@@ -777,6 +779,7 @@ udptrace_done (void)
         else
             //only flush histos
             make_udp_conn_stats (pup, TRUE);
+*/
     }
 }
 
