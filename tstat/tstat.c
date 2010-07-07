@@ -850,69 +850,69 @@ void close_all_logfiles()
 #ifdef HAVE_ZLIB
   if (zlib_logs)
     {
-      if (fp_logc != NULL) gzclose(fp_logc);
-      if (fp_lognc != NULL) gzclose(fp_lognc);
+      if (fp_logc != NULL) { gzclose(fp_logc); fp_logc=NULL; }
+      if (fp_lognc != NULL) { gzclose(fp_lognc); fp_lognc=NULL; }
 
 #ifdef RTP_CLASSIFIER
-      if (fp_rtp_logc != NULL) gzclose(fp_rtp_logc);
+      if (fp_rtp_logc != NULL) { gzclose(fp_rtp_logc); fp_rtp_logc=NULL; }
 #endif
 
 #ifdef SKYPE_CLASSIFIER
-      if (fp_skype_logc != NULL) gzclose(fp_skype_logc);
+      if (fp_skype_logc != NULL) { gzclose(fp_skype_logc); fp_skype_logc=NULL; }
 #endif
 
 #ifdef P2P_CLASSIFIER
-      if (fp_udp_logc != NULL) gzclose(fp_udp_logc);
+      if (fp_udp_logc != NULL) { gzclose(fp_udp_logc); fp_udp_logc=NULL; }
 #endif 
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
-      if (fp_chat_logc != NULL) gzclose(fp_chat_logc);
-      if (fp_chat_log_msg != NULL) gzclose(fp_chat_log_msg);
+      if (fp_chat_logc != NULL) { gzclose(fp_chat_logc); fp_chat_logc=NULL; }
+      if (fp_chat_log_msg != NULL) { gzclose(fp_chat_log_msg); fp_chat_log_msg=NULL; }
 #ifdef MSN_OTHER_COMMANDS
-      if (fp_msn_log_othercomm != NULL) gzclose(fp_msn_log_othercomm);
+      if (fp_msn_log_othercomm != NULL) { gzclose(fp_msn_log_othercomm); fp_msn_log_othercomm=NULL; }
 #endif
 #endif
 
 #ifdef L3_BITRATE
-      if (fp_l3bitrate != NULL) gzclose(fp_l3bitrate);
+      if (fp_l3bitrate != NULL) { gzclose(fp_l3bitrate); fp_l3bitrate=NULL; }
 #endif
 
 #ifdef LOG_OOO
-      if (fp_dup_ooo != NULL) gzclose(fp_dup_ooo);
+      if (fp_dup_ooo != NULL) { gzclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
     }
   else
 #endif   /* HAVE_ZLIB */
     {
-      if (fp_logc != NULL) fclose(fp_logc);
-      if (fp_lognc != NULL) fclose(fp_lognc);
+      if (fp_logc != NULL) { fclose(fp_logc); fp_logc=NULL; }
+      if (fp_lognc != NULL) { fclose(fp_lognc); fp_lognc=NULL; }
 
 #ifdef RTP_CLASSIFIER
-      if (fp_rtp_logc != NULL) fclose(fp_rtp_logc);
+      if (fp_rtp_logc != NULL) { fclose(fp_rtp_logc); fp_rtp_logc=NULL; }
 #endif
 
 #ifdef SKYPE_CLASSIFIER
-      if (fp_skype_logc != NULL) fclose(fp_skype_logc);
+      if (fp_skype_logc != NULL) { fclose(fp_skype_logc); fp_skype_logc=NULL; }
 #endif
 
 #ifdef P2P_CLASSIFIER
-      if (fp_udp_logc != NULL) fclose(fp_udp_logc);
+      if (fp_udp_logc != NULL) { fclose(fp_udp_logc); fp_udp_logc=NULL; }
 #endif 
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
-      if (fp_chat_logc != NULL) fclose(fp_chat_logc);
-      if (fp_chat_log_msg != NULL) fclose(fp_chat_log_msg);
+      if (fp_chat_logc != NULL) { fclose(fp_chat_logc); fp_chat_logc=NULL; }
+      if (fp_chat_log_msg != NULL) { fclose(fp_chat_log_msg); fp_chat_log_msg=NULL; }
 #ifdef MSN_OTHER_COMMANDS
-      if (fp_msn_log_othercomm != NULL) fclose(fp_msn_log_othercomm);
+      if (fp_msn_log_othercomm != NULL) { fclose(fp_msn_log_othercomm); fp_msn_log_othercomm=NULL; }
 #endif
 #endif
 
 #ifdef L3_BITRATE
-      if (fp_l3bitrate != NULL) fclose(fp_l3bitrate);
+      if (fp_l3bitrate != NULL) { fclose(fp_l3bitrate); fp_l3bitrate=NULL; }
 #endif
 
 #ifdef LOG_OOO
-      if (fp_dup_ooo != NULL) fclose(fp_dup_ooo);
+      if (fp_dup_ooo != NULL) { fclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
     }
 }

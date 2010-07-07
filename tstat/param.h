@@ -79,8 +79,7 @@ Increase this number on high speed network will help ...*/
 
 /* maximum number of concurrent UDP connection stored in the vector UTP 
 Increase this number on high speed network will help ...*/
-//#define MAX_UDP_PAIRS 350003
-#define MAX_UDP_PAIRS 500003
+#define MAX_UDP_PAIRS 350003
 
 /* max depth of the linear serch in the previous vector... */
 #define LIST_SEARCH_DEPT 200

@@ -73,8 +73,9 @@ static int ConnComplete (tcp_pair *);
 /*
 static u_int SynCount (tcp_pair * ptp);
 */
+/*
 static u_int FinCount (tcp_pair * ptp);
-
+*/
 void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
@@ -164,7 +165,7 @@ SynCount (tcp_pair * ptp)
 }
 */
 
-
+/*
 u_int
 FinCount (tcp_pair * ptp)
 {
@@ -173,7 +174,7 @@ FinCount (tcp_pair * ptp)
 
   return (((pab->fin_count >= 1) ? 1 : 0) + ((pba->fin_count >= 1) ? 1 : 0));
 }
-
+*/
 
 
 /* copy the IP addresses and port numbers into an addrblock structure	*/
@@ -823,8 +824,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if (!ZERO_TIME (&thisdir->last_time))
     {
       u_llong itime = elapsed (thisdir->last_time, current_time);
-      //if (itime > thisdir->idle_max)
-	  //thisdir->idle_max = itime;
       delta_t = (double) itime;
     }
   thisdir->last_time = current_time;
@@ -1308,43 +1307,6 @@ trace_done (void)
   tcp_pair *ptp;
   int ix;
 
-  /* complete the "idle time" calculations using NOW */
-  /*
-  for (ix = 0; ix <= num_tcp_pairs; ++ix)
-    {
-      tcb *thisdir;
-      u_llong itime;
-
-      ptp = ttp[ix];
-
-      if (ptp == NULL)		// already analyzed
-	continue;
-
-      // if it's CLOSED, skip it - shouldn't ever happen
-      if ((FinCount (ptp) >= 2) || (ConnReset (ptp)))
-	continue;
-
-      // c2s direction
-      thisdir = &ptp->c2s;
-      if (!ZERO_TIME (&thisdir->last_time))
-	{
-	  itime = elapsed (thisdir->last_time, current_time);
-	  if (itime > thisdir->idle_max)
-	    thisdir->idle_max = itime;
-	}
-
-
-      // s2c direction
-      thisdir = &ptp->s2c;
-      if (!ZERO_TIME (&thisdir->last_time))
-	{
-	  itime = elapsed (thisdir->last_time, current_time);
-	  if (itime > thisdir->idle_max)
-	    thisdir->idle_max = itime;
-	}
-    }
-  */
-
   for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
     {
       ptp = ttp[ix];
@@ -1371,11 +1333,7 @@ trace_done_periodic ()
   ptp_snap *ptph_tmp, *ptph, *ptph_prev;
   ptp_snap **pptph_head = NULL;
 
-
-  tcb *thisdir;
-  u_llong itime;
-
-  /* complete the "idle time" calculations using NOW */
+ /* complete the "idle time" calculations using NOW */
   if (printticks && debug > 1)
     fprintf (fp_stdout, "\nStart cleaning TCP flows\n");
   for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
@@ -1443,27 +1401,6 @@ trace_done_periodic ()
 	    }
 	  /* must be cleaned */
 	  cleaned++;
-
-      /* set idle_max time
-	  // c2s direction 
-	  thisdir = &ptp->c2s;
-	  if (!ZERO_TIME (&thisdir->last_time))
-	    {
-	      itime = elapsed (thisdir->last_time, current_time);
-	      if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	    }
-
-
-	  // s2c direction
-	  thisdir = &ptp->s2c;
-	  if (!ZERO_TIME (&thisdir->last_time))
-	    {
-	      itime = elapsed (thisdir->last_time, current_time);
-	      if (itime > thisdir->idle_max)
-		thisdir->idle_max = itime;
-	    }
-      */
 
 	  make_conn_stats (ptp, (ptp->s2c.syn_count > 0)
 			   && (ptp->c2s.syn_count > 0));

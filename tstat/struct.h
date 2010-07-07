@@ -423,7 +423,6 @@ typedef struct tcb
 
   /* for tracking unidirectional idle time */
   timeval last_time;		/* last packet SENT from this side */
-  //u_llong idle_max;		/* maximum idle time observed (usecs) */
 
   upper_protocols u_protocols;
   skype_stat *skype;
