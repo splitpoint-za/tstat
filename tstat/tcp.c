@@ -2700,30 +2700,54 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       /* printing boolean flag if this is considered internal or not */
       wfprintf (fp, " %d", ptp_save->internal_src);
 
-      /* TOPIX: added 97th colon: connection type */
+      /* TOPIX: added 97th column: connection type */
       wfprintf (fp, " %d", ptp_save->con_type);
 
-      /* P2P: added 98-99th colon: p2p protocol / p2p message type /  */
+      /* P2P: added 98-99th column: p2p protocol / p2p message type /  */
       wfprintf (fp, " %d %d", ptp_save->p2p_type / 100,
 	       ptp_save->p2p_type % 100);
 
-      /* P2P: added 100-103th colon: p2p data mesg. / p2p signalling msg.   */
+      /* P2P: added 100-103th column: p2p data mesg. / p2p signalling msg.   */
       /*      currently only for ED2K-TCP - MMM 7/3/08*/
       wfprintf (fp, " %d %d %d %d", ptp_save->p2p_data_count,
 	       ptp_save->p2p_sig_count,ptp_save->p2p_c2s_count,ptp_save->p2p_c2c_count);
 
-      /* P2P: added 104th colon: p2p chat mesg. count */
+      /* P2P: added 104th column: p2p chat mesg. count */
       /*      currently only for ED2K-TCP - MMM 5/6/08*/
       wfprintf (fp, " %d", ptp_save->p2p_msg_count);
 
-      /* Web2.0: added 105th colon: HTTP content type */
+      /* Web2.0: added 105th column: HTTP content type */
       /* 
          Using http_data+1 so that valid values are > 0, i.e. GET is 1,
          POST is 2, etc.
       */
       wfprintf (fp, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
                           ptp_save->http_data + 1 : 0 );
+#ifdef YOUTUBE_DETAILS
+     /* Web 2.0 and YouTube video identification:
+         Column 106: Video ID (or request ID) - '--' if missing or not relevant
+         Column 107: YouTube seek flag
+     */
+#ifdef YOUTUBE_REQUEST_ID
+      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
+                          ptp_save->http_ytid : "--" );
 
+      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
+                          ptp_save->http_ytseek : 0 );
+#else
+      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO )  ?
+                          ptp_save->http_ytid : "--" );
+
+      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO )  ?
+                          ptp_save->http_ytseek : 0 );
+#endif
+#endif
       /* write to log file */
       wfprintf (fp, "\n");
 

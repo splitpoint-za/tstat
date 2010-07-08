@@ -17,6 +17,27 @@
 */
 
 #include "tstat.h"
+#ifdef YOUTUBE_DETAILS
+#include <regex.h>
+#endif
+
+#ifdef YOUTUBE_DETAILS
+char *patterns[10];
+char match_buffer[200];
+char yt_id[20];
+int yt_seek;
+regex_t re[10];
+regmatch_t re_res[2];
+
+void init_web_patterns()
+{
+  patterns[0] = "&id=([0-9a-f]+)[& ]";
+  patterns[1] = "&begin=[0-9]+[& ]";
+
+  regcomp(&re[0],patterns[0],REG_EXTENDED);
+  regcomp(&re[1],patterns[1],REG_EXTENDED|REG_NOSUB);
+}
+#endif
 
 enum http_content classify_flickr(char *base, int available_data)
 {
@@ -441,7 +462,31 @@ enum http_content classify_http_get(void *pdata,int data_length)
      case 'g':
        if (memcmp(base, "/generate_204?ip=",
                   ( available_data < 17 ? available_data : 17)) == 0)
+         {
+#ifdef YOUTUBE_DETAILS
+	   if (available_data>250)
+	    {
+            memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));
+            match_buffer[(available_data<450?available_data-250:200)]='\0';
+             if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
+              {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                memcpy(yt_id,match_buffer+re_res[1].rm_so,
+                 (msize<19?msize:19));
+                 yt_id[msize]='\0';
+                if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+		 {
+		   yt_seek = 1;
+		 }
+		else
+		 {
+		   yt_seek = 0;
+		 }
+              }
+	     }
+#endif
           return HTTP_YOUTUBE_VIDEO;
+         }
        else if (memcmp (base, "/generate_204?id=",
                   ( available_data < 17 ? available_data : 17)) == 0)
           return HTTP_GOOGLEVIDEO;
@@ -822,7 +867,31 @@ enum http_content classify_http_get(void *pdata,int data_length)
      case 'v':
        if (memcmp(base, "/videoplayback?ip=",
                   ( available_data < 18 ? available_data : 18)) == 0)
+         {
+#ifdef YOUTUBE_DETAILS
+	   if (available_data>250)
+	    {
+            memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));
+            match_buffer[(available_data<450?available_data-250:200)]='\0';
+             if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
+              {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                memcpy(yt_id,match_buffer+re_res[1].rm_so,
+                 (msize<19?msize:19));
+                 yt_id[msize]='\0';
+                if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+		 {
+		   yt_seek = 1;
+		 }
+		else
+		 {
+		   yt_seek = 0;
+		 }
+              }
+            }
+#endif
           return HTTP_YOUTUBE_VIDEO;
+         }
        else if (memcmp (base, "/videoplayback?id=",
                   ( available_data < 18 ? available_data : 18)) == 0)
           return HTTP_GOOGLEVIDEO;
@@ -853,7 +922,13 @@ enum http_content classify_http_get(void *pdata,int data_length)
         {
           c = *(char *)(base + 14);
 	  if (c==' ' || c== '&')
-	     return HTTP_YOUTUBE_SITE;
+	    {
+#ifdef YOUTUBE_DETAILS
+	      memcpy(yt_id,base+3,11);
+              yt_id[11]='\0';
+#endif
+	      return HTTP_YOUTUBE_SITE;
+	    }  
 	}
        else if (available_data > 12 && (memcmp(base, "/v",2) == 0) )
    	{
@@ -889,10 +964,28 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/watch?v=",
         	       ( available_data < 9 ? available_data : 9)) == 0)
-         return HTTP_YOUTUBE_SITE;
+         {
+#ifdef YOUTUBE_DETAILS
+           if (available_data>20)
+	    {
+              memcpy(yt_id,base+9,11);
+              yt_id[11]='\0';
+	    }
+#endif
+           return HTTP_YOUTUBE_SITE;
+         }
        else if (memcmp(base, "/watch#!v=",
         	       ( available_data < 10 ? available_data : 10)) == 0)
-         return HTTP_YOUTUBE_SITE;
+         {
+#ifdef YOUTUBE_DETAILS
+           if (available_data>21)
+	    {
+              memcpy(yt_id,base+10,11);
+              yt_id[11]='\0';
+	    }
+#endif
+           return HTTP_YOUTUBE_SITE;
+         }
        else if (memcmp(base, "/watched_events ",
         	       ( available_data < 16 ? available_data : 16)) == 0)
          return HTTP_SOCIAL;

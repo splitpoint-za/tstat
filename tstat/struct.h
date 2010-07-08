@@ -563,6 +563,10 @@ struct stcp_pair
   unsigned char rtp_pt;
   Bool ignore_dpi;
   enum http_content http_data;
+#ifdef YOUTUBE_DETAILS
+  char http_ytid[20];
+  int http_ytseek;
+#endif
 
   /* obfuscate ed2k identification */
   unsigned state_11:1;

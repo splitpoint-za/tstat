@@ -23,6 +23,10 @@
 #include "jabber.h"
 #include "p2p.h"
 
+#ifdef YOUTUBE_DETAILS
+#include <regex.h>
+#endif
+
 int map_flow_type(tcp_pair *thisflow);
 
 extern struct L4_bitrates L4_bitrate;
@@ -31,10 +35,20 @@ extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 extern struct WEB_bitrates WEB_bitrate;
 
+#ifdef YOUTUBE_DETAILS
+extern void init_web_patterns();
+
+extern char yt_id[20];
+extern int yt_seek;
+#endif
+
 void
 tcpL7_init ()
 {
   /* nothing to do so far */
+#ifdef YOUTUBE_DETAILS
+   init_web_patterns();
+#endif
 }
 
 void *
@@ -468,8 +482,21 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          tcp_stats->u_protocols.f_http = current_time;
 	          ptp->state = HTTP_COMMAND;
                   ptp->http_data = HTTP_GET;
+#ifdef YOUTUBE_DETAILS
+                  strcpy(ptp->http_ytid,"--");
+		  strcpy(yt_id,"--");
+		  yt_seek = 0;
+#endif
 
                   ptp->http_data = classify_http_get(pdata,data_length);
+#ifdef YOUTUBE_DETAILS
+                  if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
+		      ptp->http_data==HTTP_YOUTUBE_SITE )
+                   {
+                     strncpy(ptp->http_ytid,yt_id,19);
+			  ptp->http_ytseek=yt_seek; 
+                   }
+#endif
 	        }
 	      break;
 	    case POST:
@@ -478,7 +505,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          tcp_stats->u_protocols.f_http = current_time;
 	          ptp->state = HTTP_COMMAND;
 		  ptp->http_data = HTTP_POST;
-
+#ifdef YOUTUBE_DETAILS
+                  strcpy(ptp->http_ytid,"--");
+		  strcpy(yt_id,"--");
+		  yt_seek = 0;
+#endif
                   ptp->http_data = classify_http_post(pdata,data_length);
 	        }
 	      break;
@@ -824,21 +855,47 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
               case GET:
                 if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
 	         {
+#ifdef YOUTUBE_DETAILS
+		  strcpy(yt_id,"--");
+#endif
                    new_http_data = classify_http_get(pdata,data_length);
                    /* Only update previous classification if new one
 		      is specific */
 		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
-		     ptp->http_data = new_http_data;
+		     { 
+		       ptp->http_data = new_http_data;
+#ifdef YOUTUBE_DETAILS
+                       if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
+		           ptp->http_data==HTTP_YOUTUBE_SITE )
+                        {
+                          strncpy(ptp->http_ytid,yt_id,19);
+			  ptp->http_ytseek=yt_seek; 
+                        }
+#endif			
+	             }
                  }
 	        break;
               case POST:
                 if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
 	         {
+#ifdef YOUTUBE_DETAILS
+		  strcpy(yt_id,"--");
+#endif
                    new_http_data = classify_http_post(pdata,data_length);
                    /* Only update previous classification if new one
 		      is specific */
 		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
-		     ptp->http_data = new_http_data;
+		    { 
+		      ptp->http_data = new_http_data;
+#ifdef YOUTUBE_DETAILS
+                      if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
+		          ptp->http_data==HTTP_YOUTUBE_SITE )
+                       {
+                         strncpy(ptp->http_ytid,yt_id,19); 
+			  ptp->http_ytseek=yt_seek; 
+                       }
+#endif
+		    }
                  }
 	        break;
 	      default:
