@@ -354,6 +354,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/connect/connect.php",
                ( available_data < 20 ? available_data : 20)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/cfs-ak-",
+               ( available_data < 8 ? available_data : 8)) == 0)
+         return HTTP_FACEBOOK;
        else if (available_data > 30 && memcmp(base, "/common/image/",14)==0 )
          {
 	   if ( 
@@ -787,6 +790,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/static/v0.4/",
         	    ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/stage.static/rsrc.php/",
+               ( available_data < 23 ? available_data : 23)) == 0)
+         return HTTP_FACEBOOK;
        else if (memcmp(base, "/search/pages/",
         	    ( available_data < 14 ? available_data : 14)) == 0)
          return HTTP_SOCIAL;
@@ -1116,7 +1122,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
   if ( available_data > 14 && 
            (memcmp(base + 6, "-ak-",4) == 0 ||
             memcmp(base + 7, "-ak-",4) == 0 ||
-	    memcmp(base + 8, "-ak-",4) == 0))
+            memcmp(base + 8, "-ak-",4) == 0 ||
+	    memcmp(base + 9, "-ak-",4) == 0))
     return HTTP_FACEBOOK;
   else if ( available_data > 36 &&
            *(char *)(base + 12) == 'g' &&
