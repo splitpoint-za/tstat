@@ -2726,27 +2726,37 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 #ifdef YOUTUBE_DETAILS
      /* Web 2.0 and YouTube video identification:
          Column 106: Video ID (or request ID) - '--' if missing or not relevant
-         Column 107: YouTube seek flag
+         Column 107: YouTube itag
+         Column 108: YouTube seek flag
+         Column 109: FLV duration (from metadata)
+         Column 110: FLV byte length (from metadata)
      */
 #ifdef YOUTUBE_REQUEST_ID
       wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
                           ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
 		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
                           ptp_save->http_ytid : "--" );
-
-      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
-                          ptp_save->http_ytseek : 0 );
 #else
       wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
                           ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO )  ?
                           ptp_save->http_ytid : "--" );
+#endif
+
+      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ptp_save->http_ytitag : "--" );
 
       wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO )  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
                           ptp_save->http_ytseek : 0 );
-#endif
+
+      wfprintf (fp, " %.3f", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ptp_save->http_flv_duration : 0.0 );
+
+      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ptp_save->http_flv_bytelength : 0 );
 #endif
       /* write to log file */
       wfprintf (fp, "\n");

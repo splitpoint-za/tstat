@@ -132,6 +132,21 @@ Here it follows a brief description of the columns.
 # 105 # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
 ############################################################################
 
+If YOUTUBE_DETAILS (and optionally YOUTUBE_REQUEST_ID) is defined, the following additional columns
+are printed. They are valid only for HTTP_YOUTUBE_VIDEO (and HTTP_YOUTUBE_SITE for the Request ID) flows
+############################################################################
+# 106 # Video ID        # 16-char video identifier (or 11-char video request ID if YOUTUBE_REQUEST_ID is defined), '--' otherwise
+# 107 # Video Quality   # Video quality code [*], '--' otherwise.
+# 108 # Seek Flag       # 0 if the video is starting from the beginning, 1 otherwise
+# 109 # FLV duration    # Video duration [s] as indicated in the FLV file metadata [+]
+# 110 # FLV size        # Video size [bytes] as indicated in the FLV file metadata [+]
+############################################################################
+
+[*] The YouTube video quality is the 'fmt' value indicated in 
+http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs 
+Common values are 34 (360p), 35 (480p), and 22 (720p).
+[+] Duration and size are not reported for MP4 videos.
+
 Connection type (Column no. 97) description (from protocol.h)
 #########################################
 # Bitmask # Protocol                    #

@@ -19,6 +19,8 @@
 
 /* the snaplen of the captured packet. Make large enough to keep all
 options */
+/* Advanced features, like YouTube and BitTorrent characterization, 
+require a large snaplen, e.g. 550 bytes */
 #define SNAPLEN 160
 
 #define	SWAPLONG(y) \

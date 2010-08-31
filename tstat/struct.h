@@ -565,7 +565,10 @@ struct stcp_pair
   enum http_content http_data;
 #ifdef YOUTUBE_DETAILS
   char http_ytid[20];
+  char http_ytitag[4];
   int http_ytseek;
+  double http_flv_duration;
+  u_int32_t http_flv_bytelength;
 #endif
 
   /* obfuscate ed2k identification */

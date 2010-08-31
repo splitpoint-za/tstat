@@ -1,6 +1,8 @@
 News in 2.2
 -------------
 * Direct generation of compressed (.gz) logs and dumps
+* Updated DPI classification:
+  - Bittorrent uTP
 
 News in 2.1
 -------------

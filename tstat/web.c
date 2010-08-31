@@ -25,6 +25,7 @@
 char *patterns[10];
 char match_buffer[200];
 char yt_id[20];
+char yt_itag[5];
 int yt_seek;
 regex_t re[10];
 regmatch_t re_res[2];
@@ -33,10 +34,70 @@ void init_web_patterns()
 {
   patterns[0] = "&id=([0-9a-f]+)[& ]";
   patterns[1] = "&begin=[0-9]+[& ]";
+  patterns[2] = "&itag=([0-9]+)[& ]";
 
   regcomp(&re[0],patterns[0],REG_EXTENDED);
   regcomp(&re[1],patterns[1],REG_EXTENDED|REG_NOSUB);
+  regcomp(&re[2],patterns[2],REG_EXTENDED);
 }
+
+void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
+{
+  char *base = (char *)pdata+4;
+  int available_data = data_length - 4 ;
+  unsigned long tmp1;
+  unsigned long tmp2;
+  union { double dbl;
+          unsigned long long ull;
+  } double_ull;
+
+  ptp->http_flv_duration = 0.0;
+  ptp->http_flv_bytelength = 0;
+
+  if (available_data < 58)
+    return;
+
+  /* Read the duration of the FLV - We need at least 58+4 bytes in the payload */
+
+  base = base+40;
+  if (memcmp(base, "duration", 8) == 0)
+   {
+     base = base+9;
+
+     memcpy(&tmp1,base,4);
+     memcpy(&tmp2,base+4,4);
+
+     tmp1 = ntohl(tmp1);
+     tmp2 = ntohl(tmp2);
+     double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
+     ptp->http_flv_duration = double_ull.dbl;
+   } 
+  else
+    return;
+
+  /* Read the bytelength of the FLV - We need at least 248+4 bytes in the payload */
+
+  if (available_data < 248)
+    return;
+
+  base = base+179;
+  if (memcmp(base, "bytelength", 10) == 0)
+   {
+     base = base+11;
+
+     memcpy(&tmp1,base,4);
+     memcpy(&tmp2,base+4,4);
+
+     tmp1 = ntohl(tmp1);
+     tmp2 = ntohl(tmp2);
+
+     double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
+     ptp->http_flv_bytelength = (int)floor(double_ull.dbl);
+   }
+
+  return;
+}
+
 #endif
 
 enum http_content classify_flickr(char *base, int available_data)
@@ -467,6 +528,19 @@ enum http_content classify_http_get(void *pdata,int data_length)
                   ( available_data < 17 ? available_data : 17)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
+	   if (available_data>110)
+	    {
+            memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
+            match_buffer[(available_data<210?available_data-110:100)]='\0';
+             if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
+              {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+                 (msize<4?msize:4));
+                 yt_itag[msize]='\0';
+              }
+	     }
+
 	   if (available_data>250)
 	    {
             memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));
@@ -875,6 +949,19 @@ enum http_content classify_http_get(void *pdata,int data_length)
                   ( available_data < 18 ? available_data : 18)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
+	   if (available_data>110)
+	    {
+            memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
+            match_buffer[(available_data<210?available_data-110:100)]='\0';
+             if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
+              {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+                 (msize<4?msize:4));
+                 yt_itag[msize]='\0';
+              }
+	     }
+
 	   if (available_data>250)
 	    {
             memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));

@@ -37,8 +37,10 @@ extern struct WEB_bitrates WEB_bitrate;
 
 #ifdef YOUTUBE_DETAILS
 extern void init_web_patterns();
+extern void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length);
 
 extern char yt_id[20];
+extern char yt_itag[5];
 extern int yt_seek;
 #endif
 
@@ -484,7 +486,9 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                   ptp->http_data = HTTP_GET;
 #ifdef YOUTUBE_DETAILS
                   strcpy(ptp->http_ytid,"--");
+                  strcpy(ptp->http_ytitag,"--");
 		  strcpy(yt_id,"--");
+		  strcpy(yt_itag,"--");
 		  yt_seek = 0;
 #endif
 
@@ -494,6 +498,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		      ptp->http_data==HTTP_YOUTUBE_SITE )
                    {
                      strncpy(ptp->http_ytid,yt_id,19);
+                     strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
                    }
 #endif
@@ -507,7 +512,9 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  ptp->http_data = HTTP_POST;
 #ifdef YOUTUBE_DETAILS
                   strcpy(ptp->http_ytid,"--");
+                  strcpy(ptp->http_ytitag,"--");
 		  strcpy(yt_id,"--");
+		  strcpy(yt_itag,"--");
 		  yt_seek = 0;
 #endif
                   ptp->http_data = classify_http_post(pdata,data_length);
@@ -825,6 +832,14 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        msn_s2c_state_update(ptp,IRO,1,pdata,plast);
 	        break;
 #endif
+#ifdef YOUTUBE_DETAILS
+	      case FLV:         /* parse header of an FLV video */
+	        if (ptp->http_data==HTTP_YOUTUBE_VIDEO)
+		 {
+		   parse_flv_header(ptp,pdata,data_length);
+		 }
+	        break;
+#endif
 	      default:
 #ifdef RTSP_CLASSIFIER
 	      /* convert the snap in a null-terminated string to use strstr */
@@ -857,6 +872,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	         {
 #ifdef YOUTUBE_DETAILS
 		  strcpy(yt_id,"--");
+		  strcpy(yt_itag,"--");
 #endif
                    new_http_data = classify_http_get(pdata,data_length);
                    /* Only update previous classification if new one
@@ -869,6 +885,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		           ptp->http_data==HTTP_YOUTUBE_SITE )
                         {
                           strncpy(ptp->http_ytid,yt_id,19);
+                          strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
                         }
 #endif			
@@ -880,6 +897,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	         {
 #ifdef YOUTUBE_DETAILS
 		  strcpy(yt_id,"--");
+		  strcpy(yt_itag,"--");
 #endif
                    new_http_data = classify_http_post(pdata,data_length);
                    /* Only update previous classification if new one
@@ -892,6 +910,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		          ptp->http_data==HTTP_YOUTUBE_SITE )
                        {
                          strncpy(ptp->http_ytid,yt_id,19); 
+                         strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
                        }
 #endif

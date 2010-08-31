@@ -58,6 +58,9 @@
 #define ICY  0x49435920UL
 #define DESC 0x44455343UL
 
+/*Flash header*/
+#define FLV  0x464C5601UL
+
 /* SMTP commands */
 #define SMTP_220  0x32323020UL
 #define SMTP_HELO 0x48454C4FUL
@@ -88,6 +91,9 @@
 #define RTSP 0x50535452UL
 #define ICY  0x20594349UL
 #define DESC 0x43534544UL
+
+/*Flash header*/
+#define FLV  0x01564C46UL
 
 /* SMTP commands */
 #define SMTP_220  0x20303232UL
