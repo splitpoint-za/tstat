@@ -1014,7 +1014,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (available_data > 15 && (memcmp(base, "/v/",3) == 0) )
         {
           c = *(char *)(base + 14);
-	  if (c==' ' || c== '&')
+	  if (c==' ' || c== '&' || c== '?')
 	    {
 #ifdef YOUTUBE_DETAILS
 	      memcpy(yt_id,base+3,11);
@@ -1059,7 +1059,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
         	       ( available_data < 9 ? available_data : 9)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
-           if (available_data>20)
+           if (available_data>20 && (*(char *)(base + 9))!=' ')
 	    {
               memcpy(yt_id,base+9,11);
               yt_id[11]='\0';
@@ -1071,7 +1071,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
         	       ( available_data < 10 ? available_data : 10)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
-           if (available_data>21)
+           if (available_data>21 && (*(char *)(base + 10))!=' ')
 	    {
               memcpy(yt_id,base+10,11);
               yt_id[11]='\0';
