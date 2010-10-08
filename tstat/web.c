@@ -1016,11 +1016,31 @@ enum http_content classify_http_get(void *pdata,int data_length)
           c = *(char *)(base + 14);
 	  if (c==' ' || c== '&' || c== '?')
 	    {
+    	      status1=0;
+    	      i = 3;
+    	      while (i<14)
+    	       {
+    		 c = *(char *)(base + i );
+    		 if (!( 
+		     ( c>=65 && c<=90 ) ||   /* [A-Z] */
+		     ( c>=97 && c<=122 ) ||  /* [a-z] */
+		     ( c>=48 && c<=57 ) ||   /* [0-9] */
+		       c==45 || c==95        /* '-' '_' */
+		     ))
+    		  {
+    		    status1=1;
+    		    break;
+    		  }
+    		 i++;
+    	       }
+    	      if (status1==0)
+               {
 #ifdef YOUTUBE_DETAILS
-	      memcpy(yt_id,base+3,11);
-              yt_id[11]='\0';
+	         memcpy(yt_id,base+3,11);
+                 yt_id[11]='\0';
 #endif
-	      return HTTP_YOUTUBE_SITE;
+    		return HTTP_YOUTUBE_SITE;
+               }
 	    }  
 	}
        else if (available_data > 12 && (memcmp(base, "/v",2) == 0) )
@@ -1059,11 +1079,31 @@ enum http_content classify_http_get(void *pdata,int data_length)
         	       ( available_data < 9 ? available_data : 9)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
-           if (available_data>20 && (*(char *)(base + 9))!=' ')
-	    {
-              memcpy(yt_id,base+9,11);
-              yt_id[11]='\0';
-	    }
+           if (available_data>20)
+            {
+    	      status1=0;
+    	      i = 9;
+    	      while (i<20)
+    	       {
+    		 c = *(char *)(base + i );
+    		 if (!( 
+		     ( c>=65 && c<=90 ) ||   /* [A-Z] */
+		     ( c>=97 && c<=122 ) ||  /* [a-z] */
+		     ( c>=48 && c<=57 ) ||   /* [0-9] */
+		       c==45 || c==95        /* '-' '_' */
+		     ))
+    		  {
+    		    status1=1;
+    		    break;
+    		  }
+    		 i++;
+    	       }
+    	      if (status1==0)
+               {
+	         memcpy(yt_id,base+9,11);
+                 yt_id[11]='\0';
+	       }
+	     }
 #endif
            return HTTP_YOUTUBE_SITE;
          }
@@ -1071,11 +1111,31 @@ enum http_content classify_http_get(void *pdata,int data_length)
         	       ( available_data < 10 ? available_data : 10)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
-           if (available_data>21 && (*(char *)(base + 10))!=' ')
-	    {
-              memcpy(yt_id,base+10,11);
-              yt_id[11]='\0';
-	    }
+           if (available_data>21)
+            {
+    	      status1=0;
+    	      i = 10;
+    	      while (i<21)
+    	       {
+    		 c = *(char *)(base + i );
+    		 if (!( 
+		     ( c>=65 && c<=90 ) ||   /* [A-Z] */
+		     ( c>=97 && c<=122 ) ||  /* [a-z] */
+		     ( c>=48 && c<=57 ) ||   /* [0-9] */
+		       c==45 || c==95        /* '-' '_' */
+		     ))
+    		  {
+    		    status1=1;
+    		    break;
+    		  }
+    		 i++;
+    	       }
+    	      if (status1==0)
+               {
+	         memcpy(yt_id,base+10,11);
+                 yt_id[11]='\0';
+	       }
+	     }
 #endif
            return HTTP_YOUTUBE_SITE;
          }
