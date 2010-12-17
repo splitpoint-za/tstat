@@ -26,7 +26,7 @@ CREATE TABLE tcp (
   ed2k_msg smallint(5) unsigned default NULL,
   src_max_seg_size smallint(5) unsigned default NULL,
   dst_max_seg_size smallint(5) unsigned default NULL,
-  html enum ("NONE","GET","POST","MSN","RTMPT","YOUTUBE","GOOGLEVIDEO","VIMEO","WIKI","RAPIDSHARE","MEGAUPLOAD","FACEBOOK","ADV","FLICKR","GMAPS","VOD","YOUTUBESITE","SOCIAL","FLASHVIDEO","MEDIAFIRE","HOTFILE","STORAGE") NOT NULL  default "GET",
+  html enum ("NONE","GET","POST","MSN","RTMPT","YOUTUBE","GOOGLEVIDEO","VIMEO","WIKI","RAPIDSHARE","MEGAUPLOAD","FACEBOOK","ADV","FLICKR","GMAPS","VOD","YOUTUBESITE","SOCIAL","FLASHVIDEO","MEDIAFIRE","HOTFILE","STORAGE","YOUTUBE204","YOUTUBE204VIDEO") NOT NULL  default "GET",
   PRIMARY KEY  (id),
   KEY idx_src_ip (src_ip),
   KEY idx_src_port (src_port),

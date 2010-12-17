@@ -55,11 +55,13 @@ static void Usage (void);
 static void BadArg (char *argsource, char *format, ...);
 static void Version (void);
 static int LoadInternalNets (char *file);
+static int LoadCloudNets (char *file);
 #ifndef TSTAT_RUNASLIB
 static void ProcessFile (char *filename, Bool last);
 #endif
 
 static Bool internal_ip (struct in_addr adx);
+static Bool cloud_ip (struct in_addr adx);
 /*
 static Bool internal_ip_string (char *adx);
 */
@@ -100,6 +102,17 @@ struct in_addr internal_net_mask2[MAX_INTERNAL_HOSTS];
 int internal_net_mask[MAX_INTERNAL_HOSTS];
 char *internal_net_file;
 int tot_internal_nets;
+
+/* Variables for Cloud definition*/
+Bool cloud_src = FALSE;
+Bool cloud_dst = FALSE;
+
+struct in_addr cloud_net_list[MAX_CLOUD_HOSTS];
+struct in_addr cloud_net_mask2[MAX_CLOUD_HOSTS];
+int cloud_net_mask[MAX_CLOUD_HOSTS];
+char *cloud_net_file;
+int tot_cloud_nets;
+
 
 #ifdef SUPPORT_IPV6
 struct in6_addr internal_net_listv6;
@@ -271,6 +284,7 @@ FILE *fp_dup_ooo_log;
 Bool coming_in;
 Bool internal_wired = FALSE;
 Bool net_conf = FALSE;
+Bool cloud_conf = FALSE;
 Bool net6_conf = FALSE;
 long int tcp_packet_count;
 
@@ -319,6 +333,7 @@ Help (void)
     "\ttstat [-htuvwpgSL] [-d[-d]]\n"
     "\t      [-s dir]\n"
     "\t      [-N file]\n"
+    "\t      [-C file]\n"
     "\t      [-B bayes.conf]\n"
     "\t      [-T runtime.conf]\n"
     "\t      [-z file]\n"
@@ -368,6 +383,13 @@ Help (void)
     "\t             255.255.0.0\n"
     "\t         If the option is not specified all networks are\n"
     "\t         considered internal\n"
+    "\n"
+    "\t-C file: specify the file name which contains the\n"
+    "\t         description of the cloud networks.\n"
+    "\t         This file must contain the subnets that will be\n"
+    "\t         considered as belonging to a specific group of networks\n"
+    "\t         (cloud) during the analysis.\n"
+    "\t         Subnets are specified like in the -N option.\n"
     "\n"
 	"\t-H ?: print internal histograms names and definitions\n"
     "\t-H file: Read histogram configuration from file\n"
@@ -930,6 +952,19 @@ void ip_histo_stat(struct ip *pip)
       add_histo (ip_len_out, (float) ntohs (pip->ip_len));
       add_histo (ip_ttl_out, (float) pip->ip_ttl);
       add_histo (ip_tos_out, (float) pip->ip_tos);
+
+      if (cloud_dst)
+       {
+         L4_bitrate.c_out[IP_TYPE] += ntohs (pip->ip_len);
+         if (pip->ip_p == IPPROTO_ICMP)
+    	   L4_bitrate.c_out[ICMP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_out[IP_TYPE] += ntohs (pip->ip_len);
+         if (pip->ip_p == IPPROTO_ICMP)
+    	   L4_bitrate.nc_out[ICMP_TYPE] += ntohs (pip->ip_len);
+       }
 #ifdef L3_BITRATE
       L3_bitrate_out += ntohs (pip->ip_len);
       L3_bitrate_ip46_out += max(ntohs(pip->ip_len),46);
@@ -944,6 +979,18 @@ void ip_histo_stat(struct ip *pip)
       add_histo (ip_len_in, (float) ntohs (pip->ip_len));
       add_histo (ip_ttl_in, (float) pip->ip_ttl);
       add_histo (ip_tos_in, (float) pip->ip_tos);
+      if (cloud_src)
+       {
+         L4_bitrate.c_in[IP_TYPE] += ntohs (pip->ip_len);
+         if (pip->ip_p == IPPROTO_ICMP)
+    	   L4_bitrate.c_in[ICMP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_in[IP_TYPE] += ntohs (pip->ip_len);
+         if (pip->ip_p == IPPROTO_ICMP)
+    	   L4_bitrate.nc_in[ICMP_TYPE] += ntohs (pip->ip_len);
+       }
 #ifdef L3_BITRATE
       L3_bitrate_in += ntohs (pip->ip_len);
       L3_bitrate_ip46_in += max(ntohs(pip->ip_len),46);
@@ -1068,6 +1115,8 @@ ip_header_stat (int phystype,
 	  }
 	}
 
+      cloud_src = cloud_ip (pip->ip_src);
+      cloud_dst = cloud_ip (pip->ip_dst);
       /* .a.c. */
       
       /* 
@@ -2264,6 +2313,9 @@ CheckArguments (int *pargc, char *argv[])
             "Warning: -N option not specified.\n"
             "         All subnets are assumed to be internal\n");
     }
+    if (cloud_conf == FALSE) {
+        tot_cloud_nets = 0;
+    }
 #ifdef SUPPORT_IPV6
     if (net6_conf == FALSE) {
         fprintf(fp_stdout, 
@@ -2350,7 +2402,7 @@ ParseArgs (int *pargc, char *argv[])
     c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "B:N:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
     if (c == -1)
         break;
     if (c == 'z') {
@@ -2374,7 +2426,7 @@ ParseArgs (int *pargc, char *argv[])
       c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "B:N:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
 
       if (c == -1) {
 	    break;
@@ -2396,6 +2448,18 @@ ParseArgs (int *pargc, char *argv[])
 	      exit (1);
 	    }
 	  net_conf = TRUE;
+	  break;
+	case 'C':
+	  /* -C file */
+	  cloud_net_file = strdup (optarg);
+	  if (!LoadCloudNets (cloud_net_file))
+	    {
+	      fprintf (fp_stderr, 
+            "Error while loading configuration\n"
+	        "Wrong or missing %s\n", cloud_net_file);
+	      exit (1);
+	    }
+	  cloud_conf = TRUE;
 	  break;
 #ifdef SUPPORT_IPV6
 	case '6':
@@ -2794,6 +2858,125 @@ LoadInternalNets (char *file) {
     return 1;
 }
 
+int
+LoadCloudNets (char *file) {
+    FILE *fp;
+    char *line, *ip_string, *mask_string, *err;
+    int i, len;
+    long int mask_bits;
+    unsigned int full_local_mask;
+    char s[16];
+//    char *slash_p, *tmp;
+
+    fp = fopen(file, "r");
+    if (!fp) {
+        fprintf(fp_stderr, "Unable to open file '%s'\n", file);
+        return 0;
+    }
+
+    tot_cloud_nets = 0;
+    i = 0;
+    while (1) {
+        line = readline(fp, 1, 1);
+        if (!line)
+            break;
+
+        len = strlen(line);
+        if (line[len - 1] == '\n')
+            line[len - 1] = '\0';
+        ip_string = line;
+
+        if (i == MAX_CLOUD_HOSTS) {
+            fprintf (fp_stderr, "Maximum number of cloud hosts/networks (%d) exceeded\n", MAX_CLOUD_HOSTS);
+            return 0;
+        }
+
+        //single line format
+        if (strchr(ip_string,'/'))
+        {
+            ip_string = strtok(ip_string,"/");
+            mask_string = strtok(NULL,"/");
+
+            if (!mask_string) {
+                fprintf(fp_stderr, "Missing ip or network mask in cloud config n.%d\n", (i+1));
+                return 0;
+            }
+            if (!inet_aton (ip_string, &(cloud_net_list[i]))) {
+                fprintf(fp_stderr, "Invalid ip address in cloud config n.%d\n", (i+1));
+                return 0;
+            }
+
+            //network mask as a single number
+            if (!strchr(mask_string,'.'))
+            { 
+                err = NULL;
+                mask_bits = strtol(mask_string, &err, 10);
+                if (*err || mask_bits < 1 || mask_bits > 32) {
+                    fprintf(fp_stderr, "Invalid network mask in cloud config n.%d\n", (i+1));
+                    return 0;
+                }
+
+                if (cloud_net_list[i].s_addr == 0)
+                   full_local_mask = 0;
+                else
+                   full_local_mask = 0xffffffff << (32 - mask_bits);
+
+                sprintf(s,"%d.%d.%d.%d",
+                    full_local_mask >> 24,
+                    (full_local_mask >> 16)  & 0x00ff,
+                    (full_local_mask >> 8 ) & 0x0000ff,
+                    full_local_mask & 0xff);
+                inet_aton (s, &(cloud_net_mask2[i]));
+                cloud_net_mask[i] = inet_addr(s);
+            }
+            //mask in dotted format
+            else
+            {
+                if (!inet_aton (mask_string, &(cloud_net_mask2[i]))) {
+                    fprintf(fp_stderr, "Invalid network mask in cloud config n.%d\n", (i+1));
+                    return 0;
+                }
+                cloud_net_mask[i] = inet_addr (mask_string);
+            }
+        }
+        //old format
+        else
+        {
+            if (!inet_aton (ip_string, &(cloud_net_list[i]))) {
+                fprintf(fp_stderr, "Invalid ip address in cloud config n.%d\n", (i+1));
+                return 0;
+            }
+
+            mask_string = readline(fp, 1, 1);
+            if (!mask_string){
+                fprintf(fp_stderr, "Missing network mask in cloud config n.%d\n", (i+1));
+                return 0;
+            }
+
+            len = strlen(mask_string);
+            if (mask_string[len - 1] == '\n')
+                mask_string[len - 1] = '\0';
+            if (!inet_aton (mask_string, &(cloud_net_mask2[i]))) {
+                fprintf(fp_stderr, "Invalid network mask in cloud config n.%d\n", (i+1));
+                return 0;
+            }
+            cloud_net_mask[i] = inet_addr (mask_string);
+        }
+       if (debug)
+        {
+            fprintf (fp_stdout, "Adding: %s as cloud net ",
+                    inet_ntoa (cloud_net_list[i]));
+            fprintf (fp_stdout, "with mask %s (%u)\n", 
+                    inet_ntoa (cloud_net_mask2[i]),
+                    cloud_net_mask[i]);
+        }
+
+        tot_cloud_nets++;
+        i++;
+    }
+    return 1;
+}
+
 /* the memcpy() function that gcc likes to stuff into the program has alignment
    problems, so here's MY version.  It's only used for small stuff, so the
    copy should be "cheap", but we can't be too fancy due to alignment boo boos */
@@ -2893,6 +3076,30 @@ internal_ip (struct in_addr adx)
   //fprintf(fp_stdout, "External: %s\n",inet_ntoa(adx));
   return 0;
 }
+
+/* 
+ * Check if the IP adx is included in the cloud nets
+ */
+
+Bool
+cloud_ip (struct in_addr adx)
+{
+  int i;
+
+  //fprintf(fp_stdout, "Checking %s \n",inet_ntoa(adx));
+  for (i = 0; i < tot_cloud_nets; i++)
+    {
+      //fprintf(fp_stdout, " Against: %s \n",inet_ntoa(cloud_net_list[i]));
+      if ((adx.s_addr & cloud_net_mask[i]) == cloud_net_list[i].s_addr)
+	{
+	  //fprintf(fp_stdout, "Cloud: %s\n",inet_ntoa(adx));
+	  return 1;
+	}
+    }
+  //fprintf(fp_stdout, "Not-cloud: %s\n",inet_ntoa(adx));
+  return 0;
+}
+
 
 /* 
  * Check if the IP adx is included in the internal nets

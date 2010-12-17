@@ -129,6 +129,9 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
   pup->internal_src = internal_src;
   pup->internal_dst = internal_dst;
 
+  pup->cloud_src = cloud_src;
+  pup->cloud_dst = cloud_dst;
+
   pup->c2s.type = UDP_UNKNOWN;
   pup->s2c.type = UDP_UNKNOWN;
   
@@ -601,11 +604,27 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip)
     {
       L4_bitrate.out[UDP_TYPE] += ntohs (pip->ip_len);
       add_histo (udp_port_dst_out, (float) ntohs(pudp->uh_dport));
+      if (cloud_dst)
+       {
+         L4_bitrate.c_out[UDP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_out[UDP_TYPE] += ntohs (pip->ip_len);
+       }
     }
   else if (!internal_src && internal_dst)
     {
       L4_bitrate.in[UDP_TYPE] += ntohs (pip->ip_len);
       add_histo (udp_port_dst_in, (float) ntohs(pudp->uh_dport));
+      if (cloud_src)
+       {
+         L4_bitrate.c_in[UDP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_in[UDP_TYPE] += ntohs (pip->ip_len);
+       }
     }
   else if (internal_src && internal_dst)
     {

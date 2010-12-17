@@ -27,6 +27,9 @@ char match_buffer[200];
 char yt_id[20];
 char yt_itag[5];
 int yt_seek;
+char yt_redir[6];
+int yt_redir_mode;
+int yt_redir_count;
 regex_t re[10];
 regmatch_t re_res[2];
 
@@ -35,10 +38,14 @@ void init_web_patterns()
   patterns[0] = "&id=([0-9a-f]+)[& ]";
   patterns[1] = "&begin=[0-9]+[& ]";
   patterns[2] = "&itag=([0-9]+)[& ]";
+  patterns[3] = "&st=(lc|nx|tcts)[& ]";
+  patterns[4] = "&redirect_counter=([0-9]+)[& ]";
 
   regcomp(&re[0],patterns[0],REG_EXTENDED);
   regcomp(&re[1],patterns[1],REG_EXTENDED|REG_NOSUB);
   regcomp(&re[2],patterns[2],REG_EXTENDED);
+  regcomp(&re[3],patterns[3],REG_EXTENDED);
+  regcomp(&re[4],patterns[4],REG_EXTENDED);
 }
 
 void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
@@ -617,6 +624,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
                   ( available_data < 17 ? available_data : 17)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
+           int st_redir_mode,rc_redir_mode;
+           int rc_redir_count;
+	   
 	   if (available_data>110)
 	    {
             memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
@@ -648,10 +658,86 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		 {
 		   yt_seek = 0;
 		 }
+                st_redir_mode = 0;
+                rc_redir_mode = 0;
+		rc_redir_count = 0;
+                if (regexec(&re[3],match_buffer,(size_t) 2, re_res, 0)==0)
+		 {
+		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
+                       (msize2<6?msize2:6));
+                    yt_redir[msize2]='\0';
+
+		   if (memcmp(yt_redir,"lc",2)==0)
+		    { 
+		      st_redir_mode = 1;
+		    }
+		   else if (memcmp(yt_redir,"nx",2)==0)
+		    { 
+		      st_redir_mode = 2;
+		    }
+		   else
+		    { 
+		      st_redir_mode = 3;
+		    }
+		 }
+		if (regexec(&re[4],match_buffer,(size_t) 2, re_res, 0)==0)
+		 {
+		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
+                       (msize2<4?msize2:4));
+                    yt_redir[msize2]='\0';
+		   rc_redir_mode = 1;
+		   sscanf(yt_redir,"%d",&rc_redir_count);
+		 }
+
+		/*
+		  redir_mode redir_count
+		    0 0 (no redir)
+		    1 X ( redirect_counter=X, no st=)
+		    2 X+1 ( redirect_counter=X, st=tcts)
+		    3 1 ( no redirect_counter, st=lc)
+		    4 1 ( no redirect_couter, st=nx)
+		    5 X+1 (another combination)
+		*/
+		
+		yt_redir_mode = 0;
+		yt_redir_count = 0;
+
+		if (rc_redir_mode==0 && st_redir_mode==0)
+		 {
+		   yt_redir_mode = 0;
+		   yt_redir_count = 0;
+		 }
+		else if (rc_redir_mode==1 && st_redir_mode==0)
+		 {
+		   yt_redir_mode = 1;
+		   yt_redir_count = rc_redir_count;
+		 }
+		else if (rc_redir_mode==1 && st_redir_mode==3)
+		 {
+		   yt_redir_mode = 2;
+		   yt_redir_count = rc_redir_count+1;
+		 }
+                else if (rc_redir_mode==0 && st_redir_mode==1)
+		 {
+		   yt_redir_mode = 3;
+		   yt_redir_count = 1;
+		 }
+                else if (rc_redir_mode==0 && st_redir_mode==2)
+		 {
+		   yt_redir_mode = 4;
+		   yt_redir_count = 1;
+		 }
+		else
+		 {
+		   yt_redir_mode = 5;
+		   yt_redir_count = rc_redir_count+1;
+		 }
               }
 	     }
 #endif
-          return HTTP_YOUTUBE_VIDEO;
+          return HTTP_YOUTUBE_204;
          }
        else if (memcmp (base, "/generate_204?id=",
                   ( available_data < 17 ? available_data : 17)) == 0)
@@ -1057,6 +1143,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
                   ( available_data < 18 ? available_data : 18)) == 0)
          {
 #ifdef YOUTUBE_DETAILS
+           int st_redir_mode,rc_redir_mode;
+           int rc_redir_count;
+
 	   if (available_data>110)
 	    {
             memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
@@ -1087,6 +1176,82 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		else
 		 {
 		   yt_seek = 0;
+		 }
+                st_redir_mode = 0;
+                rc_redir_mode = 0;
+		rc_redir_count = 0;
+                if (regexec(&re[3],match_buffer,(size_t) 2, re_res, 0)==0)
+		 {
+		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
+                       (msize2<6?msize2:6));
+                    yt_redir[msize2]='\0';
+
+		   if (memcmp(yt_redir,"lc",2)==0)
+		    { 
+		      st_redir_mode = 1;
+		    }
+		   else if (memcmp(yt_redir,"nx",2)==0)
+		    { 
+		      st_redir_mode = 2;
+		    }
+		   else
+		    { 
+		      st_redir_mode = 3;
+		    }
+		 }
+		if (regexec(&re[4],match_buffer,(size_t) 2, re_res, 0)==0)
+		 {
+		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
+                       (msize2<4?msize2:4));
+                    yt_redir[msize2]='\0';
+		   rc_redir_mode = 1;
+		   sscanf(yt_redir,"%d",&rc_redir_count);
+		 }
+		 
+		/*
+		  redir_mode redir_count
+		    0 0 (no redir)
+		    1 X ( redirect_counter=X, no st=)
+		    2 X+1 ( redirect_counter=X, st=tcts)
+		    3 1 ( no redirect_counter, st=lc)
+		    4 1 ( no redirect_couter, st=nx)
+		    5 X+1 (another combination)
+		*/
+		
+		yt_redir_mode = 0;
+		yt_redir_count = 0;
+
+		if (rc_redir_mode==0 && st_redir_mode==0)
+		 {
+		   yt_redir_mode = 0;
+		   yt_redir_count = 0;
+		 }
+		else if (rc_redir_mode==1 && st_redir_mode==0)
+		 {
+		   yt_redir_mode = 1;
+		   yt_redir_count = rc_redir_count;
+		 }
+		else if (rc_redir_mode==1 && st_redir_mode==3)
+		 {
+		   yt_redir_mode = 2;
+		   yt_redir_count = rc_redir_count+1;
+		 }
+                else if (rc_redir_mode==0 && st_redir_mode==1)
+		 {
+		   yt_redir_mode = 3;
+		   yt_redir_count = 1;
+		 }
+                else if (rc_redir_mode==0 && st_redir_mode==2)
+		 {
+		   yt_redir_mode = 4;
+		   yt_redir_count = 1;
+		 }
+		else
+		 {
+		   yt_redir_mode = 5;
+		   yt_redir_count = rc_redir_count+1;
 		 }
               }
             }
@@ -1430,11 +1595,14 @@ enum http_content classify_http_get(void *pdata,int data_length)
   else if ( available_data > 36 &&
            *(char *)(base + 12) == 'g' &&
            *(char *)(base + 13) == '/' &&
-           *(char *)(base + 25) == '/'
+           ( *(char *)(base + 25) == '/' ||
+	     *(char *)(base + 29) == '/' ) 
 	  )
     {
       /* Possible Mediafire.com matching ' /[^/_]{11}g/[^/ ]{11}/'
          or better ' /[^/_]{11}g/[^/ ]{11}/[^/]+ ' */
+      /* Possible Mediafire.com matching ' /[^/_]{11}g/[^/ ]{15}/'
+         or better ' /[^/_]{11}g/[^/ ]{15}/[^/]+ ' */
 
       status1=0;
       status2=0;
@@ -1450,8 +1618,11 @@ enum http_content classify_http_get(void *pdata,int data_length)
        }      
 
       if (status1==0) 
-       {      
-      	 for (i=14;i<25;i++)
+       {
+         int limit;
+	 limit = ( *(char *)(base + 25) == '/' ) ? 25 : 29;
+	      
+      	 for (i=14;i<limit;i++)
       	  {
       	    c = *(char *)(base + i );
 	    if (c=='/' || c==' ')
@@ -1465,7 +1636,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	  {
       	    status1 = 0;
       	    status2 = 0;
-      	    for (i=26; i< available_data; i++)
+      	    for (i=limit+1; i< available_data; i++)
       	     {
       	       c = *(char *)(base + i );
       	       if (c=='/')
@@ -1748,6 +1919,8 @@ enum web_category map_http_to_web(enum http_content http_type)
        return WEB_SOCIAL;
        
      case HTTP_YOUTUBE_VIDEO:
+     case HTTP_YOUTUBE_VIDEO204:
+     case HTTP_YOUTUBE_204:
        return WEB_YOUTUBE;
 
      case HTTP_GOOGLEVIDEO:

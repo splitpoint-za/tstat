@@ -29,6 +29,8 @@ require 'check_internal.pl';
 	 19=>"MEDIAFIRE",
 	 20=>"HOTFILE",
 	 21=>"STORAGE",
+	 22=>"YOUTUBE204",
+	 23=>"YOUTUBE204VIDEO",
 );
 
 # substitute here the CSV filename, that must be the same than the

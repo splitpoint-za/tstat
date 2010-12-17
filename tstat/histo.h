@@ -189,6 +189,10 @@ i(histo)->current_data[(index)];
 struct double_histo_list *ip_bitrate_in;
 struct double_histo_list *ip_bitrate_out;
 struct double_histo_list *ip_bitrate_loc;
+struct double_histo_list *ip_bitrate_c_in;
+struct double_histo_list *ip_bitrate_c_out;
+struct double_histo_list *ip_bitrate_nc_in;
+struct double_histo_list *ip_bitrate_nc_out;
 
 
 struct double_histo_list *ip_protocol_in;
@@ -247,6 +251,10 @@ struct double_histo_list *tcp_port_syndst_loc;
 struct double_histo_list *tcp_bitrate_in;
 struct double_histo_list *tcp_bitrate_out;
 struct double_histo_list *tcp_bitrate_loc;
+struct double_histo_list *tcp_bitrate_c_in;
+struct double_histo_list *tcp_bitrate_c_out;
+struct double_histo_list *tcp_bitrate_nc_in;
+struct double_histo_list *tcp_bitrate_nc_out;
 
 struct double_histo_list *tcp_opts_SACK;
 struct double_histo_list *tcp_opts_WS;
@@ -398,6 +406,10 @@ struct double_histo_list *udp_port_flow_dst;
 struct double_histo_list *udp_bitrate_in;
 struct double_histo_list *udp_bitrate_out;
 struct double_histo_list *udp_bitrate_loc;
+struct double_histo_list *udp_bitrate_c_in;
+struct double_histo_list *udp_bitrate_c_out;
+struct double_histo_list *udp_bitrate_nc_in;
+struct double_histo_list *udp_bitrate_nc_out;
 
       /* stream histograms */
 
@@ -539,18 +551,34 @@ struct double_histo_list *g_other_bitrate_out;
 struct double_histo_list *L7_TCP_num_out;
 struct double_histo_list *L7_TCP_num_in;
 struct double_histo_list *L7_TCP_num_loc;
+struct double_histo_list *L7_TCP_num_c_out;
+struct double_histo_list *L7_TCP_num_c_in;
+struct double_histo_list *L7_TCP_num_nc_out;
+struct double_histo_list *L7_TCP_num_nc_in;
 
 struct double_histo_list *L7_UDP_num_out;
 struct double_histo_list *L7_UDP_num_in;
 struct double_histo_list *L7_UDP_num_loc;
+struct double_histo_list *L7_UDP_num_c_out;
+struct double_histo_list *L7_UDP_num_c_in;
+struct double_histo_list *L7_UDP_num_nc_out;
+struct double_histo_list *L7_UDP_num_nc_in;
 
 struct double_histo_list *L7_HTTP_num_out;
 struct double_histo_list *L7_HTTP_num_in;
 struct double_histo_list *L7_HTTP_num_loc;
+struct double_histo_list *L7_HTTP_num_c_out;
+struct double_histo_list *L7_HTTP_num_c_in;
+struct double_histo_list *L7_HTTP_num_nc_out;
+struct double_histo_list *L7_HTTP_num_nc_in;
 
 struct double_histo_list *http_bitrate_out;
 struct double_histo_list *http_bitrate_in;
 struct double_histo_list *http_bitrate_loc;
+struct double_histo_list *http_bitrate_c_out;
+struct double_histo_list *http_bitrate_c_in;
+struct double_histo_list *http_bitrate_nc_out;
+struct double_histo_list *http_bitrate_nc_in;
 
 struct double_histo_list *L7_WEB_num_out;
 struct double_histo_list *L7_WEB_num_in;

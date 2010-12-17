@@ -149,6 +149,9 @@ extern udp_pair **utp;		/* array of pointers to allocated pairs */
 extern Bool internal_src;
 extern Bool internal_dst;
 
+extern Bool cloud_src;
+extern Bool cloud_dst;
+
 extern Bool warn_ooo;
 extern Bool warn_IN_OUT;
 extern Bool warn_printtrunc;

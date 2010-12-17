@@ -648,9 +648,25 @@ rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip)
       {
       case OUT_FLOW:
             add_histo (L7_UDP_num_out, L7_FLOW_RTP);
+	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
+	      {
+            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTP);
+	      }
+	    else
+	      {
+            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTP);
+	      }
             break;
       case IN_FLOW:
             add_histo (L7_UDP_num_in, L7_FLOW_RTP);
+	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
+	      {
+            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTP);
+	      }
+	    else
+	      {
+            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTP);
+	      }
             break;
       case LOC_FLOW:
             add_histo (L7_UDP_num_loc, L7_FLOW_RTP);
@@ -680,9 +696,25 @@ rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast)
       {
       case OUT_FLOW:
             add_histo (L7_UDP_num_out, L7_FLOW_RTCP);
+	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
+	      {
+            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTCP);
+	      }
+	    else
+	      {
+            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTCP);
+	      }
             break;
       case IN_FLOW:
             add_histo (L7_UDP_num_in, L7_FLOW_RTCP);
+	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
+	      {
+            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTCP);
+	      }
+	    else
+	      {
+            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTCP);
+	      }
             break;
       case LOC_FLOW:
             add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);

@@ -8,6 +8,12 @@
   * Changed RRD type 16 from Kazaa to uTP, and assigned unused RRD type 35 to
     Kazaa
   * YouTube characterization (experimental): video ID, size and duration
+  * Updated Rapidshare and FaceBook classification 
+  * YouTube characterization (experimental): differentiation of different 
+    components in video download, tracking of redirections
+  * New feature: separate identification and statistics (RDD/Histograms)
+    for traffic to/from a specific range of addresses ("cloud"). Activated
+    with the new -C command line option. Currently not exposed in the log files.
   
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:

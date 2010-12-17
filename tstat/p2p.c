@@ -563,9 +563,25 @@ make_p2p_conn_stats (void * flow, int tproto)
       {
       case OUT_FLOW:
             add_histo (L7_UDP_num_out, L7type);
+	    if (thisflow->cloud_dst)
+	      {
+                add_histo (L7_UDP_num_c_out, L7type);
+	      }
+	    else
+	      {
+                add_histo (L7_UDP_num_nc_out, L7type);
+	      }
             break;
       case IN_FLOW:
             add_histo (L7_UDP_num_in, L7type);
+	    if (thisflow->cloud_src)
+	      {
+                add_histo (L7_UDP_num_c_in, L7type);
+	      }
+	    else
+	      {
+                add_histo (L7_UDP_num_nc_in, L7type);
+	      }
             break;
       case LOC_FLOW:
             add_histo (L7_UDP_num_loc, L7type);
@@ -580,9 +596,25 @@ make_p2p_conn_stats (void * flow, int tproto)
      	  {
      	   case OUT_FLOW:
      	       add_histo (L7_UDP_num_out, L7type);
+	       if (thisflow->cloud_src)
+	         {
+                   add_histo (L7_UDP_num_c_out, L7type);
+	         }
+	       else
+	         {
+                   add_histo (L7_UDP_num_nc_out, L7type);
+	         }
      	       break;
      	   case IN_FLOW:
      	       add_histo (L7_UDP_num_in, L7type);
+	       if (thisflow->cloud_dst)
+	         {
+                   add_histo (L7_UDP_num_c_in, L7type);
+	         }
+	       else
+	         {
+                   add_histo (L7_UDP_num_nc_in, L7type);
+	         }
      	       break;
      	   case LOC_FLOW:
      	       add_histo (L7_UDP_num_loc, L7type);

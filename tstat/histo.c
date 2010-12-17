@@ -1067,6 +1067,18 @@ create_all_histo (void)
   ip_bitrate_loc =
     create_histo ("ip_bitrate_loc", "IP bitrate [bit/s] - local packets", 0,
 		  4, 1);
+  ip_bitrate_c_in = create_histo ("ip_bitrate_c_in",
+				"IP bitrate [bit/s] - cloud incoming packets", 0,
+				4, 1);
+  ip_bitrate_c_out =
+    create_histo ("ip_bitrate_c_out", "IP bitrate [bit/s] - cloud outgoing packets",
+		  0, 4, 1);
+  ip_bitrate_nc_in = create_histo ("ip_bitrate_nc_in",
+				"IP bitrate [bit/s] - non-cloud incoming packets", 0,
+				4, 1);
+  ip_bitrate_nc_out =
+    create_histo ("ip_bitrate_nc_out", "IP bitrate [bit/s] - non-cloud outgoing packets",
+		  0, 4, 1);
 
   ip_len_out = create_histo ("ip_len_out",
 			     "IP packet length [byte] - outgoing packets", 0,
@@ -1200,6 +1212,18 @@ create_all_histo (void)
 				   "TCP application bitrate [bit/s] - local segments", 0,
 				   L7_FLOW_TOT, 1);
 
+  tcp_bitrate_c_in = create_histo ("tcp_bitrate_c_in",
+				  "TCP application bitrate [bit/s] - cloud incoming segments", 0,
+				  L7_FLOW_TOT, 1);
+  tcp_bitrate_c_out = create_histo ("tcp_bitrate_c_out",
+				   "TCP application bitrate [bit/s] - cloud outgoing segments", 0,
+				   L7_FLOW_TOT, 1);
+  tcp_bitrate_nc_in = create_histo ("tcp_bitrate_nc_in",
+				  "TCP application bitrate [bit/s] - non-cloud incoming segments", 0,
+				  L7_FLOW_TOT, 1);
+  tcp_bitrate_nc_out = create_histo ("tcp_bitrate_nc_out",
+				   "TCP application bitrate [bit/s] - non-cloud outgoing segments", 0,
+				   L7_FLOW_TOT, 1);
 
   /* TCP flow histograms */
 
@@ -2019,6 +2043,26 @@ create_all_histo (void)
 		  "Number of tracked TCP flow per applications - local flows",
                    0, L7_FLOW_TOT, 1);
 
+  L7_TCP_num_c_out =
+    create_histo ("L7_TCP_num_c_out",
+		  "Number of tracked TCP flow per applications - cloud outgoing flows",
+                  0, L7_FLOW_TOT, 1);
+
+  L7_TCP_num_c_in =
+    create_histo ("L7_TCP_num_c_in",
+		  "Number of tracked TCP flow per applications - cloud incoming flows ",
+                   0, L7_FLOW_TOT, 1);
+
+  L7_TCP_num_nc_out =
+    create_histo ("L7_TCP_num_nc_out",
+		  "Number of tracked TCP flow per applications - non-cloud outgoing flows",
+                  0, L7_FLOW_TOT, 1);
+
+  L7_TCP_num_nc_in =
+    create_histo ("L7_TCP_num_nc_in",
+		  "Number of tracked TCP flow per applications - non-cloud incoming flows ",
+                   0, L7_FLOW_TOT, 1);
+
   L7_UDP_num_out =
     create_histo ("L7_UDP_num_out",
 		  "Number of tracked UDP flow per applications - outgoing flows",
@@ -2034,6 +2078,26 @@ create_all_histo (void)
 		  "Number of tracked UDP flow per applications - local flows",
                    0, L7_FLOW_TOT, 1);
 
+  L7_UDP_num_c_out =
+    create_histo ("L7_UDP_num_c_out",
+		  "Number of tracked UDP flow per applications - cloud outgoing flows",
+                  0, L7_FLOW_TOT, 1);
+
+  L7_UDP_num_c_in =
+    create_histo ("L7_UDP_num_c_in",
+		  "Number of tracked UDP flow per applications - cloud incoming flows ",
+                   0, L7_FLOW_TOT, 1);
+
+  L7_UDP_num_nc_out =
+    create_histo ("L7_UDP_num_nc_out",
+		  "Number of tracked UDP flow per applications - non-cloud outgoing flows",
+                  0, L7_FLOW_TOT, 1);
+
+  L7_UDP_num_nc_in =
+    create_histo ("L7_UDP_num_nc_in",
+		  "Number of tracked UDP flow per applications - non-cloud incoming flows ",
+                   0, L7_FLOW_TOT, 1);
+
   udp_bitrate_in = create_histo ("udp_bitrate_in",
 				  "UDP application bitrate [bit/s] - incoming segments", 0,
 				  L7_FLOW_TOT, 1);
@@ -2042,6 +2106,18 @@ create_all_histo (void)
 				   L7_FLOW_TOT, 1);
   udp_bitrate_loc = create_histo ("udp_bitrate_loc",
 				   "UDP application bitrate [bit/s] - local segments", 0,
+				   L7_FLOW_TOT, 1);
+  udp_bitrate_c_in = create_histo ("udp_bitrate_c_in",
+				  "UDP application bitrate [bit/s] - cloud incoming segments", 0,
+				  L7_FLOW_TOT, 1);
+  udp_bitrate_c_out = create_histo ("udp_bitrate_c_out",
+				   "UDP application bitrate [bit/s] - cloud outgoing segments", 0,
+				   L7_FLOW_TOT, 1);
+  udp_bitrate_nc_in = create_histo ("udp_bitrate_nc_in",
+				  "UDP application bitrate [bit/s] - non-cloud incoming segments", 0,
+				  L7_FLOW_TOT, 1);
+  udp_bitrate_nc_out = create_histo ("udp_bitrate_nc_out",
+				   "UDP application bitrate [bit/s] - non-cloud outgoing segments", 0,
 				   L7_FLOW_TOT, 1);
 
   L7_HTTP_num_out =
@@ -2059,6 +2135,26 @@ create_all_histo (void)
 		  "Number of tracked HTTP flows - local flows",
                    0, HTTP_LAST_TYPE, 1);
 
+  L7_HTTP_num_c_out =
+    create_histo ("L7_HTTP_num_c_out",
+		  "Number of tracked HTTP flows - cloud outgoing flows",
+                  0, HTTP_LAST_TYPE, 1);
+
+  L7_HTTP_num_c_in =
+    create_histo ("L7_HTTP_num_c_in",
+		  "Number of tracked HTTP flows - cloud incoming flows ",
+                   0, HTTP_LAST_TYPE, 1);
+
+  L7_HTTP_num_nc_out =
+    create_histo ("L7_HTTP_num_nc_out",
+		  "Number of tracked HTTP flows - non-cloud outgoing flows",
+                  0, HTTP_LAST_TYPE, 1);
+
+  L7_HTTP_num_nc_in =
+    create_histo ("L7_HTTP_num_nc_in",
+		  "Number of tracked HTTP flows - non-cloud incoming flows ",
+                   0, HTTP_LAST_TYPE, 1);
+
   http_bitrate_in = create_histo ("http_bitrate_in",
 				  "HTTP content bitrate [bit/s] - incoming segments", 0,
 				  HTTP_LAST_TYPE, 1);
@@ -2067,6 +2163,18 @@ create_all_histo (void)
 				   HTTP_LAST_TYPE, 1);
   http_bitrate_loc = create_histo ("http_bitrate_loc",
 				   "HTTP content bitrate [bit/s] - local segments", 0,
+				   HTTP_LAST_TYPE, 1);
+  http_bitrate_c_in = create_histo ("http_bitrate_c_in",
+				  "HTTP content bitrate [bit/s] - cloud incoming segments", 0,
+				  HTTP_LAST_TYPE, 1);
+  http_bitrate_c_out = create_histo ("http_bitrate_c_out",
+				   "HTTP content bitrate [bit/s] - cloud outgoing segments", 0,
+				   HTTP_LAST_TYPE, 1);
+  http_bitrate_nc_in = create_histo ("http_bitrate_nc_in",
+				  "HTTP content bitrate [bit/s] - cloud incoming segments", 0,
+				  HTTP_LAST_TYPE, 1);
+  http_bitrate_nc_out = create_histo ("http_bitrate_nc_out",
+				   "HTTP content bitrate [bit/s] - cloud outgoing segments", 0,
 				   HTTP_LAST_TYPE, 1);
 
   L7_WEB_num_out =
@@ -2169,18 +2277,34 @@ update_fake_histos ()
   fake_histo_bitrate_update (ip_bitrate_in, elapsed_time, L4_bitrate.in, 4);
   fake_histo_bitrate_update (ip_bitrate_out, elapsed_time, L4_bitrate.out, 4);
   fake_histo_bitrate_update (ip_bitrate_loc, elapsed_time, L4_bitrate.loc, 4);
+  fake_histo_bitrate_update (ip_bitrate_c_in, elapsed_time, L4_bitrate.c_in, 4);
+  fake_histo_bitrate_update (ip_bitrate_c_out, elapsed_time, L4_bitrate.c_out, 4);
+  fake_histo_bitrate_update (ip_bitrate_nc_in, elapsed_time, L4_bitrate.nc_in, 4);
+  fake_histo_bitrate_update (ip_bitrate_nc_out, elapsed_time, L4_bitrate.nc_out, 4);
 
   fake_histo_bitrate_update (tcp_bitrate_in, elapsed_time, L7_bitrate.in, L7_FLOW_TOT);
   fake_histo_bitrate_update (tcp_bitrate_out, elapsed_time, L7_bitrate.out, L7_FLOW_TOT);
   fake_histo_bitrate_update (tcp_bitrate_loc, elapsed_time, L7_bitrate.loc, L7_FLOW_TOT);
+  fake_histo_bitrate_update (tcp_bitrate_c_in, elapsed_time, L7_bitrate.c_in, L7_FLOW_TOT);
+  fake_histo_bitrate_update (tcp_bitrate_c_out, elapsed_time, L7_bitrate.c_out, L7_FLOW_TOT);
+  fake_histo_bitrate_update (tcp_bitrate_nc_in, elapsed_time, L7_bitrate.nc_in, L7_FLOW_TOT);
+  fake_histo_bitrate_update (tcp_bitrate_nc_out, elapsed_time, L7_bitrate.nc_out, L7_FLOW_TOT);
 
   fake_histo_bitrate_update (udp_bitrate_in, elapsed_time, L7_udp_bitrate.in, L7_FLOW_TOT);
   fake_histo_bitrate_update (udp_bitrate_out, elapsed_time, L7_udp_bitrate.out, L7_FLOW_TOT);
   fake_histo_bitrate_update (udp_bitrate_loc, elapsed_time, L7_udp_bitrate.loc, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_c_in, elapsed_time, L7_udp_bitrate.c_in, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_c_out, elapsed_time, L7_udp_bitrate.c_out, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_nc_in, elapsed_time, L7_udp_bitrate.nc_in, L7_FLOW_TOT);
+  fake_histo_bitrate_update (udp_bitrate_nc_out, elapsed_time, L7_udp_bitrate.nc_out, L7_FLOW_TOT);
 
   fake_histo_bitrate_update (http_bitrate_in, elapsed_time, HTTP_bitrate.in, HTTP_LAST_TYPE);
   fake_histo_bitrate_update (http_bitrate_out, elapsed_time, HTTP_bitrate.out, HTTP_LAST_TYPE);
   fake_histo_bitrate_update (http_bitrate_loc, elapsed_time, HTTP_bitrate.loc, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_c_in, elapsed_time, HTTP_bitrate.c_in, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_c_out, elapsed_time, HTTP_bitrate.c_out, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_nc_in, elapsed_time, HTTP_bitrate.nc_in, HTTP_LAST_TYPE);
+  fake_histo_bitrate_update (http_bitrate_nc_out, elapsed_time, HTTP_bitrate.nc_out, HTTP_LAST_TYPE);
 
   fake_histo_bitrate_update (web_bitrate_in, elapsed_time, WEB_bitrate.in, WEB_LAST_TYPE);
   fake_histo_bitrate_update (web_bitrate_out, elapsed_time, WEB_bitrate.out, WEB_LAST_TYPE);

@@ -140,12 +140,34 @@ are printed. They are valid only for HTTP_YOUTUBE_VIDEO (and HTTP_YOUTUBE_SITE f
 # 108 # Seek Flag       # 0 if the video is starting from the beginning, 1 otherwise
 # 109 # FLV duration    # Video duration [s] as indicated in the FLV file metadata [+]
 # 110 # FLV size        # Video size [bytes] as indicated in the FLV file metadata [+]
+# 111 # HTTP Response   # First HTTP Response code seen in the server->client communication
+# 112 # Redir Mode      # Server Redirection Type [=]
+# 113 # Redir Count     # Redirection counter [=]
 ############################################################################
 
 [*] The YouTube video quality is the 'fmt' value indicated in 
 http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs 
 Common values are 34 (360p), 35 (480p), and 22 (720p).
 [+] Duration and size are not reported for MP4 videos.
+[=] Redirection type and redirection count are based on the redirection information in the videodownload URL:
+    Redir_mode Redir_count  Comment
+      	 0 	    0 	    No redirection indication
+      	 1 	    X 	    URL parameter redirect_counter=X, no "st=" parameter
+      	 2 	    X+1     URL parameter redirect_counter=X, parameter "st=tcts"
+      	 3 	    1       No "redirect_counter=" parameter, parameter "st=lc"
+      	 4 	    1       No "redirect_counter=" parameter, parameter "st=nx"
+      	 5 	    X+1     Any other combination
+    redirect_counter is set when the video is redirected (via "Location") from 
+       v<X>.lscache<Y>.c.youtube.com address  to the corresponding tc.v<X>.lscache<Y>.c.youtube.com
+       or to the corresponding v<X>.nonxt<Y>.c.youtube.com, 
+       or when any request is redirected to v<N>.cache<M>.c.youtube.com
+    st=tcts is set with redirect_counter when the (already redirected) request is redirected to
+       a location-identified cache r<N>.<city><X>[gst]<Y>.c.youtube.com
+    st=lc is set (with no redirect_counter parameter) when the lscache request is redirected to
+       a location-identified cache r<N>.<city><X>[gst]<Y>.c.youtube.com
+    st=nx is set (with no redirect_counter parameter) when the nonxt request is redirected to
+       a location-identified cache r<N>.<city><X>[gst]<Y>.c.youtube.com. nonxt<N> addresses
+       are used for unlisted and private videos.
 
 Connection type (Column no. 97) description (from protocol.h)
 #########################################
@@ -228,6 +250,8 @@ HTTP Web2.0 type (Column no. 105) description (from struct.h)
 # 19    # HTTP_MEDIAFIRE     # MediaFire file download (GET)             #
 # 20    # HTTP_HOTFILE       # Hotfile.com file download (GET)           #
 # 21    # HTTP_STORAGE       # Storage.to file download (GET)            #
+# 22    # HTTP_YOUTUBE_204   # YouTube "pre-loading" (GET) [%]	         #
+# 23    # HTTP_YOUTUBE_VIDEO204 # YouTube "pre-loading" and video (GET)[%]#
 ##########################################################################
 
 These values are different from 0 only for identified HTTP connections 
@@ -241,3 +265,5 @@ it should match also generic OpenSocial traffic. Probably not useful outside
 Poland or Hungary.
 [=] HTTP_FLASHVIDEO identify traffic from a few popular flash-based video
 distribution sites.
+[%] HTTP_YOUTUBE_204 and HTTP_YOUTUBE_VIDEO204 are counted as HTTP_YOUTUBE_VIDEO
+in RRDs and histograms (i.e. they are classified in idx4 ). 

@@ -517,6 +517,8 @@ enum http_content
   HTTP_MEDIAFIRE,       /* 18 - MediaFire file download (GET) 		*/
   HTTP_HOTFILE,      	/* 19 - Hotfile.com file download (GET) 	*/
   HTTP_STORAGE,       	/* 20 - Storage.to file download (GET) 		*/
+  HTTP_YOUTUBE_204,	/* 21 - YouTube "pre-loading" (GET) 		*/
+  HTTP_YOUTUBE_VIDEO204, /* 22 - YouTube "pre-loading" and video (GET)  */
   HTTP_LAST_TYPE
 };
 
@@ -567,8 +569,11 @@ struct stcp_pair
   char http_ytid[20];
   char http_ytitag[4];
   int http_ytseek;
+  int http_ytredir_mode;
+  int http_ytredir_count;
   double http_flv_duration;
   u_int32_t http_flv_bytelength;
+  char http_response[4];
 #endif
 
   /* obfuscate ed2k identification */
@@ -596,6 +601,9 @@ struct stcp_pair
   unsigned state_rtmp_c2s_hand:1;
   unsigned state_rtmp_s2c_hand:1;
 
+  /* Cloud identification */
+  Bool cloud_src;
+  Bool cloud_dst;
 };
 typedef struct stcp_pair tcp_pair;
 
@@ -851,6 +859,10 @@ struct sudp_pair
 
   enum obfuscate_udp_state kad_state;
 
+  /* Cloud identification */
+  Bool cloud_src;
+  Bool cloud_dst;
+
   /* linked list of usage */
   struct sudp_pair *next;
 };
@@ -862,6 +874,10 @@ struct L4_bitrates
   unsigned long long in[4];
   unsigned long long out[4];
   unsigned long long loc[4];
+  unsigned long long c_in[4];
+  unsigned long long c_out[4];
+  unsigned long long nc_in[4];
+  unsigned long long nc_out[4];
 };
 
 struct L7_bitrates
@@ -869,6 +885,10 @@ struct L7_bitrates
   unsigned long long in[L7_FLOW_TOT];  /* unsigned long long in[L7_FLOW_TOT] */
   unsigned long long out[L7_FLOW_TOT]; /* unsigned long long out[L7_FLOW_TOT] */
   unsigned long long loc[L7_FLOW_TOT]; /* unsigned long long loc[L7_FLOW_TOT] */
+  unsigned long long c_in[L7_FLOW_TOT];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long c_out[L7_FLOW_TOT]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long nc_in[L7_FLOW_TOT];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long nc_out[L7_FLOW_TOT]; /* unsigned long long out[L7_FLOW_TOT] */
 };
 
 struct HTTP_bitrates
@@ -876,6 +896,10 @@ struct HTTP_bitrates
   unsigned long long in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
   unsigned long long out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
   unsigned long long loc[HTTP_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+  unsigned long long c_in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long c_out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long nc_in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long nc_out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
 };
 
 struct WEB_bitrates

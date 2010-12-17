@@ -137,12 +137,28 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
       L4_bitrate.out[TCP_TYPE] += ntohs (pip->ip_len);
       add_histo (tcp_port_src_out, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_out, (float) ntohs (ptcp->th_dport));
+      if (cloud_dst)
+       {
+         L4_bitrate.c_out[TCP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_out[TCP_TYPE] += ntohs (pip->ip_len);
+       }
     }
   else if (!internal_src && internal_dst)
     {
       L4_bitrate.in[TCP_TYPE] += ntohs (pip->ip_len);
       add_histo (tcp_port_src_in, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_in, (float) ntohs (ptcp->th_dport));
+      if (cloud_src)
+       {
+         L4_bitrate.c_in[TCP_TYPE] += ntohs (pip->ip_len);
+       }
+      else
+       {
+         L4_bitrate.nc_in[TCP_TYPE] += ntohs (pip->ip_len);
+       }
     }
   else if (internal_src && internal_dst)
     {
@@ -336,6 +352,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   ptp->internal_src = internal_src;
   ptp->internal_dst = internal_dst;
+
+  ptp->cloud_src = cloud_src;
+  ptp->cloud_dst = cloud_dst;
 
   /* Initialize the state */
   ptp->con_type = 0;
@@ -2734,31 +2753,64 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 #ifdef YOUTUBE_REQUEST_ID
       wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
                           ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204 ||
 		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
                           ptp_save->http_ytid : "--" );
 #else
       wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO )  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
                           ptp_save->http_ytid : "--" );
 #endif
 
       wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
                           ptp_save->http_ytitag : "--" );
 
       wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
                           ptp_save->http_ytseek : 0 );
 
       wfprintf (fp, " %.3f", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
                           ptp_save->http_flv_duration : 0.0 );
 
       wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO)  ?
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
                           ptp_save->http_flv_bytelength : 0 );
+
+      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) ?
+                            ptp_save->http_response : "---" );
+
+      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
+                          ptp_save->http_ytredir_mode : 0 );
+
+      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
+                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
+                          ptp_save->http_ytredir_count : 0 );
 #endif
       /* write to log file */
+      /* printing boolean flag if this is considered internal or not */
+//      wfprintf (fp, " %d", ptp_save->internal_src);
+//      wfprintf (fp, " %d", ptp_save->internal_dst);
+//      wfprintf (fp, " %d", ptp_save->cloud_src);
+//      wfprintf (fp, " %d", ptp_save->cloud_dst);
+
       wfprintf (fp, "\n");
 
    }

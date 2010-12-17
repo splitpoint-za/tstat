@@ -27,6 +27,8 @@ require 'check_internal.pl';
 	 19=>"MEDIAFIRE",
 	 20=>"HOTFILE",
 	 21=>"STORAGE",
+	 22=>"YOUTUBE204",
+	 23=>"YOUTUBE204VIDEO",
 );
 
 # substitute here the database name, username and password

@@ -42,7 +42,11 @@ extern void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length);
 extern char yt_id[20];
 extern char yt_itag[5];
 extern int yt_seek;
+extern int yt_redir_mode;
+extern int yt_redir_count;
 #endif
+
+#define YTMAP(X) (((X)==HTTP_YOUTUBE_VIDEO204||(X)==HTTP_YOUTUBE_204)?(HTTP_YOUTUBE_VIDEO):(X))
 
 void
 tcpL7_init ()
@@ -490,16 +494,22 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  strcpy(yt_id,"--");
 		  strcpy(yt_itag,"--");
 		  yt_seek = 0;
+                  yt_redir_mode = 0;
+                  yt_redir_count = 0;
 #endif
 
                   ptp->http_data = classify_http_get(pdata,data_length);
 #ifdef YOUTUBE_DETAILS
                   if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
-		      ptp->http_data==HTTP_YOUTUBE_SITE )
+		      ptp->http_data==HTTP_YOUTUBE_SITE ||
+		      ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
+		      ptp->http_data==HTTP_YOUTUBE_204 )
                    {
                      strncpy(ptp->http_ytid,yt_id,19);
                      strncpy(ptp->http_ytitag,yt_itag,4);
-			  ptp->http_ytseek=yt_seek; 
+			  ptp->http_ytseek=yt_seek;
+			  ptp->http_ytredir_mode=yt_redir_mode;
+			  ptp->http_ytredir_count=yt_redir_count;
                    }
 #endif
 	        }
@@ -516,6 +526,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  strcpy(yt_id,"--");
 		  strcpy(yt_itag,"--");
 		  yt_seek = 0;
+                  yt_redir_mode = 0;
+                  yt_redir_count = 0;
 #endif
                   ptp->http_data = classify_http_post(pdata,data_length);
 	        }
@@ -776,6 +788,17 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = HTTP_RESPONSE;
+#ifdef YOUTUBE_DETAILS
+                if ((char *) pdata + 13 <= (char *) plast)
+		  {
+                    memcpy(ptp->http_response,(char *) pdata+9,3);
+		    ptp->http_response[3]='\0';
+                  }
+                else
+		  {
+                    strncpy(ptp->http_response,"000",4);
+		  }
+#endif
 	        break;
 	      case ICY:
 	        tcp_stats->u_protocols.f_icy = current_time;
@@ -834,7 +857,9 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 #endif
 #ifdef YOUTUBE_DETAILS
 	      case FLV:         /* parse header of an FLV video */
-	        if (ptp->http_data==HTTP_YOUTUBE_VIDEO)
+	        if (ptp->http_data==HTTP_YOUTUBE_VIDEO||
+		    ptp->http_data==HTTP_YOUTUBE_VIDEO204||
+		    ptp->http_data==HTTP_YOUTUBE_204)
 		 {
 		   parse_flv_header(ptp,pdata,data_length);
 		 }
@@ -868,7 +893,9 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	   switch (*((u_int32_t *) pdata))
 	    {
               case GET:
-                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
+                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST
+                   || ptp->http_data== HTTP_YOUTUBE_204
+		   )
 	         {
 #ifdef YOUTUBE_DETAILS
 		  strcpy(yt_id,"--");
@@ -877,23 +904,41 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                    new_http_data = classify_http_get(pdata,data_length);
                    /* Only update previous classification if new one
 		      is specific */
-		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
+                   if ( ptp->http_data== HTTP_YOUTUBE_204 && 
+		        new_http_data == HTTP_YOUTUBE_VIDEO)
+	             {
+		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
+#ifdef YOUTUBE_DETAILS
+                       strncpy(ptp->http_ytid,yt_id,19);
+                       strncpy(ptp->http_ytitag,yt_itag,4);
+		       ptp->http_ytseek=yt_seek; 
+			  ptp->http_ytredir_mode=yt_redir_mode;
+			  ptp->http_ytredir_count=yt_redir_count;
+#endif			
+		     }
+		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
 		     { 
 		       ptp->http_data = new_http_data;
 #ifdef YOUTUBE_DETAILS
                        if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
-		           ptp->http_data==HTTP_YOUTUBE_SITE )
+		           ptp->http_data==HTTP_YOUTUBE_SITE ||
+ 		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
+		           ptp->http_data==HTTP_YOUTUBE_204 )
                         {
                           strncpy(ptp->http_ytid,yt_id,19);
                           strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
+			  ptp->http_ytredir_mode=yt_redir_mode;
+			  ptp->http_ytredir_count=yt_redir_count;
                         }
 #endif			
 	             }
                  }
 	        break;
               case POST:
-                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST)
+                if (ptp->http_data==HTTP_GET || ptp->http_data==HTTP_POST
+                   || ptp->http_data== HTTP_YOUTUBE_204
+		   )
 	         {
 #ifdef YOUTUBE_DETAILS
 		  strcpy(yt_id,"--");
@@ -902,16 +947,32 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                    new_http_data = classify_http_post(pdata,data_length);
                    /* Only update previous classification if new one
 		      is specific */
-		   if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
+                   if ( ptp->http_data== HTTP_YOUTUBE_204 && 
+		        new_http_data == HTTP_YOUTUBE_VIDEO)
+	             {
+		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
+#ifdef YOUTUBE_DETAILS
+                       strncpy(ptp->http_ytid,yt_id,19);
+                       strncpy(ptp->http_ytitag,yt_itag,4);
+		       ptp->http_ytseek=yt_seek; 
+			  ptp->http_ytredir_mode=yt_redir_mode;
+			  ptp->http_ytredir_count=yt_redir_count;
+#endif			
+		     }
+		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
 		    { 
 		      ptp->http_data = new_http_data;
 #ifdef YOUTUBE_DETAILS
                       if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
-		          ptp->http_data==HTTP_YOUTUBE_SITE )
+		           ptp->http_data==HTTP_YOUTUBE_SITE ||
+ 		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
+		           ptp->http_data==HTTP_YOUTUBE_204 )
                        {
                          strncpy(ptp->http_ytid,yt_id,19); 
                          strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
+			  ptp->http_ytredir_mode=yt_redir_mode;
+			  ptp->http_ytredir_count=yt_redir_count;
                        }
 #endif
 		    }
@@ -1083,26 +1144,58 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	{
 	case OUT_FLOW:
 	  add_histo (L7_TCP_num_out, type);
+          if (ptp->cloud_dst)
+	   {
+	     add_histo (L7_TCP_num_c_out, type);
+	   }
+	  else
+	   {
+	     add_histo (L7_TCP_num_nc_out, type);
+	   }
 	  if (type==L7_FLOW_HTTP)
 	   {
- 	     add_histo (L7_HTTP_num_out, ptp->http_data);
- 	     add_histo (L7_WEB_num_out, map_http_to_web(ptp->http_data));
+ 	     add_histo (L7_HTTP_num_out, YTMAP(ptp->http_data));
+ 	     add_histo (L7_WEB_num_out, map_http_to_web(YTMAP(ptp->http_data)));
+             if (ptp->cloud_dst)
+	      {
+ 	     add_histo (L7_HTTP_num_c_out, YTMAP(ptp->http_data));
+	      }
+	     else
+	      {
+ 	     add_histo (L7_HTTP_num_nc_out, YTMAP(ptp->http_data));
+	      }
 	   }
 	  break;
 	case IN_FLOW:
 	  add_histo (L7_TCP_num_in, type);
+          if (ptp->cloud_src)
+	   {
+	     add_histo (L7_TCP_num_c_in, type);
+	   }
+	  else
+	   {
+	     add_histo (L7_TCP_num_nc_in, type);
+	   }
 	  if (type==L7_FLOW_HTTP)
 	   {
- 	     add_histo (L7_HTTP_num_in, ptp->http_data);
- 	     add_histo (L7_WEB_num_in, map_http_to_web(ptp->http_data));
+ 	     add_histo (L7_HTTP_num_in, YTMAP(ptp->http_data));
+ 	     add_histo (L7_WEB_num_in, map_http_to_web(YTMAP(ptp->http_data)));
+             if (ptp->cloud_src)
+	      {
+ 	     add_histo (L7_HTTP_num_c_in, YTMAP(ptp->http_data));
+	      }
+	     else
+	      {
+ 	     add_histo (L7_HTTP_num_nc_in, YTMAP(ptp->http_data));
+	      }
 	   }
 	  break;
 	case LOC_FLOW:
 	  add_histo (L7_TCP_num_loc, type);
 	  if (type==L7_FLOW_HTTP)
 	   {
- 	     add_histo (L7_HTTP_num_loc, ptp->http_data);
- 	     add_histo (L7_WEB_num_loc, map_http_to_web(ptp->http_data));
+ 	     add_histo (L7_HTTP_num_loc, YTMAP(ptp->http_data));
+ 	     add_histo (L7_WEB_num_loc, map_http_to_web(YTMAP(ptp->http_data)));
 	   }
 	  break;
 	}
@@ -1263,8 +1356,24 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
        L7_bitrate.out[type] += len;
       if (type==L7_FLOW_HTTP)
        {
-	 HTTP_bitrate.out[thisflow->http_data] += len;
-	 WEB_bitrate.out[map_http_to_web(thisflow->http_data)] += len;
+	 HTTP_bitrate.out[YTMAP(thisflow->http_data)] += len;
+	 WEB_bitrate.out[map_http_to_web(YTMAP(thisflow->http_data))] += len;
+       }
+      if (cloud_dst)
+       {
+         L7_bitrate.c_out[type] += len;
+         if (type==L7_FLOW_HTTP)
+         {
+	   HTTP_bitrate.c_out[YTMAP(thisflow->http_data)] += len;
+         }
+       }
+      else
+       {
+         L7_bitrate.nc_out[type] += len;
+         if (type==L7_FLOW_HTTP)
+         {
+	   HTTP_bitrate.nc_out[YTMAP(thisflow->http_data)] += len;
+         }
        }
     }
   else if (!internal_src && internal_dst)
@@ -1272,8 +1381,24 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
        L7_bitrate.in[type] += len;
       if (type==L7_FLOW_HTTP)
        {
-	 HTTP_bitrate.in[thisflow->http_data] += len;
-	 WEB_bitrate.in[map_http_to_web(thisflow->http_data)] += len;
+	 HTTP_bitrate.in[YTMAP(thisflow->http_data)] += len;
+	 WEB_bitrate.in[map_http_to_web(YTMAP(thisflow->http_data))] += len;
+       }
+      if (cloud_src)
+       {
+         L7_bitrate.c_in[type] += len;
+         if (type==L7_FLOW_HTTP)
+         {
+	   HTTP_bitrate.c_in[YTMAP(thisflow->http_data)] += len;
+         }
+       }
+      else
+       {
+         L7_bitrate.nc_in[type] += len;
+         if (type==L7_FLOW_HTTP)
+         {
+	   HTTP_bitrate.nc_in[YTMAP(thisflow->http_data)] += len;
+         }
        }
     }
   else if (internal_src && internal_dst)
@@ -1281,8 +1406,8 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
        L7_bitrate.loc[type] += len;
       if (type==L7_FLOW_HTTP)
        {
-	 HTTP_bitrate.loc[thisflow->http_data] += len;
-	 WEB_bitrate.loc[map_http_to_web(thisflow->http_data)] += len;
+	 HTTP_bitrate.loc[YTMAP(thisflow->http_data)] += len;
+	 WEB_bitrate.loc[map_http_to_web(YTMAP(thisflow->http_data))] += len;
        }
     }
 
@@ -1305,10 +1430,26 @@ make_udpL7_rate_stats (ucb * thisflow, int len)
    if (internal_src && !internal_dst)
     {
        L7_udp_bitrate.out[type] += len;
+       if (cloud_dst)
+        {
+          L7_udp_bitrate.c_out[type] += len;
+        }
+       else
+        {
+          L7_udp_bitrate.nc_out[type] += len;
+        }
     }
   else if (!internal_src && internal_dst)
     {
        L7_udp_bitrate.in[type] += len;
+       if (cloud_dst)
+        {
+          L7_udp_bitrate.c_in[type] += len;
+        }
+       else
+        {
+          L7_udp_bitrate.nc_in[type] += len;
+        }
     }
   else if (internal_src && internal_dst)
     {

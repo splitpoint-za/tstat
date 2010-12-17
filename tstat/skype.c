@@ -807,10 +807,30 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
 	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_out, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.c_out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_out, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.nc_out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
 	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_out, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.c_out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_out, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.nc_out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
 	      break;
 	    }
 	  break;
@@ -821,10 +841,30 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
 	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_in, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.c_in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_in, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.nc_in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
 	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_in, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.c_in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_in, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.nc_in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
 	      break;
 	    }
 	  break;
@@ -929,10 +969,30 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2E);
 	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_out, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.c_out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_out, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.nc_out[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_out, L7_FLOW_SKYPE_E2O);
 	      L7_udp_bitrate.out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_out, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.c_out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_out, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.nc_out[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
 	      break;
 	    }
 	  break;
@@ -943,10 +1003,30 @@ print_skype_conn_stats_UDP (void *thisdir, int dir)
 	    case L7_FLOW_SKYPE_E2E:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2E);
 	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_in, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.c_in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_in, L7_FLOW_SKYPE_E2E);
+	          L7_udp_bitrate.nc_in[L7_FLOW_SKYPE_E2E] += thisUdir->data_bytes;
+	        }
 	      break;
 	    case L7_FLOW_SKYPE_E2O:
 	      add_histo (L7_UDP_num_in, L7_FLOW_SKYPE_E2O);
 	      L7_udp_bitrate.in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	      if ( (dir==C2S && pup->cloud_src) || (dir==S2C && pup->cloud_dst))
+	        {
+	          add_histo (L7_UDP_num_c_in, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.c_in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
+	      else
+	        {
+	          add_histo (L7_UDP_num_nc_in, L7_FLOW_SKYPE_E2O);
+	          L7_udp_bitrate.nc_in[L7_FLOW_SKYPE_E2O] += thisUdir->data_bytes;
+	        }
 	      break;
 	    }
 	  break;

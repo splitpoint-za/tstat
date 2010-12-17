@@ -26,6 +26,7 @@
 
 /* max number of nets to check if ip is internal or external */
 #define MAX_INTERNAL_HOSTS  100
+#define MAX_CLOUD_HOSTS  100
 
 /*
 * maximum number of segment recorded for each quadrant of a flow;
