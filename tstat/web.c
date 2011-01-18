@@ -620,8 +620,11 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'g':
-       if (memcmp(base, "/generate_204?ip=",
-                  ( available_data < 17 ? available_data : 17)) == 0)
+       if ( (memcmp(base, "/generate_204?sparams=",
+                  ( available_data < 22 ? available_data : 22)) == 0) ||
+	      /* next one is the old YT rule, valid before 12/Jan/2011 */
+            (memcmp(base, "/generate_204?ip=",
+                  ( available_data < 17 ? available_data : 17)) == 0))
          {
 #ifdef YOUTUBE_DETAILS
            int st_redir_mode,rc_redir_mode;
@@ -1139,8 +1142,11 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'v':
-       if (memcmp(base, "/videoplayback?ip=",
-                  ( available_data < 18 ? available_data : 18)) == 0)
+       if ( (memcmp(base, "/videoplayback?sparams=",
+                  ( available_data < 23 ? available_data : 23)) == 0) ||
+	      /* next one is the old YT rule, valid before 12/Jan/2011 */
+            (memcmp(base, "/videoplayback?ip=",
+                  ( available_data < 18 ? available_data : 18)) == 0))
          {
 #ifdef YOUTUBE_DETAILS
            int st_redir_mode,rc_redir_mode;
