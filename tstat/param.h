@@ -141,3 +141,5 @@ Increase this number on high speed network will help ...*/
 /* Secondary address histogram sample rate */
 #define ADX2_BITRATE_DELTA 60   /* 60 sec */
 #define ADX2_MAX_DELTA      1   /*  1 sec */
+
+#define RATE_SAMPLING 1000000   /* 1 sec */

@@ -410,11 +410,11 @@ typedef struct tcb
   double retr_tm_sum2;		/* sum of squares, for stdev */
   u_long retr_tm_count;		/* for averages */
 
-  /* Instantaneous throughput info */
-  timeval thru_firsttime;	/* time of first packet this interval */
-  u_long thru_bytes;		/* number of bytes this interval */
-  u_long thru_pkts;		/* number of packets this interval */
-  timeval thru_lasttime;	/* time of previous segment */
+//  /* Instantaneous throughput info */
+//  timeval thru_firsttime;	/* time of first packet this interval */
+//  u_long thru_bytes;		/* number of bytes this interval */
+//  u_long thru_pkts;		/* number of packets this interval */
+//  timeval thru_lasttime;	/* time of previous segment */
 
   /* data transfer time stamps - mallman */
   timeval first_data_time;
@@ -447,6 +447,21 @@ typedef struct tcb
  seqnum msg_last_seq;
  u_int msg_count;
  u_int msg_size[MAX_COUNT_MESSAGES];
+
+#ifdef VIDEO_DETAILS
+ timeval rate_last_sample;
+ double rate_left_edge;
+ double rate_right_edge;
+ double rate_min;
+ double rate_max;
+ double rate_sum;		/* for averages */
+ double rate_sum2;		/* sum of squares, for stdev */
+ u_int  rate_samples;		/* for averages */
+ u_int  rate_empty_samples;
+ u_int  rate_bytes;
+ u_int  rate_empty_streak;
+ u_int  rate_begin_bytes[10];
+#endif
 }
 tcb;
 
@@ -500,7 +515,7 @@ enum http_content
   HTTP_MSN,		/*  2 - MSN Chat command tunneled over HTTP (POST) */
   HTTP_RTMPT,		/*  3 - RTMPT - RTMP over HTTP Tunnel (POST) 	*/
   HTTP_YOUTUBE_VIDEO,	/*  4 - YouTube video content download (GET) 	*/
-  HTTP_GOOGLEVIDEO,	/*  5 - GoogleVideo video content download (GET) */
+  HTTP_VIDEO_CONTENT,	/*  5 - FLV or MP4 video content download (GET) */
   HTTP_VIMEO,		/*  6 - Vimeo video content download (GET) 	*/
   HTTP_WIKI,		/*  7 - Wikipedia (GET) 			*/
   HTTP_RAPIDSHARE,	/*  8 - RapidShare file download (GET) 		*/
@@ -519,6 +534,8 @@ enum http_content
   HTTP_STORAGE,       	/* 20 - Storage.to file download (GET) 		*/
   HTTP_YOUTUBE_204,	/* 21 - YouTube "pre-loading" (GET) 		*/
   HTTP_YOUTUBE_VIDEO204, /* 22 - YouTube "pre-loading" and video (GET)  */
+  HTTP_YOUTUBE_SITE_DIRECT, /* 23 - YouTube site direct video access (GET) */
+  HTTP_YOUTUBE_SITE_EMBED, /* 24 - YouTube embedded video access (GET) */
   HTTP_LAST_TYPE
 };
 
@@ -565,7 +582,7 @@ struct stcp_pair
   unsigned char rtp_pt;
   Bool ignore_dpi;
   enum http_content http_data;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
   char http_ytid[20];
   char http_ytitag[4];
   int http_ytseek;
@@ -573,7 +590,9 @@ struct stcp_pair
   int http_ytredir_count;
   double http_flv_duration;
   u_int32_t http_flv_bytelength;
+  double http_flv_fullduration;
   char http_response[4];
+  int http_ytmobile;
 #endif
 
   /* obfuscate ed2k identification */

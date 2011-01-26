@@ -11,7 +11,7 @@ require 'check_internal.pl';
          3=>"MSN",
          4=> "RTMPT",
          5=> "YOUTUBE",
-         6=> "GOOGLEVIDEO",
+         6=> "VIDEOCONTENT",
          7=> "VIMEO",
          8=> "WIKI",
          9=> "RAPIDSHARE",
@@ -29,6 +29,8 @@ require 'check_internal.pl';
 	 21=>"STORAGE",
 	 22=>"YOUTUBE204",
 	 23=>"YOUTUBE204VIDEO",
+	 24=>"YOUTUBESITEDIRECT",
+	 25=>"YOUTUBESITEEMBED",
 );
 
 # substitute here the database name, username and password

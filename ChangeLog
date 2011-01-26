@@ -14,6 +14,14 @@
   * New feature: separate identification and statistics (RDD/Histograms)
     for traffic to/from a specific range of addresses ("cloud"). Activated
     with the new -C command line option. Currently not exposed in the log files.
+  * New log_video_complete file. Most of the collected data for video flows
+    moved from the log_tcp_complete file to the new log_video_complete file to
+    reduce cluttering
+  * Improved YouTube identification and classification, with multiple categories
+    both for video and for site connections
+  * Removed Google Video identification: Google Videos are now classified as YouTube
+  * New "Video Content" category, for content-identified FLV and MP4 files. It reuses the
+    GoogleVideo ID. 
   
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:

@@ -24,6 +24,7 @@
 extern FILE *fp_logc;
 extern FILE *fp_lognc;
 extern FILE *fp_rtp_logc;
+extern FILE *fp_video_logc;
 
 extern Bool is_stdin;
 extern Bool printticks;
@@ -79,7 +80,10 @@ static u_int FinCount (tcp_pair * ptp);
 void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
-
+#ifdef VIDEO_DETAILS
+Bool is_video(tcp_pair *ptp_save);
+void update_video_log (tcp_pair *tcp_save, tcb *pab, tcb *pba);
+#endif
 
 #ifdef CHECK_TCP_DUP
 Bool
@@ -969,6 +973,77 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (ZERO_TIME (&thisdir->first_data_time))
 	thisdir->first_data_time = current_time;
       thisdir->last_data_time = current_time;
+
+#ifdef VIDEO_DETAILS
+      if (ZERO_TIME (&thisdir->rate_last_sample))
+       {
+	 thisdir->rate_last_sample = current_time;
+	 thisdir->rate_left_edge = time2double(current_time);
+	 thisdir->rate_right_edge = thisdir->rate_left_edge+RATE_SAMPLING;
+	 thisdir->rate_min=MAXFLOAT;
+	 thisdir->rate_max=0.0;
+	 thisdir->rate_bytes=0;
+	 thisdir->rate_empty_streak=0;
+//       printf("FT %f %f %f\n",time2double(current_time) ,thisdir->rate_left_edge,thisdir->rate_right_edge);
+       }
+
+      if ( time2double(current_time) < thisdir->rate_right_edge)
+       {
+	 thisdir->rate_bytes += tcp_data_length;
+       }
+      else
+       {
+         double sample;
+	 int streak=0;
+
+	 sample = thisdir->rate_bytes *1e6 / RATE_SAMPLING;
+
+	 if (thisdir->rate_min>sample) 
+	   thisdir->rate_min = sample;
+	 if (thisdir->rate_max<sample) 
+	   thisdir->rate_max = sample;
+	   
+	 thisdir->rate_sum += sample;
+	 thisdir->rate_sum2 += sample*sample;
+ 	 if (thisdir->rate_samples<10)
+	  {
+	    thisdir->rate_begin_bytes[thisdir->rate_samples] = thisdir->rate_bytes;
+	  }
+
+	 thisdir->rate_samples++;
+         if (thisdir->rate_bytes==0)
+	   {
+	     thisdir->rate_empty_samples++;
+	     streak++;
+	   }
+
+	 thisdir->rate_left_edge +=  RATE_SAMPLING;
+	 thisdir->rate_right_edge +=  RATE_SAMPLING;
+
+         while (time2double(current_time) >= thisdir->rate_right_edge)
+	  {
+//       printf("S %f %f %f\n",time2double(current_time),
+//                thisdir->rate_right_edge,         
+//               time2double(current_time)-thisdir->rate_right_edge);
+ 	    thisdir->rate_left_edge +=  RATE_SAMPLING;
+	    thisdir->rate_right_edge +=  RATE_SAMPLING;
+ 	    if (thisdir->rate_samples<10)
+	     {
+	      thisdir->rate_begin_bytes[thisdir->rate_samples] = 0;
+	     }
+	    thisdir->rate_samples++;
+	    thisdir->rate_empty_samples++;
+	    streak++;
+	  }
+	 
+	 if (streak > thisdir->rate_empty_streak)
+	  thisdir->rate_empty_streak = streak;
+
+	 thisdir->rate_last_sample = current_time;
+	 thisdir->rate_bytes = tcp_data_length;
+       }
+#endif
+
     }
 
   /*TTL stats */
@@ -2029,6 +2104,111 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   print_jabber_conn_stats(ptp_save);
 #endif
 
+#ifdef VIDEO_DETAILS
+ if (!ZERO_TIME (&(ptp_save->c2s.rate_last_sample)))
+  {
+    double sample;
+    double delta;
+    int streak=0;
+
+    delta = time2double(current_time)-ptp_save->c2s.rate_left_edge;
+    if (delta < RATE_SAMPLING )
+       sample = ptp_save->c2s.rate_bytes * 1e6 / delta;
+    else
+       sample = ptp_save->c2s.rate_bytes * 1e6 / RATE_SAMPLING;
+
+    if (ptp_save->c2s.rate_min>sample) 
+      ptp_save->c2s.rate_min = sample;
+    if (ptp_save->c2s.rate_max<sample) 
+      ptp_save->c2s.rate_max = sample;
+      
+    ptp_save->c2s.rate_sum += sample;
+    ptp_save->c2s.rate_sum2 += sample*sample;
+    if (ptp_save->c2s.rate_samples<10)
+     {
+       ptp_save->c2s.rate_begin_bytes[ptp_save->c2s.rate_samples] = ptp_save->c2s.rate_bytes;
+     }
+    ptp_save->c2s.rate_samples++;
+    if (ptp_save->c2s.rate_bytes==0)
+     {
+       ptp_save->c2s.rate_empty_samples++;
+       streak++;
+     }
+
+    ptp_save->c2s.rate_left_edge +=  RATE_SAMPLING;
+    ptp_save->c2s.rate_right_edge +=  RATE_SAMPLING;
+
+    while (time2double(current_time) >= ptp_save->c2s.rate_right_edge)
+     {
+//       printf("FC %f %f\n",time2double(current_time)
+//       ,ptp_save->c2s.rate_right_edge);
+       ptp_save->c2s.rate_left_edge +=  RATE_SAMPLING;
+       ptp_save->c2s.rate_right_edge +=  RATE_SAMPLING;
+       if (ptp_save->c2s.rate_samples<10)
+        {
+          ptp_save->c2s.rate_begin_bytes[ptp_save->c2s.rate_samples] = 0;
+        }
+       ptp_save->c2s.rate_samples++;
+       ptp_save->c2s.rate_empty_samples++;
+       streak++;
+     }
+     
+    if (streak > ptp_save->c2s.rate_empty_streak)
+      ptp_save->c2s.rate_empty_streak = streak;
+  }
+ if (!ZERO_TIME (&(ptp_save->s2c.rate_last_sample)))
+  {
+    double sample;
+    double delta;
+    int streak=0;
+
+    delta = time2double(current_time)-ptp_save->s2c.rate_left_edge;
+    if (delta < RATE_SAMPLING )
+       sample = ptp_save->s2c.rate_bytes * 1e6 / delta;
+    else
+       sample = ptp_save->s2c.rate_bytes * 1e6 / RATE_SAMPLING;
+
+    if (ptp_save->s2c.rate_min>sample) 
+      ptp_save->s2c.rate_min = sample;
+    if (ptp_save->s2c.rate_max<sample) 
+      ptp_save->s2c.rate_max = sample;
+      
+    ptp_save->s2c.rate_sum += sample;
+    ptp_save->s2c.rate_sum2 += sample*sample;
+    if (ptp_save->s2c.rate_samples<10)
+     {
+       ptp_save->s2c.rate_begin_bytes[ptp_save->s2c.rate_samples] = ptp_save->s2c.rate_bytes;
+     }
+    ptp_save->s2c.rate_samples++;
+    if (ptp_save->s2c.rate_bytes==0)
+     {
+       ptp_save->s2c.rate_empty_samples++;
+       streak++;
+     }
+
+    ptp_save->s2c.rate_left_edge +=  RATE_SAMPLING;
+    ptp_save->s2c.rate_right_edge +=  RATE_SAMPLING;
+
+    while (time2double(current_time) >= ptp_save->s2c.rate_right_edge)
+     {
+//       printf("FS %f %f\n",time2double(current_time)
+//       ,ptp_save->s2c.rate_right_edge);
+       ptp_save->s2c.rate_left_edge +=  RATE_SAMPLING;
+       ptp_save->s2c.rate_right_edge +=  RATE_SAMPLING;
+       if (ptp_save->s2c.rate_samples<10)
+        {
+          ptp_save->s2c.rate_begin_bytes[ptp_save->s2c.rate_samples] = 0;
+        }
+       ptp_save->s2c.rate_samples++;
+       ptp_save->s2c.rate_empty_samples++;
+       streak++;
+     }
+
+    if (streak > ptp_save->c2s.rate_empty_streak)
+      ptp_save->c2s.rate_empty_streak = streak;
+  }
+#endif
+
   /* Statistics from the plugins */
 
   /* TCP proto stats should be done only for complete flows 
@@ -2742,68 +2922,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       */
       wfprintf (fp, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
                           ptp_save->http_data + 1 : 0 );
-#ifdef YOUTUBE_DETAILS
-     /* Web 2.0 and YouTube video identification:
-         Column 106: Video ID (or request ID) - '--' if missing or not relevant
-         Column 107: YouTube itag
-         Column 108: YouTube seek flag
-         Column 109: FLV duration (from metadata)
-         Column 110: FLV byte length (from metadata)
-     */
-#ifdef YOUTUBE_REQUEST_ID
-      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204 ||
-		            ptp_save->http_data==HTTP_YOUTUBE_SITE)  ?
-                          ptp_save->http_ytid : "--" );
-#else
-      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_ytid : "--" );
-#endif
 
-      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_ytitag : "--" );
-
-      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_ytseek : 0 );
-
-      wfprintf (fp, " %.3f", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_flv_duration : 0.0 );
-
-      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_flv_bytelength : 0 );
-
-      wfprintf (fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) ?
-                            ptp_save->http_response : "---" );
-
-      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_ytredir_mode : 0 );
-
-      wfprintf (fp, " %d", (ptp_save->con_type & HTTP_PROTOCOL) && 
-                          ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                            ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                            ptp_save->http_data==HTTP_YOUTUBE_204  )  ?
-                          ptp_save->http_ytredir_count : 0 );
-#endif
       /* write to log file */
       /* printing boolean flag if this is considered internal or not */
 //      wfprintf (fp, " %d", ptp_save->internal_src);
@@ -2814,6 +2933,14 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       wfprintf (fp, "\n");
 
    }
+   
+#ifdef VIDEO_DETAILS
+   if (fp_video_logc && is_video(ptp_save))
+    {
+      update_video_log(ptp_save,pab,pba);
+    }
+#endif
+   
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))
       return;
@@ -2822,6 +2949,279 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
    else
       update_conn_log_mm_v2(ptp_save,pab,pba);
 }
+
+#ifdef VIDEO_DETAILS
+
+Bool is_video(tcp_pair *ptp_save)
+{
+  if (ptp_save->con_type & RTMP_PROTOCOL)
+    return TRUE;
+    
+  if (!(ptp_save->con_type & HTTP_PROTOCOL))
+    return FALSE;
+
+  switch (ptp_save->http_data)
+   {
+     case HTTP_YOUTUBE_VIDEO:
+     case HTTP_YOUTUBE_VIDEO204:
+     case HTTP_YOUTUBE_204:
+     case HTTP_YOUTUBE_SITE:
+     case HTTP_YOUTUBE_SITE_DIRECT:
+     case HTTP_YOUTUBE_SITE_EMBED:
+     case HTTP_VIDEO_CONTENT:
+     case HTTP_VIMEO:
+     case HTTP_VOD:
+     case HTTP_FLASHVIDEO:
+       return TRUE;
+     default:
+       return FALSE;
+   }
+}
+
+void
+update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  double etime;
+  int i;
+  char id_string[20];
+
+  etime = elapsed (ptp_save->first_time, ptp_save->last_time);
+  etime = etime / 1000;
+
+  if(!log_engine)
+	  return;
+  if (fp_video_logc != NULL)
+    {
+      wfprintf (fp_video_logc, 
+	       "%s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu",
+	       HostName (ptp_save->addr_pair.a_address),
+	       ServiceName (ptp_save->addr_pair.a_port),
+	       pab->packets,
+	       pab->reset_count,
+	       pab->unique_bytes, pab->data_pkts, pab->data_bytes,
+	       pab->rexmit_pkts, pab->rexmit_bytes, pab->out_order_pkts,
+	       pab->fin_count,
+	       pab->max_seg_size,
+	       pab->cwin_max, pab->cwin_min);
+
+      wfprintf (fp_video_logc, " %f %f %f %f %u %u %u",
+	       (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
+		1000.0),
+	       (ptp_save->c2s.rtt_min / 1000.0),
+               (ptp_save->c2s.rtt_max / 1000.0),
+	       (Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
+		      ptp_save->c2s.rtt_count) / 1000.0),
+		ptp_save->c2s.rtt_count,
+                ptp_save->c2s.ttl_min,
+                ptp_save->c2s.ttl_max);
+
+      /* Rate c2s */
+      if (ptp_save->c2s.rate_samples > 1)
+       {
+          wfprintf (fp_video_logc, " %d %d %d %.3f %.3f %.3f %.3f",
+        		ptp_save->c2s.rate_samples,				       
+        		ptp_save->c2s.rate_empty_samples,			       
+			ptp_save->c2s.rate_empty_streak,
+        		8e-3*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples,        
+        		8e-3*sqrt((ptp_save->c2s.rate_sum2 - 
+        			   ptp_save->c2s.rate_sum*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples)/
+        			   (ptp_save->c2s.rate_samples-1)),
+        		8e-3*ptp_save->c2s.rate_min,
+        		8e-3*ptp_save->c2s.rate_max);
+       }
+      else
+       {
+          wfprintf (fp_video_logc, " 0 0 0 0.000 0.000 0.000 0.000");
+       }
+      
+      /* printing boolean flag if this is considered internal or not */
+      wfprintf (fp_video_logc, " %d", ptp_save->internal_src);
+
+      wfprintf (fp_video_logc,
+	       " %s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu",
+	       HostName (ptp_save->addr_pair.b_address),
+	       ServiceName (ptp_save->addr_pair.b_port),
+	       pba->packets,
+	       pba->reset_count,
+	       pba->unique_bytes, pba->data_pkts, pba->data_bytes,
+	       pba->rexmit_pkts, pba->rexmit_bytes, pba->out_order_pkts,
+	       pba->fin_count,
+	       pba->max_seg_size,
+	       pba->cwin_max, pba->cwin_min);
+
+      wfprintf (fp_video_logc, " %f %f %f %f %u %u %u",
+	       (Average (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) /
+		1000.0),
+	       (ptp_save->s2c.rtt_min / 1000.0),
+               (ptp_save->s2c.rtt_max / 1000.0),
+	       (Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
+		      ptp_save->s2c.rtt_count) / 1000.0),
+		ptp_save->s2c.rtt_count,
+                ptp_save->s2c.ttl_min,
+                ptp_save->s2c.ttl_max);
+
+      /* Rate s2c */
+      if (ptp_save->s2c.rate_samples > 1 )
+       {
+          wfprintf (fp_video_logc, " %d %d %d %.3f %.3f %.3f %.3f",
+        		ptp_save->s2c.rate_samples,				       
+        		ptp_save->s2c.rate_empty_samples,
+			ptp_save->s2c.rate_empty_streak,
+        		8e-3*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples,        
+        		8e-3*sqrt((ptp_save->s2c.rate_sum2 - 
+        			   ptp_save->s2c.rate_sum*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples)/
+        			   (ptp_save->s2c.rate_samples-1)),
+        		8e-3*ptp_save->s2c.rate_min,
+        		8e-3*ptp_save->s2c.rate_max);
+       }
+      else
+       {
+          wfprintf (fp_video_logc, " 0 0 0 0.000 0.000 0.000 0.000");
+       }
+
+      /* printing boolean flag if this is considered internal or not */
+      wfprintf (fp_video_logc, " %d", ptp_save->internal_dst);
+
+/* elapsed time */
+      wfprintf (fp_video_logc, " %f", etime);
+
+/* first pkt time */
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (first_packet, ptp_save->first_time) / 1000.0);
+/* last pkt time */
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (first_packet, ptp_save->last_time) / 1000.0);
+
+/* first DATA pkt time */
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->payload_start_time) / 1000.0);
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->payload_start_time) / 1000.0);
+
+/* last DATA pkt time */
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->payload_end_time) / 1000.0);
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->payload_end_time) / 1000.0);
+
+/* Absolute time of first packet */
+      wfprintf (fp_video_logc, " %f", time2double(ptp_save->first_time) / 1000.);
+
+      /* TOPIX: 67th column: connection type */
+      wfprintf (fp_video_logc, " %d", ptp_save->con_type);
+
+      /* P2P: 68th column: p2p protocol   */
+      wfprintf (fp_video_logc, " %d", ptp_save->p2p_type / 100);
+
+      /* Web2.0: 69th column: HTTP content type */
+      /* 
+         Using http_data+1 so that valid values are > 0, i.e. GET is 1,
+         POST is 2, etc.
+      */
+      wfprintf (fp_video_logc, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
+                          ptp_save->http_data + 1 : 0 );
+
+      wfprintf (fp_video_logc, " %s", (ptp_save->con_type & HTTP_PROTOCOL) ?
+                            ptp_save->http_response : "---" );
+
+     /* Web 2.0 and YouTube video identification:
+         Column 71: Request ID (16 char) - '--' if missing or not relevant
+         Column 72: Video ID (11 char) - '--' if missing or not relevant
+         Column 73: YouTube itag ('fmt' video quality) 
+         Column 74: YouTube seek flag
+         Column 75: FLV duration (from metadata)
+         Column 76: FLV total duration (from metadata)
+         Column 77: FLV byte length (from metadata)
+	 Column 78: Redirection mode
+	 Column 79: Redirection counter
+	 Column 80: Mobile Media
+     */
+#ifdef YOUTUBE_REQUEST_ID
+     if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     	     ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_204 ))
+       {
+     	   id16to11(id_string,ptp_save->http_ytid);
+     	   wfprintf (fp_video_logc, " %s %s", ptp_save->http_ytid,id_string);
+       }
+     else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     			       ( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
+     				 ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+     				 ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
+       {
+     	   id11to16(id_string,ptp_save->http_ytid);
+     	   wfprintf (fp_video_logc, " %s %s", id_string, ptp_save->http_ytid);
+       }
+     else			 
+       {
+     	   wfprintf (fp_video_logc, " -- --");
+       }
+#else
+      if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+              ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+        	ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+        	ptp_save->http_data==HTTP_YOUTUBE_204 ))
+        {
+            wfprintf (fp_video_logc, " %s --", ptp_save->http_ytid);
+        }
+      else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+        			( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
+        			  ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+        			  ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
+        {
+            id11to16(id_string,ptp_save->http_ytid);
+            wfprintf (fp_video_logc, " %s --", id_string);
+        }
+      else			  
+        {
+            wfprintf (fp_video_logc, " -- --");
+        }
+#endif
+
+      if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+                 ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+                   ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+                   ptp_save->http_data==HTTP_YOUTUBE_204  )
+	 )
+       {
+         wfprintf (fp_video_logc, " %s %d %.3f %.3f %d %d %d %d", 
+                                 ptp_save->http_ytitag,
+				 ptp_save->http_ytseek,
+				 ptp_save->http_flv_duration,
+				 ptp_save->http_flv_fullduration,
+				 ptp_save->http_flv_bytelength,
+				 ptp_save->http_ytredir_mode,
+				 ptp_save->http_ytredir_count,
+				 ptp_save->http_ytmobile );
+       }
+      else
+       {
+         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0 0 0 0");
+       }
+
+      /* write to log file */
+
+      for (i=0;i<10;i++)
+       {
+          wfprintf (fp_video_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
+       }
+
+      for (i=0;i<10;i++)
+       {
+          wfprintf (fp_video_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
+       }
+
+      wfprintf (fp_video_logc, "\n");
+
+   }
+
+}
+#endif
 
 void
 update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)

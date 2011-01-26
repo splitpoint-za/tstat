@@ -279,6 +279,9 @@ FILE *fp_l3bitrate = NULL;
 FILE *fp_dup_ooo_log;
 #endif
 
+#ifdef VIDEO_DETAILS
+FILE *fp_video_logc = NULL;
+#endif
 
 /* discriminate Direction */
 Bool coming_in;
@@ -854,6 +857,11 @@ create_new_outfiles (char *filename)
         }
 #endif
 
+#ifdef VIDEO_DETAILS
+      /* Video log */
+      reopen_logfile(&fp_video_logc,basename,"log_video_complete");
+#endif
+
 #ifdef LOG_OOO
       /* MGM start */
       /* Open the files for dup and ooo logging */
@@ -899,6 +907,10 @@ void close_all_logfiles()
       if (fp_l3bitrate != NULL) { gzclose(fp_l3bitrate); fp_l3bitrate=NULL; }
 #endif
 
+#ifdef VIDEO_DETAILS
+      if (fp_video_logc != NULL) { gzclose(fp_video_logc); fp_video_logc=NULL; }
+#endif
+
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { gzclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
@@ -931,6 +943,10 @@ void close_all_logfiles()
 
 #ifdef L3_BITRATE
       if (fp_l3bitrate != NULL) { fclose(fp_l3bitrate); fp_l3bitrate=NULL; }
+#endif
+
+#ifdef VIDEO_DETAILS
+      if (fp_video_logc != NULL) { fclose(fp_video_logc); fp_video_logc=NULL; }
 #endif
 
 #ifdef LOG_OOO

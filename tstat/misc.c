@@ -163,3 +163,88 @@ int in_out_loc(int internal_src, int internal_dst, int dir)
    } else
     return EXT_FLOW;
 }
+
+
+/* YouTube ID conversion functions */
+
+const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const char hex16[] = "0123456789abcdef";
+
+/* Convert YouTube VideoID (11-chars) in the 16-chars ID*/
+void id11to16(char *id16, char *id11)
+{
+  static unsigned char b[16];
+  int i,j;
+  char *p,*q;
+  int basep,baseq;
+
+  if (strlen(id11)!=11)
+   {
+     strncpy(id16,id11,12);
+     return;
+   }
+
+  i=0;j=0;
+  while (i<10)
+   {
+     p = strchr(b64,id11[i]);
+     basep = p - b64;
+     
+     q = strchr(b64,id11[i+1]);
+     baseq = q - b64;
+     
+     b[j] = (basep & 0x3f) >> 2;
+     b[j+1] = (basep & 0x03 ) << 2 | ((baseq & 0x3f)>> 4);
+     b[j+2] = (baseq & 0x0f);
+     i+=2; j+=3;
+   }
+  p = strchr(b64,id11[10]);
+  basep = p - b64;
+     
+  b[15] = (basep & 0x3f) >> 2;
+  
+  for (i=0;i<16;i++)
+   {
+     id16[i]=hex16[b[i]];
+   }
+  id16[16]='\0';
+
+}
+
+/* Convert YouTube VideoID (16-chars) in the 11-chars ID*/
+void id16to11(char *id11, char *id16)
+{
+  static unsigned char a[11];
+  static unsigned char b[16];
+  int i,j;
+
+  if (strlen(id16)!=16)
+   {
+     strncpy(id11,id16,12);
+     return;
+   }
+  
+  for (i=0;i<16;i++)
+   {
+     if (id16[i]>='a' && id16[i]<='f')
+       b[i]=id16[i]-'a'+10;
+     else
+       b[i]=id16[i]-'0';
+   }
+
+  i=0;j=0;
+  
+  while (i<10)
+   {
+  a[i] = (b[j] << 2) | (b[j+1] >> 2) ;
+  a[i+1] = ((b[j+1] & 0x03 ) << 4 ) | b[j+2] ;
+  i+=2; j+=3;
+   }
+  a[10] = (b[15] << 2) ;
+  
+  for (i=0;i<11;i++)
+   {
+     id11[i]=b64[a[i]];
+   }
+  id11[11]='\0';
+}

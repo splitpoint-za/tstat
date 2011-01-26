@@ -705,6 +705,9 @@ void AVE_init (win_stat * stat, char *name, timeval tc);
 
 int in_out_loc (int internal_src, int internal_dst, int dir);
 
+void id11to16(char *id16, char *id11);
+void id16to11(char *id11, char *id16);
+
 /* generic UDP */
 
 /* P2P plugin */

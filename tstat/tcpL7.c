@@ -23,7 +23,7 @@
 #include "jabber.h"
 #include "p2p.h"
 
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
 #include <regex.h>
 #endif
 
@@ -35,7 +35,7 @@ extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 extern struct WEB_bitrates WEB_bitrate;
 
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
 extern void init_web_patterns();
 extern void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length);
 
@@ -44,15 +44,29 @@ extern char yt_itag[5];
 extern int yt_seek;
 extern int yt_redir_mode;
 extern int yt_redir_count;
+extern int yt_mobile;
 #endif
 
-#define YTMAP(X) (((X)==HTTP_YOUTUBE_VIDEO204||(X)==HTTP_YOUTUBE_204)?(HTTP_YOUTUBE_VIDEO):(X))
+enum http_content YTMAP(enum http_content X)
+{
+  switch (X)
+   {
+     case HTTP_YOUTUBE_VIDEO204:
+     case HTTP_YOUTUBE_204:
+       return HTTP_YOUTUBE_VIDEO;
+     case HTTP_YOUTUBE_SITE_DIRECT:
+     case HTTP_YOUTUBE_SITE_EMBED:
+       return HTTP_YOUTUBE_SITE;
+     default:
+       return X;      
+   }
+}
 
 void
 tcpL7_init ()
 {
   /* nothing to do so far */
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
    init_web_patterns();
 #endif
 }
@@ -488,7 +502,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          tcp_stats->u_protocols.f_http = current_time;
 	          ptp->state = HTTP_COMMAND;
                   ptp->http_data = HTTP_GET;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                   strcpy(ptp->http_ytid,"--");
                   strcpy(ptp->http_ytitag,"--");
 		  strcpy(yt_id,"--");
@@ -496,12 +510,15 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  yt_seek = 0;
                   yt_redir_mode = 0;
                   yt_redir_count = 0;
+		  yt_mobile = 0;
 #endif
 
                   ptp->http_data = classify_http_get(pdata,data_length);
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                   if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
 		      ptp->http_data==HTTP_YOUTUBE_SITE ||
+		      ptp->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+		      ptp->http_data==HTTP_YOUTUBE_SITE_EMBED ||
 		      ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		      ptp->http_data==HTTP_YOUTUBE_204 )
                    {
@@ -510,6 +527,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytseek=yt_seek;
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
+			  ptp->http_ytmobile = yt_mobile;
                    }
 #endif
 	        }
@@ -520,7 +538,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	          tcp_stats->u_protocols.f_http = current_time;
 	          ptp->state = HTTP_COMMAND;
 		  ptp->http_data = HTTP_POST;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                   strcpy(ptp->http_ytid,"--");
                   strcpy(ptp->http_ytitag,"--");
 		  strcpy(yt_id,"--");
@@ -528,6 +546,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  yt_seek = 0;
                   yt_redir_mode = 0;
                   yt_redir_count = 0;
+		  yt_mobile = 0;
 #endif
                   ptp->http_data = classify_http_post(pdata,data_length);
 	        }
@@ -788,7 +807,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        ptp->con_type &= ~OBF_PROTOCOL;
 	        ptp->con_type &= ~MSE_PROTOCOL;
 	        ptp->state = HTTP_RESPONSE;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                 if ((char *) pdata + 13 <= (char *) plast)
 		  {
                     memcpy(ptp->http_response,(char *) pdata+9,3);
@@ -855,15 +874,32 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        msn_s2c_state_update(ptp,IRO,1,pdata,plast);
 	        break;
 #endif
-#ifdef YOUTUBE_DETAILS
-	      case FLV:         /* parse header of an FLV video */
-	        if (ptp->http_data==HTTP_YOUTUBE_VIDEO||
-		    ptp->http_data==HTTP_YOUTUBE_VIDEO204||
-		    ptp->http_data==HTTP_YOUTUBE_204)
-		 {
-		   parse_flv_header(ptp,pdata,data_length);
-		 }
-	        break;
+#ifdef VIDEO_DETAILS
+              case FLV:         /* parse header of an FLV video */
+                if (ptp->http_data==HTTP_YOUTUBE_VIDEO||
+                    ptp->http_data==HTTP_YOUTUBE_VIDEO204||
+                    ptp->http_data==HTTP_YOUTUBE_204)
+                 {
+                   parse_flv_header(ptp,pdata,data_length);
+                 }
+                else
+                 {
+                   if ( ((char *) pdata + 37 <= (char *) plast)
+                     && memcmp( pdata+27, "onMetaData", 10 )==0 )
+                    {
+                      if (ptp->http_data==HTTP_GET)
+                        ptp->http_data = HTTP_VIDEO_CONTENT;
+                    }
+                 }
+                break;
+              case MP4:         /* parse header of an MP4 container */
+                if ( ((char *) pdata + 12 <= (char *) plast)
+                     && memcmp( pdata+4, "ftyp", 4)==0 )
+                  {
+                      if (ptp->http_data==HTTP_GET)
+                        ptp->http_data = HTTP_VIDEO_CONTENT;
+                  }
+                break;
 #endif
 	      default:
 #ifdef RTSP_CLASSIFIER
@@ -897,7 +933,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                    || ptp->http_data== HTTP_YOUTUBE_204
 		   )
 	         {
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
 		  strcpy(yt_id,"--");
 		  strcpy(yt_itag,"--");
 #endif
@@ -908,20 +944,23 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		        new_http_data == HTTP_YOUTUBE_VIDEO)
 	             {
 		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                        strncpy(ptp->http_ytid,yt_id,19);
                        strncpy(ptp->http_ytitag,yt_itag,4);
 		       ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
+			  ptp->http_ytmobile = yt_mobile;
 #endif			
 		     }
 		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
 		     { 
 		       ptp->http_data = new_http_data;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                        if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
 		           ptp->http_data==HTTP_YOUTUBE_SITE ||
+		           ptp->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+		           ptp->http_data==HTTP_YOUTUBE_SITE_EMBED||
  		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		           ptp->http_data==HTTP_YOUTUBE_204 )
                         {
@@ -930,6 +969,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
+			  ptp->http_ytmobile = yt_mobile;
                         }
 #endif			
 	             }
@@ -940,7 +980,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                    || ptp->http_data== HTTP_YOUTUBE_204
 		   )
 	         {
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
 		  strcpy(yt_id,"--");
 		  strcpy(yt_itag,"--");
 #endif
@@ -951,20 +991,23 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		        new_http_data == HTTP_YOUTUBE_VIDEO)
 	             {
 		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                        strncpy(ptp->http_ytid,yt_id,19);
                        strncpy(ptp->http_ytitag,yt_itag,4);
 		       ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
+			  ptp->http_ytmobile = yt_mobile;
 #endif			
 		     }
 		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
 		    { 
 		      ptp->http_data = new_http_data;
-#ifdef YOUTUBE_DETAILS
+#ifdef VIDEO_DETAILS
                       if (ptp->http_data==HTTP_YOUTUBE_VIDEO ||
 		           ptp->http_data==HTTP_YOUTUBE_SITE ||
+		           ptp->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+		           ptp->http_data==HTTP_YOUTUBE_SITE_EMBED||
  		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		           ptp->http_data==HTTP_YOUTUBE_204 )
                        {
@@ -973,6 +1016,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
+			  ptp->http_ytmobile = yt_mobile;
                        }
 #endif
 		    }

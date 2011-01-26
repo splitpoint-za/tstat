@@ -61,6 +61,9 @@
 /*Flash header*/
 #define FLV  0x464C5601UL
 
+/* MP4 header */
+#define MP4  0x00000018UL
+
 /* SMTP commands */
 #define SMTP_220  0x32323020UL
 #define SMTP_HELO 0x48454C4FUL
@@ -94,6 +97,9 @@
 
 /*Flash header*/
 #define FLV  0x01564C46UL
+
+/* MP4 header */
+#define MP4  0x18000000UL
 
 /* SMTP commands */
 #define SMTP_220  0x20303232UL
