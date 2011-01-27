@@ -912,7 +912,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
               if (regexec(&re[5],match_buffer,(size_t) 2,re_res,0)==0)
               {
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+                memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
                  yt_id[msize]='\0';
               }
@@ -931,7 +931,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
               if (regexec(&re[5],match_buffer,(size_t) 2,re_res,0)==0)
               {
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+                memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
                  yt_id[msize]='\0';
               }
