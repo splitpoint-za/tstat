@@ -118,18 +118,19 @@ Here it follows a brief description of the columns.
 # 93  # S first payload # Server first segment with payload since the first flow segment [ms]
 # 94  # C last payload  # Client last segment with payload since the first flow segment [ms]
 # 95  # S last payload  # Server last segment with payload since the first flow segment [ms]
-# 96  # Internal        # Bool set to 1 if the client has internal IP
-# 97  # Connection type # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 98  # P2P type        # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 99  # P2P subtype     # P2P protocol message type, as identified by the IPP2P engine. Application dependent. See ipp2p_tstat.c.
+# 96  # First time abs  # Flow first packet absolute time (epoch) [ms]
+# 97  # Internal        # Bool set to 1 if the client has internal IP
+# 98  # Connection type # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 99  # P2P type        # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 100 # P2P subtype     # P2P protocol message type, as identified by the IPP2P engine. Application dependent. See ipp2p_tstat.c.
 ############################################################################
-# 100 # ED2K Data       # For P2P ED2K flows, the number of data messages
-# 101 # ED2K Signaling  # For P2P ED2K flows, the number of signaling (not data) messages
-# 102 # ED2K C2S        # For P2P ED2K flows, the number of client<->server messages
-# 103 # ED2K C2C        # For P2P ED2K flows, the number of client<->client messages
-# 104 # ED2K Chat       # For P2P ED2K flows, the number of chat messages 
+# 101 # ED2K Data       # For P2P ED2K flows, the number of data messages
+# 102 # ED2K Signaling  # For P2P ED2K flows, the number of signaling (not data) messages
+# 103 # ED2K C2S        # For P2P ED2K flows, the number of client<->server messages
+# 104 # ED2K C2C        # For P2P ED2K flows, the number of client<->client messages
+# 105 # ED2K Chat       # For P2P ED2K flows, the number of chat messages 
 ############################################################################
-# 105 # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 106 # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
 ############################################################################
 
 Connection type (Column no. 97) description (from protocol.h)

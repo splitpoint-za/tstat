@@ -367,6 +367,10 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->p2p_state = UNKNOWN_TYPE;
   ptp->ignore_dpi = FALSE;
 
+#ifdef VIDEO_DETAILS
+  memset(&ptp->http_meta,0,sizeof(struct flv_metadata));
+#endif
+
   return (&ttp[num_tcp_pairs]);
 }
 
@@ -487,6 +491,8 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
         "** trash TCP packet: it does not belong to any known flows\n");
 	}
       not_id_p++;
+      add_histo (profile_trash, 0);
+
       return (NULL);
     }
 
@@ -581,6 +587,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
         "** out of memory when creating flows - considering a not_id_p\n");
 	}
       not_id_p++;
+      add_histo (profile_trash, 0);
 
     /* profile number of missed TCP session */
     if (profile_flows->flag == HISTO_ON)
@@ -974,6 +981,23 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	thisdir->first_data_time = current_time;
       thisdir->last_data_time = current_time;
 
+#ifdef PACKET_STATS
+      if (thisdir->seg_count<MAX_COUNT_SEGMENTS)
+       {
+         thisdir->seg_size[thisdir->seg_count] = tcp_data_length;
+	 if (thisdir->seg_count==0)
+	  {
+            thisdir->last_seg_time=time2double(current_time);
+	  }
+	 else
+	  {
+	    thisdir->seg_intertime[thisdir->seg_count-1] =
+	    time2double(current_time) - thisdir->last_seg_time;
+            thisdir->last_seg_time=time2double(current_time);
+	  }
+	 thisdir->seg_count++;
+       }
+#endif
 #ifdef VIDEO_DETAILS
       if (ZERO_TIME (&thisdir->rate_last_sample))
        {
@@ -984,7 +1008,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	 thisdir->rate_max=0.0;
 	 thisdir->rate_bytes=0;
 	 thisdir->rate_empty_streak=0;
-//       printf("FT %f %f %f\n",time2double(current_time) ,thisdir->rate_left_edge,thisdir->rate_right_edge);
        }
 
       if ( time2double(current_time) < thisdir->rate_right_edge)
@@ -1022,9 +1045,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
          while (time2double(current_time) >= thisdir->rate_right_edge)
 	  {
-//       printf("S %f %f %f\n",time2double(current_time),
-//                thisdir->rate_right_edge,         
-//               time2double(current_time)-thisdir->rate_right_edge);
  	    thisdir->rate_left_edge +=  RATE_SAMPLING;
 	    thisdir->rate_right_edge +=  RATE_SAMPLING;
  	    if (thisdir->rate_samples<10)
@@ -2140,8 +2160,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
     while (time2double(current_time) >= ptp_save->c2s.rate_right_edge)
      {
-//       printf("FC %f %f\n",time2double(current_time)
-//       ,ptp_save->c2s.rate_right_edge);
        ptp_save->c2s.rate_left_edge +=  RATE_SAMPLING;
        ptp_save->c2s.rate_right_edge +=  RATE_SAMPLING;
        if (ptp_save->c2s.rate_samples<10)
@@ -2191,8 +2209,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
     while (time2double(current_time) >= ptp_save->s2c.rate_right_edge)
      {
-//       printf("FS %f %f\n",time2double(current_time)
-//       ,ptp_save->s2c.rate_right_edge);
        ptp_save->s2c.rate_left_edge +=  RATE_SAMPLING;
        ptp_save->s2c.rate_right_edge +=  RATE_SAMPLING;
        if (ptp_save->s2c.rate_samples<10)
@@ -2779,7 +2795,11 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   /* RRDtools                                                */
   if(!log_engine)
 	  return;
+#if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
+  if (fp_logc != NULL && is_video(ptp_save))
+#else
   if (fp_logc != NULL)
+#endif
     {
       wfprintf (fp, 
 	       "%s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
@@ -2896,6 +2916,9 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	       elapsed (ptp_save->first_time,
 			pba->payload_end_time) / 1000.0);
 
+/* Absolute time of first packet */
+      wfprintf (fp, " %f", time2double(ptp_save->first_time) / 1000.);
+
       /* printing boolean flag if this is considered internal or not */
       wfprintf (fp, " %d", ptp_save->internal_src);
 
@@ -2930,6 +2953,56 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 //      wfprintf (fp, " %d", ptp_save->cloud_src);
 //      wfprintf (fp, " %d", ptp_save->cloud_dst);
 
+#ifdef PACKET_STATS
+  {
+    int i;
+
+       /* PSH-delimited Message sizes */
+          wfprintf (fp, " -");
+      wfprintf (fp, " %d",ptp_save->c2s.msg_count);
+      for (i=0;i<MAX_COUNT_MESSAGES;i++)
+       {
+          wfprintf (fp, " %d",ptp_save->c2s.msg_size[i]);
+       }
+
+          wfprintf (fp, " -");
+      wfprintf (fp, " %d",ptp_save->s2c.msg_count);
+      for (i=0;i<MAX_COUNT_MESSAGES;i++)
+       {
+          wfprintf (fp, " %d",ptp_save->s2c.msg_size[i]);
+       }
+
+          wfprintf (fp, " -");
+
+       /* Segment sizes */
+      wfprintf (fp, " %d",ptp_save->c2s.seg_count);
+      for (i=0;i<MAX_COUNT_SEGMENTS;i++)
+       {
+          wfprintf (fp, " %d",ptp_save->c2s.seg_size[i]);
+       }
+
+          wfprintf (fp, " -");
+      wfprintf (fp, " %d",ptp_save->s2c.seg_count);
+      for (i=0;i<MAX_COUNT_SEGMENTS;i++)
+       {
+          wfprintf (fp, " %d",ptp_save->s2c.seg_size[i]);
+       }
+
+          wfprintf (fp, " -");
+       /* Segment intertimes */
+      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
+       {
+          wfprintf (fp, " %f",ptp_save->c2s.seg_intertime[i]/1000.);
+       }
+
+          wfprintf (fp, " -");
+      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
+       {
+          wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
+       }
+
+  }
+#endif
       wfprintf (fp, "\n");
 
    }
@@ -3133,14 +3206,12 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
          Column 72: Video ID (11 char) - '--' if missing or not relevant
          Column 73: YouTube itag ('fmt' video quality) 
          Column 74: YouTube seek flag
-         Column 75: FLV duration (from metadata)
-         Column 76: FLV total duration (from metadata)
-         Column 77: FLV byte length (from metadata)
-	 Column 78: Redirection mode
-	 Column 79: Redirection counter
-	 Column 80: Mobile Media
+         Column 75-84: FLV Metadata
+	 Column 85: Redirection mode
+	 Column 86: Redirection counter
+	 Column 87: Mobile Media
      */
-#ifdef YOUTUBE_REQUEST_ID
+#ifndef HIDE_YOUTUBE_REQUEST_ID
      if ((ptp_save->con_type & HTTP_PROTOCOL) && 
      	     ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
      	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
@@ -3189,19 +3260,26 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
                    ptp_save->http_data==HTTP_YOUTUBE_204  )
 	 )
        {
-         wfprintf (fp_video_logc, " %s %d %.3f %.3f %d %d %d %d", 
+         wfprintf (fp_video_logc, " %s %d %.3f %.3f %.3f %d %d %.3f %.3f %.3f %.3f %d %d %d %d", 
                                  ptp_save->http_ytitag,
 				 ptp_save->http_ytseek,
-				 ptp_save->http_flv_duration,
-				 ptp_save->http_flv_fullduration,
-				 ptp_save->http_flv_bytelength,
+				 ptp_save->http_meta.duration,
+				 ptp_save->http_meta.starttime,
+				 ptp_save->http_meta.totalduration,
+				 ptp_save->http_meta.width,
+				 ptp_save->http_meta.height,
+				 ptp_save->http_meta.videodatarate,
+				 ptp_save->http_meta.audiodatarate,
+				 ptp_save->http_meta.totaldatarate,
+				 ptp_save->http_meta.framerate,
+				 ptp_save->http_meta.bytelength,
 				 ptp_save->http_ytredir_mode,
 				 ptp_save->http_ytredir_count,
 				 ptp_save->http_ytmobile );
        }
       else
        {
-         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0 0 0 0");
+         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0");
        }
 
       /* write to log file */
@@ -3214,6 +3292,12 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
       for (i=0;i<10;i++)
        {
           wfprintf (fp_video_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
+       }
+
+      wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_count);
+      for (i=0;i<MAX_COUNT_MESSAGES;i++)
+       {
+          wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_size[i]);
        }
 
       wfprintf (fp_video_logc, "\n");

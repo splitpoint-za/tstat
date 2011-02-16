@@ -2264,6 +2264,10 @@ create_all_histo (void)
     AVE_init(&active_flows_win_UDP, "active flows UDP", current_time);
     AVE_init(&missed_flows_win_TCP, "missed flows TCP", current_time);
     AVE_init(&missed_flows_win_UDP, "missed flows UDP", current_time);
+
+    profile_trash =
+        create_histo("profile_trash", "trash TCP packets", 0, 1, 1);
+
 }
 
 extern struct bitrates bitrate;

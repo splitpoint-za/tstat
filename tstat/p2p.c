@@ -627,8 +627,12 @@ make_p2p_conn_stats (void * flow, int tproto)
        return;
 #endif
 
+#if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
+  return;
+#else
   if (!log_engine || fp_udp_logc == NULL)
     return;
+#endif
 
   thisUdir = thisC2S;
   pup = thisUdir->pup;
@@ -647,8 +651,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     5   Flow Size [Bytes]
   wfprintf (fp_udp_logc,
 	   " %f %.6f %llu",
-//	   1e-6 * time2double ((thisUdir->first_pkt_time)), 
-           elapsed (first_packet,thisUdir->first_pkt_time)/1000,
+	   time2double ((thisUdir->first_pkt_time))/1000., 
+//         elapsed (first_packet,thisUdir->first_pkt_time)/1000,
 	   elapsed (thisUdir->first_pkt_time, thisUdir->last_pkt_time) /
 	   1000.0 / 1000.0, thisUdir->data_bytes);
 
@@ -704,8 +708,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     13   Flow Size [Bytes]
   wfprintf (fp_udp_logc,
 	   " %f %.6f %llu",
-//	   1e-6 * time2double ((thisUdir->first_pkt_time)), 
-           elapsed (first_packet,thisUdir->first_pkt_time)/1000,
+	   time2double ((thisUdir->first_pkt_time))/1000., 
+//         elapsed (first_packet,thisUdir->first_pkt_time)/1000,
 	   elapsed (thisUdir->first_pkt_time, thisUdir->last_pkt_time) /
 	   1000.0 / 1000.0, thisUdir->data_bytes);
 

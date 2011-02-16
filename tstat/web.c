@@ -26,11 +26,11 @@ char *patterns[10];
 char match_buffer[450];
 char yt_id[20];
 char yt_itag[5];
-int yt_seek;
+int  yt_seek;
 char yt_redir[6];
-int yt_redir_mode;
-int yt_redir_count;
-int yt_mobile;
+int  yt_redir_mode;
+int  yt_redir_count;
+int  yt_mobile;
 regex_t re[10];
 regmatch_t re_res[2];
 
@@ -51,56 +51,144 @@ void init_web_patterns()
   regcomp(&re[5],patterns[5],REG_EXTENDED);
 }
 
-void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
+double read_double(char *base)
 {
-  char *base = (char *)pdata+4;
-  int available_data = data_length - 4 ;
   unsigned long tmp1;
   unsigned long tmp2;
   union { double dbl;
           unsigned long long ull;
   } double_ull;
 
-  ptp->http_flv_duration = 0.0;
-  ptp->http_flv_bytelength = 0;
+  memcpy(&tmp1,base,4);
+  memcpy(&tmp2,base+4,4);
+
+  tmp1 = ntohl(tmp1);
+  tmp2 = ntohl(tmp2);
+  double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
+  return double_ull.dbl;
+}
+
+void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
+{
+  struct flv_metadata *meta;
+  char *base = (char *)pdata+4;
+  int available_data = data_length - 4 ;
+
+  meta = &(ptp->http_meta);
+
+  /* Read the duration of the FLV - We need at least 58+4 bytes in the payload */
 
   if (available_data < 58)
     return;
 
-  /* Read the duration of the FLV - We need at least 58+4 bytes in the payload */
-
   base = base+40;
   if (memcmp(base, "duration", 8) == 0)
    {
-     base = base+9;
+     meta->duration = read_double(base+9);
+   } 
+  else
+    return;
 
-     memcpy(&tmp1,base,4);
-     memcpy(&tmp2,base+4,4);
+  /* Read the starttime of the FLV - We need at least 79+4 bytes in the payload */
 
-     tmp1 = ntohl(tmp1);
-     tmp2 = ntohl(tmp2);
-     double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
-     ptp->http_flv_duration = double_ull.dbl;
+  if (available_data < 79) 
+    return;
+
+  base = base+19;
+  if (memcmp(base, "starttime", 9) == 0)
+   {
+     meta->starttime = read_double(base+10);
    } 
   else
     return;
 
   /* Read the total duration of the FLV - We need at least 102+4 bytes in the payload */
+
   if (available_data < 102)
     return;
 
-  base = base+30;
+  base = base+20;
   if (memcmp(base, "totalduration", 13) == 0)
    {
-     base = base+14;
+     meta->totalduration = read_double(base+14);
+   } 
+  else
+    return;
 
-     memcpy(&tmp1,base,4);
-     memcpy(&tmp2,base+4,4);
+  /* Read the video width of the FLV - We need at least 118+4 bytes in the payload */
 
-     tmp1 = ntohl(tmp1);
-     tmp2 = ntohl(tmp2);
-     double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
-     ptp->http_flv_fullduration = double_ull.dbl;
+  if (available_data < 118)
+    return;
+
+  base = base+24;
+  if (memcmp(base, "width", 5) == 0)
+   {
+     meta->width = (int)floor(read_double(base+6));
+   } 
+  else
+    return;
+
+  /* Read the video height of the FLV - We need at least 135+4 bytes in the payload */
+
+  if (available_data < 135)
+    return;
+
+  base = base+16;
+  if (memcmp(base, "height", 6) == 0)
+   {
+     meta->height = (int)floor(read_double(base+7));
+   } 
+  else
+    return;
+
+  /* Read the video datarate of the FLV - We need at least 159+4 bytes in the payload */
+
+  if (available_data < 159)
+    return;
+
+  base = base+17;
+  if (memcmp(base, "videodatarate", 13) == 0)
+   {
+     meta->videodatarate = read_double(base+14);
+   } 
+  else
+    return;
+
+  /* Read the audio datarate of the FLV - We need at least 183+4 bytes in the payload */
+
+  if (available_data < 183)
+    return;
+
+  base = base+24;
+  if (memcmp(base, "audiodatarate",13) == 0)
+   {
+     meta->audiodatarate = read_double(base+14);
+   } 
+  else
+    return;
+
+  /* Read the total datarate of the FLV - We need at least 207+4 bytes in the payload */
+
+  if (available_data < 207)
+    return;
+
+  base = base+24;
+  if (memcmp(base, "totaldatarate", 13) == 0)
+   {
+     meta->totaldatarate = read_double(base+14);
+   } 
+  else
+    return;
+
+  /* Read the frame rate of the FLV - We need at least 227+4 bytes in the payload */
+
+  if (available_data < 227)
+    return;
+
+  base = base+24;
+  if (memcmp(base, "framerate", 9) == 0)
+   {
+     meta->framerate = read_double(base+10);
    } 
   else
     return;
@@ -110,19 +198,10 @@ void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
   if (available_data < 248)
     return;
 
-  base = base+135;
+  base = base+20;
   if (memcmp(base, "bytelength", 10) == 0)
    {
-     base = base+11;
-
-     memcpy(&tmp1,base,4);
-     memcpy(&tmp2,base+4,4);
-
-     tmp1 = ntohl(tmp1);
-     tmp2 = ntohl(tmp2);
-
-     double_ull.ull = (unsigned long long) tmp1 << 32 | tmp2;
-     ptp->http_flv_bytelength = (int)floor(double_ull.dbl);
+     meta->bytelength = (int)floor(read_double(base+11));
    }
 
   return;

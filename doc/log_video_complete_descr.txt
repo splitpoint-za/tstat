@@ -2,7 +2,7 @@ Tstat produces a "log_video_complete" files which logs every TCP Video
 connection that has been tracked. Currently are classified as Video 
 the RTMP connections and the relevant HTTP connections (YouTube, Vimeo, generic
 FLV/MP4, VOD and FlashVideo). 
-It is generated only if VIDEO_DETAILS (and optionally YOUTUBE_REQUEST_ID) 
+It is generated only if VIDEO_DETAILS (and optionally HIDE_YOUTUBE_REQUEST_ID) 
 is defined. 
 
 The log contains a subset of the data already reported in the TCP 
@@ -91,25 +91,36 @@ Here it follows a brief description of the columns.
 ############################################################################
 # 71  # Video ID16	# 16-char video identifier, '--' otherwise
 # 72  # Video ID11	# 11-char video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 73  # Video Quality	# Video quality code [*], '--' otherwise.
+# 73  # Video Format	# Video Format code [*], '--' otherwise.
 # 74  # Seek Flag	# 0 if the video is starting from the beginning, 1 otherwise
+############################################################################
 # 75  # FLV duration	# Video duration [s] as indicated in the FLV file metadata [+]
-# 76  # FLV total dur.  # Total Video duration [s] as indicated in the FLV file metadata [+]
-# 77  # FLV size	# Video size [bytes] as indicated in the FLV file metadata [+]
-# 78  # Redir Mode	# Server Redirection Type [=]
-# 79  # Redir Count     # Redirection counter [=]
-# 80  # Mobile Media    # 1 if the video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
+# 76  # FLV start time	# Video start time [s] as indicated in the FLV file metadata [+]
+# 77  # FLV total dur.  # Total Video duration [s] as indicated in the FLV file metadata [+]
+# 78  # FLV width       # Video width [pixels] as indicated in the FLV file metadata [+]
+# 79  # FLV height      # Video heigth [pixels] as indicated in the FLV file metadata [+]
+# 80  # FLV video datarate # Video data rate [kbps] as indicated in the FLV file metadata [+]
+# 81  # FLV audio datarate # Audio data rate [kbps] as indicated in the FLV file metadata [+]
+# 82  # FLV total datarate # Total data rate [kbps] as indicated in the FLV file metadata [+]
+# 83  # FLV framerate   # Video framerate [fps] as indicated in the FLV file metadata [+]
+# 84  # FLV size	# Video size [bytes] as indicated in the FLV file metadata [+]
+############################################################################
+# 85  # Redir Mode	# Server Redirection Type [=]
+# 86  # Redir Count     # Redirection counter [=]
+# 87  # Mobile Media    # 1 if the video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
 ############################################################################
 
 Additional Columns (Temporary as of 25/01/11)
 ############################################################################
-# 81-90  # Bytes in the first 10 rate sampling slots C2S
-# 91-100 # Bytes in the first 10 rate sampling slots S2C
+# 88-97  # Bytes in the first 10 rate sampling slots C2S
+# 98-107 # Bytes in the first 10 rate sampling slots S2C
+# 108    # Number of PSH-separated 'messages' in the S2C flow
+# 109-118 # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
 ############################################################################
 
-[*] The YouTube video quality is the 'fmt' value indicated in 
+[*] The YouTube video format is the 'fmt/itag' value indicated in 
 http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs 
-Common values are 34 (360p), 35 (480p), and 22 (720p).
+Common values are 34 (360p FLV), 35 (480p FLV), and 22 (720p MP4).
 [+] Duration and size are not reported for MP4 videos.
 [=] Redirection type and redirection count are based on the redirection information in the videodownload URL:
     Redir_mode Redir_count  Comment

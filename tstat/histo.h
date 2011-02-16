@@ -609,6 +609,8 @@ win_stat active_flows_win_UDP;
 win_stat missed_flows_win_TCP;
 win_stat missed_flows_win_UDP;
 
+struct double_histo_list *profile_trash;
+
 /* Chat stat */
 
 #define MSN_CHAT_HISTO 1

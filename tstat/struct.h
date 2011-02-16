@@ -286,7 +286,10 @@ typedef struct upper_protocols
 } upper_protocols;
 
 /* Only store the size for the first 4 messages */
-#define MAX_COUNT_MESSAGES 4
+#define MAX_COUNT_MESSAGES 10
+#ifdef PACKET_STATS
+#define MAX_COUNT_SEGMENTS 10
+#endif
 
 typedef struct tcb
 {
@@ -448,6 +451,14 @@ typedef struct tcb
  u_int msg_count;
  u_int msg_size[MAX_COUNT_MESSAGES];
 
+/* Store information on the first MAX_COUNT_SEGMENTS segments */
+#ifdef PACKET_STATS
+ u_int seg_count;
+ u_int seg_size[MAX_COUNT_SEGMENTS];
+ double last_seg_time;
+ double seg_intertime[MAX_COUNT_SEGMENTS];
+#endif
+
 #ifdef VIDEO_DETAILS
  timeval rate_last_sample;
  double rate_left_edge;
@@ -551,6 +562,19 @@ enum web_category
   WEB_LAST_TYPE
 };
 
+struct flv_metadata {
+  double duration;
+  double starttime;
+  double totalduration;
+  u_int32_t width;
+  u_int32_t height;
+  double videodatarate;
+  double audiodatarate;
+  double totaldatarate;
+  double framerate;
+  u_int32_t bytelength;
+};
+
 struct stcp_pair
 {
 
@@ -585,14 +609,12 @@ struct stcp_pair
 #ifdef VIDEO_DETAILS
   char http_ytid[20];
   char http_ytitag[4];
-  int http_ytseek;
-  int http_ytredir_mode;
-  int http_ytredir_count;
-  double http_flv_duration;
-  u_int32_t http_flv_bytelength;
-  double http_flv_fullduration;
+  int  http_ytseek;
+  int  http_ytredir_mode;
+  int  http_ytredir_count;
+  struct flv_metadata http_meta;
   char http_response[4];
-  int http_ytmobile;
+  int  http_ytmobile;
 #endif
 
   /* obfuscate ed2k identification */

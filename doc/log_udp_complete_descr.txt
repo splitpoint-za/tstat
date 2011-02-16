@@ -15,7 +15,7 @@ are separated by spaces.
 ############################################################################
 #  1  # Client IP addr  # IP addresses of the 'client' 
 #  2  # Client UDP port # UDP port addresses for the 'client'
-#  3  # First time      # 'Client' first packet time since first segment ever [ms]
+#  3  # First time      # 'Client' first packet absolute time (epoch) [ms]
 #  4  # Completion time # Time between the first and the last packet from the 'client' [s]
 #  5  # Data bytes      # Number of bytes transmitted in the payload
 #  6  # Packets         # Total number of packets observed from the 'client'
@@ -24,7 +24,7 @@ are separated by spaces.
 ############################################################################
 #  9  # Server IP addr  # IP addresses of the 'server' 
 # 10  # Server UDP port # UDP port addresses for the 'server'
-# 11  # First time      # 'Server' first packet time since first segment ever [ms]
+# 11  # First time      # 'Server' first packet absolute time (epoch) [ms]
 # 12  # Completion time # Time between the first and the last packet from the 'server' [s]
 # 13  # Data bytes      # Number of bytes transmitted in the payload
 # 14  # Packets         # Total number of packets observed from the 'server'

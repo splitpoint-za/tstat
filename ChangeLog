@@ -19,9 +19,13 @@
     reduce cluttering
   * Improved YouTube identification and classification, with multiple categories
     both for video and for site connections
-  * Removed Google Video identification: Google Videos are now classified as YouTube
-  * New "Video Content" category, for content-identified FLV and MP4 files. It reuses the
-    GoogleVideo ID. 
+  * Removed Google Video identification: Google Videos are now classified as 
+    YouTube
+  * New "Video Content" category, for content-identified FLV and MP4 files. 
+    It reuses the GoogleVideo ID. 
+  * YouTube characterization (experimental): all metadata information from
+    FLV file header is collected.
+  * (Re)Introduced absolute flows times in tcp and udp logs.
   
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:
