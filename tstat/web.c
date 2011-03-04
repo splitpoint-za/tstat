@@ -600,7 +600,39 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'e':
-       if (memcmp(base, "/editapps.php",
+      if (available_data > 19 && (memcmp(base, "/embed/",7) == 0) )
+        {
+          c = *(char *)(base + 18);
+	  if (c==' ' || c== '&' || c== '?')
+	    {
+    	      status1=0;
+    	      i = 7;
+    	      while (i<18)
+    	       {
+    		 c = *(char *)(base + i );
+    		 if (!( 
+		     ( c>=65 && c<=90 ) ||   /* [A-Z] */
+		     ( c>=97 && c<=122 ) ||  /* [a-z] */
+		     ( c>=48 && c<=57 ) ||   /* [0-9] */
+		       c==45 || c==95        /* '-' '_' */
+		     ))
+    		  {
+    		    status1=1;
+    		    break;
+    		  }
+    		 i++;
+    	       }
+    	      if (status1==0)
+               {
+#ifdef VIDEO_DETAILS
+	         memcpy(yt_id,base+7,11);
+                 yt_id[11]='\0';
+#endif
+    		return HTTP_YOUTUBE_SITE_EMBED;
+               }
+	    }
+	    }
+       else if (memcmp(base, "/editapps.php",
         	     ( available_data < 13 ? available_data : 13)) == 0)
           return HTTP_FACEBOOK;
        else if (memcmp(base, "/editnote.php",
@@ -2353,6 +2385,8 @@ enum web_category map_http_to_web(enum http_content http_type)
      case HTTP_FLICKR:
      case HTTP_GMAPS:
      case HTTP_YOUTUBE_SITE:
+     case HTTP_YOUTUBE_SITE_DIRECT:
+     case HTTP_YOUTUBE_SITE_EMBED:
        return WEB_OTHER;
 
      default:
