@@ -1409,7 +1409,16 @@ static int ProcessPacket(struct timeval *pckt_time,
         return 0;
     }
 
-
+    /* If it's IP-over-IP, skip the external IP header */
+    if (PIP_ISV4(pip) && pip->ip_p == IPPROTO_IPIP)
+     {
+       pip = (struct ip *)((char *)pip+4*pip->ip_hl);
+       if (!PIP_ISV4 (pip) && !PIP_ISV6 (pip))
+        {
+	  /* The same sanity check than above, but without warnings*/
+          return 0;
+        }
+     }
 
     /* Statistics from IP HEADER */
     if (ip_header_stat
