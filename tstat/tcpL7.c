@@ -1280,12 +1280,24 @@ int map_flow_type(tcp_pair *thisflow)
              ( thisflow->s2c.msg_size[0]==3073 || 
 	       thisflow->s2c.msg_size[0]==1537) ) 
            type = L7_FLOW_RTMP;
+         else if ((thisflow->c2s.msg_size[0]+thisflow->c2s.msg_size[1])==1537 &&
+               ( thisflow->s2c.msg_size[0]==3073 || 
+	         thisflow->s2c.msg_size[0]==1537 ||
+	         (thisflow->s2c.msg_size[0]+thisflow->s2c.msg_size[1])==3073 || 
+	         (thisflow->s2c.msg_size[0]+thisflow->s2c.msg_size[1])==1537)
+	       ) 
+	    /* PSH-separated message definition might not be perfect, so we look
+	       also at the second "message" */
+           type = L7_FLOW_RTMP;
          else
-          /* If con_type was set to RTMP_PROTOCOL, I already 
+          /* If con_type was set to RTMP_PROTOCOL and I already 
 	     have seen the first 2 messages and if the size are wrong, the
 	     flow will never be RTMP
 	  */
-            thisflow->con_type &= ~RTMP_PROTOCOL;
+          { 
+	    if (thisflow->c2s.msg_count>1 && thisflow->s2c.msg_count>1)
+               thisflow->con_type &= ~RTMP_PROTOCOL;
+	  }   
        }
    }
 

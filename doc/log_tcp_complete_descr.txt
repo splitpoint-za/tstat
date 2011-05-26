@@ -133,7 +133,7 @@ Here it follows a brief description of the columns.
 # 106 # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
 ############################################################################
 
-Connection type (Column no. 97) description (from protocol.h)
+Connection type (Column no. 98) description (from protocol.h)
 #########################################
 # Bitmask # Protocol                    #
 #  Value  # Description                 #
@@ -163,7 +163,7 @@ Since the connection type is a bitmask, it's possible to have combinated
 values. Common combinations are 257 (HTML and P2P), or 16640 (P2P and OBF).
 
 
-P2P type (Column no. 98) description (from ipp2p_tstat.h)
+P2P type (Column no. 99) description (from ipp2p_tstat.h)
 #############################################################
 # Set-to-1      # Internal         # Protocol               #
 # n-th bit      #                  #                        #
@@ -189,7 +189,7 @@ P2P type (Column no. 98) description (from ipp2p_tstat.h)
 # 18            # IPP2P_KADU       # Adunanza (eMule mod)   #
 #############################################################
 
-HTTP Web2.0 type (Column no. 105) description (from struct.h)
+HTTP Web2.0 type (Column no. 106) description (from struct.h)
 ##########################################################################
 # Value # Internal           # Description                               #
 ##########################################################################
@@ -221,7 +221,7 @@ HTTP Web2.0 type (Column no. 105) description (from struct.h)
 ###################################################################################
 
 These values are different from 0 only for identified HTTP connections 
-(column no. 97). There constants are also used in the RRD data and in 
+(column no. 98). There constants are also used in the RRD data and in 
 histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).
 [*] HTTP_VOD connection identification is experimental and not valid for
 usage outside Politecnico di Torino.
