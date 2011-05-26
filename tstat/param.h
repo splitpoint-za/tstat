@@ -126,6 +126,13 @@ Increase this number on high speed network will help ...*/
 #define MIN_DELTA_T_TCP_DUP_PKT 2000 /* microsec (previously 50us) */
 #define CHECK_TCP_DUP
 
+/* Until Tstat 2.1 the fixed snaplen size for pcap live captures was */
+/* hardcoded in tcpdump.h.                                           */
+/* Now it can be selected from the command line (-E) and the default */
+/* value is hardcoded here. Make large enough to keep all options.   */
+/* Advanced features, like YouTube and BitTorrent characterization,  */
+/* require a large snaplen, e.g. 550 bytes */
+#define DEFAULT_SNAPLEN 160
 
 /* RTP parameters */
 #define RTP_WIN 16		/* sliding window size used to track RTP

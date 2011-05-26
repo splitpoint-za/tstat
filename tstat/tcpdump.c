@@ -38,6 +38,8 @@ void tcpdump_install_filter (pcap_t * pcap, bpf_u_int32 net);
 /* global pointer, the pcap info header */
 static pcap_t *pcap;
 
+/* Snaplen for the live capture*/
+extern int snaplen;
 
 /* Interaction with pcap */
 static struct ether_header eth_header;
@@ -658,7 +660,7 @@ init_live_tcpdump (char *filename)
       exit (1);
     }
 
-  pcap = pcap_open_live (dev, SNAPLEN, TRUE, 1000, errbuf);
+  pcap = pcap_open_live (dev, snaplen, TRUE, 1000, errbuf);
 
   if (pcap == NULL)
     {

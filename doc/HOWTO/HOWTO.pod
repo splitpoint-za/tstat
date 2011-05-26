@@ -238,7 +238,7 @@ the command is the following:
               [-H ?|file ]
               [-Z] [-P]
               [-r RRD_out_dir] [-R rrd_conf]
-              [-l] [-i interface]
+              [-l] [-i interface] [-E snaplen]
               [-f filterfile]
               <file1 file2>
 
@@ -303,6 +303,8 @@ the command is the following:
         -r path: path to use to create/update the RRDtool database
         -l: enable live capture using libpcap
         -i interface: specifies the interface to be used to capture traffic
+        -E snaplen: specifies the snaplen size used to capture traffic.
+                    It might be overridden by the interface slen size
         -f filterfile: specifies the libpcap filter file. Syntax as in tcpdump
 
         file: trace file to be analyzed
@@ -1516,13 +1518,13 @@ using tstat_report data.
 
 
     Marco Mellia <mellia@mail.tlc.polito.it>
-    Dario Rossi  <dario.rossi@enst.fr> 
+    Maurizio Munafo'    <munafo@polito.it>
+    Alessandro Finamore <finamore@mail.tlc.polito.it>
 
 =item Other active authors:
 
 
-    Maurizio Munafo'    <munafo@polito.it>
-    Alessandro Finamore <finamore@mail.tlc.polito.it>
+    Dario Rossi  <dario.rossi@enst.fr> 
 
 =item Other authors:
 

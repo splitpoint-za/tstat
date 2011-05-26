@@ -242,6 +242,8 @@ char *dag_dev_list;		/* list of DAG cards device names */
 #define DAG_NAME_BUFSIZE 25
 #endif
 
+int snaplen = DEFAULT_SNAPLEN;    /* Snaplen for the live capture */
+
 /* for elapsed processing time */
 struct timeval wallclock_start;
 struct timeval wallclock_finished;
@@ -351,7 +353,7 @@ Help (void)
     "\t      [-r RRD_out_dir] [-R rrd_conf]\n"
 #endif
 #ifdef GROK_LIVE_TCPDUMP
-    "\t      [-l] [-i interface]\n"
+    "\t      [-l] [-i interface] [-E snaplen]\n"
 #endif
 #ifdef GROK_ERF_LIVE
     "\t      [--dag device_name device_name ...]\n"
@@ -444,6 +446,8 @@ Help (void)
 #ifdef GROK_LIVE_TCPDUMP
     "\t-l: enable live capture using libpcap\n"
     "\t-i interface: specifies the interface to be used to capture traffic\n"
+    "\t-E snaplen: specifies the snaplen size used to capture traffic.\n"
+    "\t            It might be overridden by the interface slen size\n"
 #endif /* GROK_LIVE_TCPDUMP */
 
 #ifdef GROK_ERF_LIVE
@@ -2367,7 +2371,7 @@ CheckArguments (int *pargc, char *argv[])
 #endif
 
 #ifdef GROK_LIVE_TCPDUMP
-#define GROK_LIVE_TCPDUMP_OPT "li:"
+#define GROK_LIVE_TCPDUMP_OPT "li:E:"
 #else
 #define GROK_LIVE_TCPDUMP_OPT ""
 #endif
@@ -2558,6 +2562,20 @@ ParseArgs (int *pargc, char *argv[])
 	  dev = strdup (optarg);
 	  if (debug > 1)
 	    fprintf (fp_stdout, "Capturing device set to %s\n", dev);
+	  break;
+	case 'E':		/* choose the snaplen for the live capture */
+	   {
+	     int slen = strtol(optarg,NULL,10);
+	     if (slen>0 && slen<65536)
+	      {
+	        snaplen = slen;
+	        fprintf (fp_stdout, "SnapLen set to %d\n", snaplen);
+	      }
+	     else
+	      { 
+	        fprintf (fp_stdout, "Invalid value %d for SnapLen - Using default value %d\n",slen,snaplen);
+	      }
+	    }
 	  break;
 #endif /* GROK_LIVE_TCPDUMP */
 	case 't':
