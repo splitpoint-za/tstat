@@ -144,20 +144,21 @@ a configuration option to control this feature
 At the end of C<configure> is printed a small report:
 
     -------------------------------------------------
-      tstat Version 2.1
-        -lrrd -lpcap -lpthread -lm 
+      tstat Version 2.2
+      -lpcap -lpthread -lm  -lrrd -lz
 
-          Prefix: '/usr/local'
+      Prefix: '/usr/local'
 
-          Package features:
-          - pcap      yes
-          - rrd       yes
-          - libtstat  no
+      Package features:
+    	- pcap      yes
+    	- zlib      yes
+    	- rrd	    yes
+    	- libtstat  no
     -------------------------------------------------
 
 This indicate if the libtstat has been selected or not for the building 
-and if it was found the C<Librrd> in the system in which case is automatically
-added in building of the project.
+and if either C<Librrd> or C<Zlib> were found in the system, 
+in which case they are automatically added in building the project.
 
 Tstat's source code uses some preprocess definition to enable/disable some features,
 like for example the DAG support which is disabled by default.
@@ -623,7 +624,7 @@ the same measured quantity by I<appending> a specific tag (see L<"Histograms">) 
 
 
 Tstat creates a set of TXT flow files in the main output directory: C<log_tcp_complete>,
-C<log_tcp_nocomplete>, C<log_udp_complete>, C<log_mm_complete>,
+C<log_tcp_nocomplete>, C<log_udp_complete>, C<log_mm_complete>, C<log_video_complete>,
 C<log_skype_complete>, C<log_chat_complete> and C<log_chat_messages>.
 TCP flows can be either completed or not depending whether Tstat observed the
 3-way handshaking or not; in the first case, all the measured indexes relatively
@@ -634,7 +635,9 @@ maintained in the C<log_udp_complete> file. Being UDP basically a
 connectionless protocol, it is impossible to distinguish among C<complete> and
 C<nocomplete> flows in this case.
 
-Furthermore the following log files are created: C<log_mm_complete> for multimedia flows
+Furthermore the following log files are created: C<log_video_complete> for TCP video 
+streaming flows (i.e. RTMP or HTTP-based video services like YouTube), 
+C<log_mm_complete> for multimedia flows
 (i.e. RTP, RTCP, etc), C<log_chat_complete> for IM protocols (i.e. MSN, Jabber, etc) and
 C<log_skype_complete> for Skype traffic.
 
@@ -1517,13 +1520,13 @@ using tstat_report data.
 =item Active authors:
 
 
-    Marco Mellia <mellia@mail.tlc.polito.it>
     Maurizio Munafo'    <munafo@polito.it>
     Alessandro Finamore <finamore@mail.tlc.polito.it>
 
 =item Other active authors:
 
 
+    Marco Mellia <mellia@mail.tlc.polito.it>
     Dario Rossi  <dario.rossi@enst.fr> 
 
 =item Other authors:

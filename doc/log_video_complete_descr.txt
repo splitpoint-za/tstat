@@ -89,10 +89,10 @@ Here it follows a brief description of the columns.
 # 69  # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
 # 70  # HTTP Response   # First HTTP Response code seen in the server->client communication
 ############################################################################
-# 71  # Video ID16	# 16-char video identifier, '--' otherwise
-# 72  # Video ID11	# 11-char video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 73  # Video Format	# Video Format code [*], '--' otherwise.
-# 74  # Seek Flag	# 0 if the video is starting from the beginning, 1 otherwise
+# 71  # Video ID16	# 16-char YouTube video identifier, '--' otherwise
+# 72  # Video ID11	# 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
+# 73  # Video Format	# YouTube Video Format code [*], '--' otherwise.
+# 74  # Begin Offset	# Playback offset for the Youtube video [ms], 0 otherwise
 ############################################################################
 # 75  # FLV duration	# Video duration [s] as indicated in the FLV file metadata [+]
 # 76  # FLV start time	# Video start time [s] as indicated in the FLV file metadata [+]

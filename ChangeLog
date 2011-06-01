@@ -1,4 +1,4 @@
-14/06/10 - MMM 
+26/05/10 - MMM 
 - Main changes since 2.1:
   * Modified IPv6 behavior: all traffic is internal if no network is defined
     (to mirror IPv4 default behavior)
@@ -26,6 +26,9 @@
   * YouTube characterization (experimental): all metadata information from
     FLV file header is collected.
   * (Re)Introduced absolute flows times in tcp and udp logs.
+  * Improved (and relaxed) RTMP identification
+  * Added the -E command line option to declare a user-defined snaplen
+  * Changed the YouTube seek information to report the real required offset
   
 23/10/09 -MMM & Finamore
 - Main changes from 2.0 to 2.1:

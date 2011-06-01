@@ -27,7 +27,8 @@ char match_buffer[450];
 char yt_id[20];
 char yt_itag[5];
 int  yt_seek;
-char yt_redir[6];
+char yt_seek_char[10];
+char yt_redir[7];
 int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
@@ -37,14 +38,14 @@ regmatch_t re_res[2];
 void init_web_patterns()
 {
   patterns[0] = "[?&]id=([0-9a-f]{16})[& ]";
-  patterns[1] = "[?&]begin=[0-9]+[& ]";
+  patterns[1] = "[?&]begin=([0-9]+)[& ]";
   patterns[2] = "[?&]itag=([0-9]+)[& ]";
   patterns[3] = "[?&]st=(lc|nx|tcts)[& ]";
   patterns[4] = "[?&]redirect_counter=([0-9]+)[& ]";
   patterns[5] = "[?&]?video_id=([A-Za-z0-9_-]{11})[& ]";
 
   regcomp(&re[0],patterns[0],REG_EXTENDED);
-  regcomp(&re[1],patterns[1],REG_EXTENDED|REG_NOSUB);
+  regcomp(&re[1],patterns[1],REG_EXTENDED);
   regcomp(&re[2],patterns[2],REG_EXTENDED);
   regcomp(&re[3],patterns[3],REG_EXTENDED);
   regcomp(&re[4],patterns[4],REG_EXTENDED);
@@ -773,7 +774,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
                int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_itag,match_buffer+re_res[1].rm_so,
                  (msize<4?msize:4));
-                 yt_itag[msize]='\0';
+                 yt_itag[msize<4?msize:4]='\0';
               }
 	     }
 
@@ -786,10 +787,14 @@ enum http_content classify_http_get(void *pdata,int data_length)
                int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
-                 yt_id[msize]='\0';
-                if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+                 yt_id[msize<19?msize:19]='\0';
+                if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
 		 {
-		   yt_seek = 1;
+                   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
+                    (msize<9?msize:9));
+                    yt_seek_char[msize2<9?msize2:9]='\0';
+	            sscanf(yt_seek_char,"%d",&yt_seek);
 		 }
 		else
 		 {
@@ -803,7 +808,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                     memcpy(yt_redir,match_buffer+re_res[1].rm_so,
                        (msize2<6?msize2:6));
-                    yt_redir[msize2]='\0';
+                    yt_redir[msize2<6?msize2:6]='\0';
 
 		   if (memcmp(yt_redir,"lc",2)==0)
 		    { 
@@ -823,7 +828,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                     memcpy(yt_redir,match_buffer+re_res[1].rm_so,
                        (msize2<4?msize2:4));
-                    yt_redir[msize2]='\0';
+                    yt_redir[msize2<4?msize2:4]='\0';
 		   rc_redir_mode = 1;
 		   sscanf(yt_redir,"%d",&rc_redir_count);
 		 }
@@ -901,7 +906,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_itag,match_buffer+re_res[1].rm_so,
                (msize<4?msize:4));
-               yt_itag[msize]='\0';
+               yt_itag[msize<4?msize:4]='\0';
             }
 
             /* id = id16 */
@@ -910,13 +915,17 @@ enum http_content classify_http_get(void *pdata,int data_length)
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_id,match_buffer+re_res[1].rm_so,
                (msize<19?msize:19));
-               yt_id[msize]='\0';
+               yt_id[msize<19?msize:19]='\0';
 	    }
 	   
 	   /* begin = */ 
-           if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+           if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
 	    {
-	      yt_seek = 1;
+              int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+               memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
+               (msize2<9?msize2:9));
+               yt_seek_char[msize2<9?msize2:9]='\0';
+	       sscanf(yt_seek_char,"%d",&yt_seek);
 	    }
 	   else
 	    {
@@ -932,7 +941,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                memcpy(yt_redir,match_buffer+re_res[1].rm_so,
              	  (msize2<6?msize2:6));
-               yt_redir[msize2]='\0';
+               yt_redir[msize2<6?msize2:6]='\0';
 
 	      if (memcmp(yt_redir,"lc",2)==0)
 	       { 
@@ -954,7 +963,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                memcpy(yt_redir,match_buffer+re_res[1].rm_so,
              	  (msize2<4?msize2:4));
-               yt_redir[msize2]='\0';
+               yt_redir[msize2<4?msize2:4]='\0';
 	      rc_redir_mode = 1;
 	      sscanf(yt_redir,"%d",&rc_redir_count);
 	    }
@@ -1025,7 +1034,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
-                 yt_id[msize]='\0';
+                 yt_id[msize<19?msize:19]='\0';
               }
 	    }
 #endif
@@ -1044,7 +1053,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
-                 yt_id[msize]='\0';
+                 yt_id[msize<19?msize:19]='\0';
               }
 	    }
 #endif
@@ -1466,7 +1475,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
                int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_itag,match_buffer+re_res[1].rm_so,
                  (msize<4?msize:4));
-                 yt_itag[msize]='\0';
+                 yt_itag[msize<4?msize:4]='\0';
               }
 	     }
 
@@ -1479,10 +1488,14 @@ enum http_content classify_http_get(void *pdata,int data_length)
                int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
                  (msize<19?msize:19));
-                 yt_id[msize]='\0';
-                if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+                 yt_id[msize<19?msize:19]='\0';
+                if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
 		 {
-		   yt_seek = 1;
+                   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+                    memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
+                    (msize<9?msize:9));
+                    yt_seek_char[msize2<9?msize2:9]='\0';
+	            sscanf(yt_seek_char,"%d",&yt_seek);
 		 }
 		else
 		 {
@@ -1496,7 +1509,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                     memcpy(yt_redir,match_buffer+re_res[1].rm_so,
                        (msize2<6?msize2:6));
-                    yt_redir[msize2]='\0';
+                    yt_redir[msize2<6?msize2:6]='\0';
 
 		   if (memcmp(yt_redir,"lc",2)==0)
 		    { 
@@ -1516,7 +1529,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                     memcpy(yt_redir,match_buffer+re_res[1].rm_so,
                        (msize2<4?msize2:4));
-                    yt_redir[msize2]='\0';
+                    yt_redir[msize2<4?msize2:4]='\0';
 		   rc_redir_mode = 1;
 		   sscanf(yt_redir,"%d",&rc_redir_count);
 		 }
@@ -1594,7 +1607,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_itag,match_buffer+re_res[1].rm_so,
                (msize<4?msize:4));
-               yt_itag[msize]='\0';
+               yt_itag[msize<4?msize:4]='\0';
             }
 
             /* id = id16 */
@@ -1603,13 +1616,17 @@ enum http_content classify_http_get(void *pdata,int data_length)
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_id,match_buffer+re_res[1].rm_so,
                (msize<19?msize:19));
-               yt_id[msize]='\0';
+               yt_id[msize<19?msize:19]='\0';
 	    }
 	   
 	   /* begin = */ 
-           if (regexec(&re[1],match_buffer,(size_t) 0, NULL, 0)==0)
+           if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
 	    {
-	      yt_seek = 1;
+              int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
+               memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
+               (msize2<9?msize2:9));
+               yt_seek_char[msize2<9?msize2:9]='\0';
+	       sscanf(yt_seek_char,"%d",&yt_seek);
 	    }
 	   else
 	    {
@@ -1625,7 +1642,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                memcpy(yt_redir,match_buffer+re_res[1].rm_so,
              	  (msize2<6?msize2:6));
-               yt_redir[msize2]='\0';
+               yt_redir[msize2<6?msize2:6]='\0';
 
 	      if (memcmp(yt_redir,"lc",2)==0)
 	       { 
@@ -1647,7 +1664,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
                memcpy(yt_redir,match_buffer+re_res[1].rm_so,
              	  (msize2<4?msize2:4));
-               yt_redir[msize2]='\0';
+               yt_redir[msize2<4?msize2:4]='\0';
 	      rc_redir_mode = 1;
 	      sscanf(yt_redir,"%d",&rc_redir_count);
 	    }

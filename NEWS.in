@@ -3,6 +3,12 @@ News in @PACKAGE_VERSION@
 * Direct generation of compressed (.gz) logs and dumps
 * Updated DPI classification:
   - Bittorrent uTP
+  - Detailed YouTube characterization
+* "Cloud" characterization: separate identification and statistics 
+   (RDD/Histograms)  for traffic to/from a specific range of 
+   addresses ("cloud").
+* New log file for videos (log_video_complete)
+* General improvements and bugfixes
 
 News in 2.1
 -------------
