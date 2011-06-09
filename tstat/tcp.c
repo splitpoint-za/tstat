@@ -3008,7 +3008,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
    }
    
 #ifdef VIDEO_DETAILS
-   if (fp_video_logc && is_video(ptp_save))
+   if (fp_video_logc && is_video(ptp_save) && complete )
     {
       update_video_log(ptp_save,pab,pba);
     }
