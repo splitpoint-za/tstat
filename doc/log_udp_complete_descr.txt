@@ -11,29 +11,19 @@ and S2C - Server-to-Client traffic directions and values
 are separated by spaces.
 
 ############################################################################
-#Col n# Short desc      # Long descr                                      #
+# C2S # S2C # Short description      # Unit  # Long description            #
 ############################################################################
-#  1  # Client IP addr  # IP addresses of the 'client' 
-#  2  # Client UDP port # UDP port addresses for the 'client'
-#  3  # First time      # 'Client' first packet absolute time (epoch) [ms]
-#  4  # Completion time # Time between the first and the last packet from the 'client' [s]
-#  5  # Data bytes      # Number of bytes transmitted in the payload
-#  6  # Packets         # Total number of packets observed from the 'client'
-#  7  # Internal        # Bool set to 1 if the 'client' has internal IP
-#  8  # UDP Type        # Protocol type for the 'client'->'server' semiflow. See the udp_type enum in struct.h
-############################################################################
-#  9  # Server IP addr  # IP addresses of the 'server' 
-# 10  # Server UDP port # UDP port addresses for the 'server'
-# 11  # First time      # 'Server' first packet absolute time (epoch) [ms]
-# 12  # Completion time # Time between the first and the last packet from the 'server' [s]
-# 13  # Data bytes      # Number of bytes transmitted in the payload
-# 14  # Packets         # Total number of packets observed from the 'server'
-# 15  # Internal        # Bool set to 1 if the 'server' has internal IP
-# 16  # UDP Type        # Protocol type for the 'server'->'client' semiflow. See the udp_type enum in struct.h
+#  1  #  9  # Client/Server IP addr  # -     # IP addresses of client/server
+#  2  # 10  # Client/Server UDP port # -     # UDP port addresses of client/server
+#  3  # 11  # First time             # s     # client/server first packet in absolute time (epoch)
+#  4  # 12  # Completion time        # s     # Time between the first and the last packet from the 'client'
+#  5  # 13  # Data bytes             # bytes # Number of bytes transmitted in the payload
+#  6  # 14  # Packets                # -     # Total number of packets observed from the client/server
+#  7  # 15  # Internal               # 0/1   # 1 = IP address is internal 
+#  8  # 16  # UDP Type               # -     # Protocol type (see also the udp_type enum in struct.h)
 ############################################################################
 
-UDP type (Columns no. 8, 16) description (from struct.h)
---------------------------------------------------------
+UDP type - col. 8, 16 (see struct.h)
 #########################################################################
 # Value # Internal      # Description                                   #
 #########################################################################

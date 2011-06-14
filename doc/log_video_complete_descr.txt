@@ -14,108 +14,75 @@ you can refer to the description for the log_tcp_complete file.
 Here it follows a brief description of the columns.
 
 ############################################################################
-#Col n# Short desc      # Long descr                                       #
+# C2S # S2C # Short desc.            # Unit # Long description                       
 ############################################################################
-#  1  # Client IP addr  # IP addresses of the client 
-#  2  # Client TCP port # TCP port addresses for the client
-#  3  # packets         # total number of packets observed form the client
-#  4  # RST sent        # 0 if no RST segment has been sent by the client, 1 otherwise
-#  5  # unique bytes    # number of bytes sent in the payload
-#  6  # data pkts       # number of segments with payload
-#  7  # data bytes      # number of bytes transmitted in the payload, including retransmissions
-#  8  # rexmit pkts     # number of retransmitted segments
-#  9  # rexmit bytes    # number of retransmitted bytes
-# 10  # out seq pkts    # number of segments observed out of sequence
-# 11  # FIN count       # number of FIN segments observed (including rtx)
-# 12  # max seg size    # Maximum segment size observed [bytes]
-# 13  # cwin max        # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
-# 14  # cwin min        # Minimum in-flight-size [bytes]
-# 15  # Average rtt     # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
-# 16  # rtt min         # Minimum RTT observed during connection lifetime [ms]
-# 17  # rtt max         # Maximum RTT observed during connection lifetime [ms]
-# 18  # Stdev rtt       # Standard deviation of the RTT [ms]
-# 19  # rtt count       # Number of valid RTT observation
-# 20  # ttl_min         # Minimum Time To Live
-# 21  # ttl_max         # Maximum Time To Live
-# 22  # Rate Samples    # Number of samples C2S in the rate measurement
-# 23  # Zero Samples    # Number of empty samples C2S in the rate measurement
-# 24  # Zero Streak	# Maximum number of consecutive C2S empty samples
-# 25  # Average rate	# Average rate in the C2S direction [kbps]
-# 26  # Stdev rate	# Standard deviation rate in the C2S direction [kbps]
-# 27  # min rate	# Minimum (non zero) rate sample
-# 28  # max rate	# Maximum rate sample
-# 29  # Src Internal    # Bool set to 1 if the client has internal IP
+#  1  # 30  # Client/Server IP addr  # -     # IP addresses of the client/server
+#  2  # 31  # Client/Server TCP port # -     # TCP port addresses for the client/server
+#  3  # 32  # packets                # -     # total number of packets observed form the client/server
+#  4  # 33  # RST sent               # 0/1   # 0 = no RST segment has been sent by the client/server
+#  5  # 34  # unique bytes           # bytes # number of bytes sent in the payload
+#  6  # 35  # data pkts              # -     # number of segments with payload
+#  7  # 36  # data bytes             # bytes # number of bytes transmitted in the payload, including retransmissions
+#  8  # 37  # rexmit pkts            # -     # number of retransmitted segments
+#  9  # 38  # rexmit bytes           # bytes # number of retransmitted bytes
+# 10  # 39  # out seq pkts           # -     # number of segments observed out of sequence
+# 11  # 40  # FIN count              # -     # number of FIN segments observed (including rtx)
+# 12  # 41  # max seg size           # bytes # Maximum segment size observed
+# 13  # 42  # cwin max               # bytes # Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window.
+# 14  # 43  # cwin min               # bytes # Minimum in-flight-size [bytes]
+# 15  # 44  # Average rtt            # ms    # Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK
+# 16  # 45  # rtt min                # ms    # Minimum RTT observed during connection lifetime
+# 17  # 46  # rtt max                # ms    # Maximum RTT observed during connection lifetime
+# 18  # 47  # Stdev rtt              # ms    # Standard deviation of the RTT
+# 19  # 48  # rtt count              # -     # Number of valid RTT observation
+# 20  # 49  # ttl_min                # -     # Minimum Time To Live
+# 21  # 50  # ttl_max                # -     # Maximum Time To Live
+# 22  # 51  # Rate Samples           # -     # Number of samples C2S/S2C in the rate measurement
+# 23  # 52  # Zero Samples           # -     # Number of empty samples C2S/S2C in the rate measurement
+# 24  # 53  # Zero Streak	         # -     # Maximum number of consecutive C2S/S2C empty samples
+# 25  # 54  # Average rate	         # kbps  # Average rate in the C2S/S2C direction
+# 26  # 55  # Stdev rate	         # kbps  # Standard deviation rate in the C2S/S2C direction
+# 27  # 56  # min rate	             # -     # Minimum (non zero) rate sample
+# 28  # 57  # max rate	             # -     # Maximum rate sample
+# 29  # 58  # Src Internal           # 0/1   # 0 = external ip address, 1 = internal ip address 
 ############################################################################
-# 30  # Server IP addr  # IP addresses of the server 
-# 31  # Server TCP port # TCP port addresses for the server 
-# 32  # packets 	# total number of packets observed form the server
-# 33  # RST sent	# 0 if no RST segment has been sent by the server, 1 otherwise
-# 34  # unique bytes	# number of bytes sent in the payload
-# 35  # data pkts	# number of segments with payload
-# 36  # data bytes	# number of bytes transmitted in the payload, including retransmissions
-# 37  # rexmit pkts	# number of retransmitted segments
-# 38  # rexmit bytes	# number of retransmitted bytes
-# 39  # out seq pkts	# number of segments observed out of sequence
-# 40  # FIN count	# number of FIN segments observed (including rtx)
-# 41  # max seg size	# Maximum segment size observed [bytes]
-# 42  # cwin max	# Maximum in-flight-size computed as the difference between the largest sequence number so far, and the corresponding last ACK message on the reverse path. It is an estimate of the congestion window. [bytes]
-# 43  # cwin min	# Minimum in-flight-size [bytes]
-# 44  # Average rtt	# Average RTT computed measuring the time elapsed between the data segment and the corresponding ACK [ms]
-# 45  # rtt min 	# Minimum RTT observed during connection lifetime [ms]
-# 46  # rtt max 	# Maximum RTT observed during connection lifetime [ms]
-# 47  # Stdev rtt	# Standard deviation of the RTT [ms]
-# 48  # rtt count	# Number of valid RTT observation
-# 49  # ttl_min 	# Minimum Time To Live
-# 50  # ttl_max 	# Maximum Time To Live
-# 51  # Rate Samples	# Number of samples S2C in the rate measurement
-# 52  # Zero Samples    # Number of empty samples S2C in the rate measurement
-# 53  # Zero Streak     # Maximum number of consecutive S2C empty samples
-# 54  # Average rate    # Average rate in the S2C direction [kbps]
-# 55  # Stdev rate      # Standard deviation rate in the S2C direction [kbps]
-# 56  # min rate        # Minimum (non zero) rate sample
-# 57  # max rate        # Maximum rate sample
-# 58  # Dst Internal    # Bool set to 1 if the server has internal IP
+# 59  # Completion time              # ms    # Flow duration since first packet to last packet
+# 60  # First time	                 # ms    # Flow first packet since first segment ever
+# 61  # Last time	                 # ms    # Flow last segment since first segment ever
+# 62  # C first payload              # ms    # Client first segment with payload since the first flow segment
+# 63  # S first payload              # ms    # Server first segment with payload since the first flow segment
+# 64  # C last payload               # ms    # Client last segment with payload since the first flow segment
+# 65  # S last payload               # ms    # Server last segment with payload since the first flow segment
+# 66  # First time abs               # ms    # Flow first packet absolute time (epoch)
+# 67  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 68  # P2P type	                 # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 69  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 70  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
 ############################################################################
-# 59  # Completion time # Flow duration since first packet to last packet [ms]
-# 60  # First time	# Flow first packet since first segment ever [ms]
-# 61  # Last time	# Flow last segment since first segment ever [ms]
-# 62  # C first payload # Client first segment with payload since the first flow segment [ms]
-# 63  # S first payload # Server first segment with payload since the first flow segment [ms]
-# 64  # C last payload  # Client last segment with payload since the first flow segment [ms]
-# 65  # S last payload  # Server last segment with payload since the first flow segment [ms]
-# 66  # First time abs  # Flow first packet absolute time (epoch) [ms]
-# 67  # Connection type # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 68  # P2P type	# Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 69  # HTTP type       # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
-# 70  # HTTP Response   # First HTTP Response code seen in the server->client communication
+# 71  # Video ID16	                 # -     # 16-char YouTube video identifier, '--' otherwise
+# 72  # Video ID11	                 # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
+# 73  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
+# 74  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
 ############################################################################
-# 71  # Video ID16	# 16-char YouTube video identifier, '--' otherwise
-# 72  # Video ID11	# 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 73  # Video Format	# YouTube Video Format code [*], '--' otherwise.
-# 74  # Begin Offset	# Playback offset for the Youtube video [ms], 0 otherwise
+# 75  # FLV duration	             # s     # Video duration as indicated in the FLV file metadata [+]
+# 76  # FLV start time	             # s     # Video start time as indicated in the FLV file metadata [+]
+# 77  # FLV total dur.               # s     # Total Video duration as indicated in the FLV file metadata [+]
+# 78  # FLV width                    # pixel # Video width as indicated in the FLV file metadata [+]
+# 79  # FLV height                   # pixel # Video heigth as indicated in the FLV file metadata [+]
+# 80  # FLV video datarate           # kbps  # Video data rate as indicated in the FLV file metadata [+]
+# 81  # FLV audio datarate           # kbps  # Audio data rate as indicated in the FLV file metadata [+]
+# 82  # FLV total datarate           # kbps  # Total data rate as indicated in the FLV file metadata [+]
+# 83  # FLV framerate                # fps   # Video framerate as indicated in the FLV file metadata [+]
+# 84  # FLV size	                 # bytes # Video size as indicated in the FLV file metadata [+]
 ############################################################################
-# 75  # FLV duration	# Video duration [s] as indicated in the FLV file metadata [+]
-# 76  # FLV start time	# Video start time [s] as indicated in the FLV file metadata [+]
-# 77  # FLV total dur.  # Total Video duration [s] as indicated in the FLV file metadata [+]
-# 78  # FLV width       # Video width [pixels] as indicated in the FLV file metadata [+]
-# 79  # FLV height      # Video heigth [pixels] as indicated in the FLV file metadata [+]
-# 80  # FLV video datarate # Video data rate [kbps] as indicated in the FLV file metadata [+]
-# 81  # FLV audio datarate # Audio data rate [kbps] as indicated in the FLV file metadata [+]
-# 82  # FLV total datarate # Total data rate [kbps] as indicated in the FLV file metadata [+]
-# 83  # FLV framerate   # Video framerate [fps] as indicated in the FLV file metadata [+]
-# 84  # FLV size	# Video size [bytes] as indicated in the FLV file metadata [+]
+# 85  # Redir Mode	                 # -     # Server Redirection Type [=]
+# 86  # Redir Count                  # -     # Redirection counter [=]
+# 87  # Mobile Media                 # 0/1   # 1 = video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
 ############################################################################
-# 85  # Redir Mode	# Server Redirection Type [=]
-# 86  # Redir Count     # Redirection counter [=]
-# 87  # Mobile Media    # 1 if the video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
-############################################################################
-
-Additional Columns (Temporary as of 25/01/11)
-############################################################################
-# 88-97  # Bytes in the first 10 rate sampling slots C2S
-# 98-107 # Bytes in the first 10 rate sampling slots S2C
-# 108    # Number of PSH-separated 'messages' in the S2C flow
-# 109-118 # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
+# 88-97   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
+# 98-107  # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
+# 108     # PSH-Messages             # -     # Number of PSH-separated 'messages' in the S2C flow
+# 109-118 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
 ############################################################################
 
 [*] The YouTube video format is the 'fmt/itag' value indicated in 

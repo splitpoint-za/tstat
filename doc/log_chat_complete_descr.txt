@@ -6,42 +6,31 @@ Values are separated by spaces and columns are grouped
 according to C2S - Client-to-Server and S2C - Server-to-Client traffic directions. 
 
 ###########################################################################################
-#Col.no.# Short descr     # Long description
+# C2S # S2C # Short description      # Unit  # Long description
 ###########################################################################################
-#  1    # Client IP addr  # IP address of the 'client' 
-#  2    # Client port     # TCP port address for the 'client'
-#  3    # Flow Size       # Flow Size [Bytes]
-#  4    # Total packets   # No. of Total flow packets
-#  5    # Total messages  # No. of Total messages sent by client
-#  6    # MSG_A           # No. of MSG_A sent by client [for MSN only, 0 for the others]
-#  7    # MSG_D           # No. of MSG_D sent by client [for MSN only, 0 for the others]
-#  8    # MSG_N           # No. of MSG_N sent by client [for MSN only, 0 for the others]
-#  9    # MSG_U           # No. of MSG_U sent by client [for MSN only, 0 for the others]
-# 10    # MSG_Y           # No. of MSG_Y sent by client [for MSN only, 0 for the others]
+#  1  # 11  # Client/Server IP addr  # -     # IP address of client/server
+#  2  # 12  # Client/Server port     # -     # TCP port address of client/server
+#  3  # 13  # Flow Size              # bytes # Flow Size [Bytes]
+#  4  # 14  # Total packets          # -     # No. of Total flow packets
+#  5  # 15  # Total messages         # -     # No. of Total messages sent by client
+#  6  # 16  # MSG_A                  # -     # No. of MSG_A sent by client [for MSN only, 0 for the others]
+#  7  # 17  # MSG_D                  # -     # No. of MSG_D sent by client [for MSN only, 0 for the others]
+#  8  # 18  # MSG_N                  # -     # No. of MSG_N sent by client [for MSN only, 0 for the others]
+#  9  # 19  # MSG_U                  # -     # No. of MSG_U sent by client [for MSN only, 0 for the others]
+# 10  # 20  # MSG_Y                  # -     # No. of MSG_Y sent by client [for MSN only, 0 for the others]
 ###########################################################################################
-# 11    # Server IP addr  # IP address of the 'server' 
-# 12    # Server port     # TCP port address for the 'server'
-# 13    # Flow Size       # Flow Size [Bytes]
-# 14    # Total packets   # No. of Total flow packets
-# 15    # Total messages  # No. of Total messages sent by server
-# 16    # MSG_A           # No. of MSG_A sent by server [for MSN only, 0 for the others]
-# 17    # MSG_D           # No. of MSG_D sent by server [for MSN only, 0 for the others]
-# 18    # MSG_N           # No. of MSG_N sent by server [for MSN only, 0 for the others]
-# 19    # MSG_U           # No. of MSG_U sent by server [for MSN only, 0 for the others]
-# 20    # MSG_Y           # No. of MSG_Y sent by server [for MSN only, 0 for the others]
-###########################################################################################
-# 21    # Start Time      # Flow Start Time [in Unix Epoch Time]
-# 22    # End Time        # Flow End Time [s]
-# 23    # Chat Flow Type  # Chat Flow Type: see below
-# 24    # Chat Version    # Version of the protocol used by the Instant Messaging application
-# 25    # Internal        # 0=external ip address, 1=internal ip address
-# 26    # TCP Flow No.    # TCP Flow ID Number
-# 27    # "T"             # Label to state a TCP Flow
-# 28    # Chat Protocol   # Type of Upper Level Protocol [32=MSN, 64=Yahoo, 128=Jabber/GTalk]
+# 21  #     # Start Time             # s     # Flow Start Time
+# 22  #     # End Time               # s     # Flow End Time
+# 23  #     # Chat Flow Type         # -     # Chat Flow Type
+# 24  #     # Chat Version           # -     # Version of the protocol used by the Instant Messaging application
+# 25  #     # Internal               # 0/1   # 1 = internal IP address
+# 26  #     # TCP Flow No.           # -     # TCP Flow ID Number
+# 27  #     # 'T'                    # -     # Label to state a TCP Flow
+# 28  #     # Chat Protocol          # 32=MSN, 64=Yahoo, 128=Jabber/GTalk # Type of Upper Level Protocol
 ###########################################################################################
 
 
-Chat Flow Type (col.23)
+Chat Flow Type - col. 23 
 ###########################################################
 #Value# Description                         # IM Protocols
 ###########################################################

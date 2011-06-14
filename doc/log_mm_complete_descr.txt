@@ -27,106 +27,57 @@ For RTCP flows, a simpler heuristic is used:
 
 If so, the flow is considered a RTCP flow and its analysis may start.
 
-###############################################################################################
-#Col.no.# Short Desc.      # Long Description                                        # Protocol
-##########################################################################################
-#  1    # L4 Proto         # 1 = TCP, 2 = UDP                                        # All
-#  2    # Protocol         # 3 = RTP, 4 = RTCP                                       # All
-#  3    # IP address       # Client IP addresses                                     # All
-#  4    # L4 port          # TCP/UDP port addresses for the Client                   # All
-#  5    # Internal         # Boolean set to 1 if the client has internal IP.         # All
-#  6    # Packets          # Number of packets Tstat has seen belonging to the flow  # All
-#  7    # IPG              # Inter Packet Gap (IPG) [ms]                             # All
-#  8    # Jitter AVG       # Jitter (average): 
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]; 
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]; 
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-#  9    # Jitter Max       # Jitter (max)
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-# 10    # Jitter Min       # Jitter (min)
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-# 11    # TTL AVG          # Time to live (TTL) (average)                            # All
-# 12    # TTL Max          # Time to live (TTL) (max)                                # All
-# 13    # TTL Min          # Time to live (TTL) (min)                                # All
-# 14    # Start            # Start time [EPOCH]                                      # All
-# 15    # Duration         # Duration [s]                                            # All
-# 16    # Data             # Data transfered [byte]                                  # All
-# 17    # Bitrate          # Average speed [bit/s]                                   # All
-# 18    # SSRC             # SSRC                                                    # RTP, RTCP
-# 19    # Lost pkts        # Lost packets, computed by Tstat using a window based algorithm  # RTP
-# 20    # Out of seq. pkts # Out of sequence packets computed by Tstat computed by Tstat using a window based algorithm  # TCP,RTP
-# 21    # Dup pkts         # Duplicate packets computed by Tstat
-#       #                  # - if RTP, computed by Tstat using a window based algorithm
-#       #                  # - if TCP, computed as retrasmissions                    # TCP,RTP
-# 22    # Late pkts        # Late packets computed by Tstat computed by Tstat using a window based algorithm    #  RTP
-# 23    # RTP type         # RTP payload type                                        # RTP
-# 24    # Reset            # Bogus reset                                             # RTP
-# 25    # Cum lost pkts    # Cumulative packet loss:
-#       #                  # - each lost packets increments this counter,
-#       #                  # - each duplicated packets decremnets it from RTCP       # RTCP
-# 26    # Frac lost pkts   # Extracted from the RTCP header [%]                      # RTCP
-# 27    # Flow length      # Associated RTP flow length                              # RTCP
-# 28    # Flow length      # Associated RTP flow length [bytes]                      # RTCP
-# 29    # RTT AVG          # Round Trip Time (RTT) (average) [ms]                    # TCP, RTCP
-# 30    # RTT Max          # Round Trip Time (RTT) (max) [ms]                        # TCP, RTCP
-# 31    # RTT Min          # Round Trip Time (RTT) (min) [ms]                        # TCP, RTCP
-# 32    # RTT              # Round Trip Time (RTT) (samples) [ms]                    # TCP, RTCP
-# 33    # Truncated RTCP header # Truncated RTCP header                              # RTCP
-# 34    # First HTTP       # First HTTP packet [EPOCH]                               # TCP
-# 35    # First RTSP       # First RTSP packet [EPOCH]                               # TCP
-# 36    # FIRST RTP        # First RTP packet [EPOCH]                                # TCP
-# 37    # FIRST ICY        # First ICY packet [EPOCH]                                # TCP 
-###############################################################################################
-# 38    # Protocol         # 3 = RTP, 4 = RTCP                                       # All
-# 39    # IP address       # IP addresses of the client/server                       # All
-# 40    # L4 port          # TCP/UDP port addresses for the Server                   # All
-# 41    # Internal         # Boolean set to 1 if the client has internal IP.         # All
-# 42    # Packets          # Number of packets Tstat has seen belonging to the flow  # All
-# 43    # IPG              # Inter Packet Gap (IPG) [ms]                             # All
-# 44    # Jitter AVG       # Jitter (average): 
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]; 
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]; 
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-# 45    # Jitter Max       # Jitter (max)
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-# 46    # Jitter Min       # Jitter (min)
-#       #                  # - if RTP, computed by Tstat as in RFC3550 [ms]
-#       #                  # - if RTCP, extracted from the RTCP header [codec timestamps units]
-#       #                  # - if TCP, computed using only data packets [ms]         # All
-# 47    # TTL AVG          # Time to live (TTL) (average)                            # All
-# 48    # TTL Max          # Time to live (TTL) (max)                                # All
-# 49    # TTL Min          # Time to live (TTL) (min)                                # All
-# 50    # Start            # Start time [EPOCH]                                      # All
-# 51    # Duration         # Duration [s]                                            # All
-# 52    # Data             # Data transfered [byte]                                  # All
-# 53    # Bitrate          # Average speed [bit/s]                                   # All
-# 54    # SSRC             # SSRC                                                    # RTP, RTCP
-# 55    # Lost pkts        # Lost packets, computed by Tstat using a window based algorithm  # RTP
-# 56    # Out of seq. pkts # Out of sequence packets computed by Tstat computed by Tstat using a window based algorithm  # TCP,RTP
-# 57    # Dup pkts         # Duplicate packets computed by Tstat
-#       #                  # - if RTP, computed by Tstat using a window based algorithm
-#       #                  # - if TCP, computed as retrasmissions                    # TCP,RTP
-# 58    # Late pkts        # Late packets computed by Tstat computed by Tstat using a window based algorithm    #  RTP
-# 59    # RTP type         # RTP payload type                                        # RTP
-# 60    # Reset            # Bogus reset                                             # RTP
-# 61    # Cum lost pkts    # Cumulative packet loss:
-#       #                  # - each lost packets increments this counter,
-#       #                  # - each duplicated packets decremnets it from RTCP       # RTCP
-# 62    # Frac lost pkts   # Extracted from the RTCP header [%]                      # RTCP
-# 63    # Flow length      # Associated RTP flow length                              # RTCP
-# 64    # Flow length      # Associated RTP flow length [bytes]                      # RTCP
-# 65    # RTT AVG          # Round Trip Time (RTT) (average) [ms]                    # TCP, RTCP
-# 66    # RTT Max          # Round Trip Time (RTT) (max) [ms]                        # TCP, RTCP
-# 67    # RTT Min          # Round Trip Time (RTT) (min) [ms]                        # TCP, RTCP
-# 68    # RTT              # Round Trip Time (RTT) (samples) [ms]                    # TCP, RTCP
-# 69    # Truncated RTCP header # Truncated RTCP header                              # RTCP
-# 70    # First HTTP       # First HTTP packet [EPOCH]                               # TCP
-# 71    # First RTSP       # First RTSP packet [EPOCH]                               # TCP
-# 72    # FIRST RTP        # First RTP packet [EPOCH]                                # TCP
-# 73    # FIRST ICY        # First ICY packet [EPOCH]                                # TCP 
+##############################################################################################################
+# C2S   # S2C # Short Description# Unit  # Long Description                                        # Protocol
+##############################################################################################################
+#  1    #     # L4 Proto         # 1/2   # 1 = TCP, 2 = UDP                                        # All
+#  2    # 38  # Protocol         # 3/4   # 3 = RTP, 4 = RTCP                                       # All
+#  3    # 39  # IP address       # -     # Client/Server IP addresses                              # All
+#  4    # 40  # L4 port          # -     # TCP/UDP port addresses for the Client/Server            # All
+#  5    # 41  # Internal         # 0/1   # 1 = internal ip                                         # All
+#  6    # 42  # Packets          # -     # Number of packets Tstat has seen belonging to the flow  # All
+#  7    # 43  # IPG              # ms    # Inter Packet Gap (IPG)                                  # All
+#  8    # 44  # Jitter AVG       # ms/ts # Jitter (average):                                       #
+#       #     #                  #       # - if RTP, computed by Tstat as in RFC3550 [ms]          #
+#       #     #                  #       # - if RTCP, extracted from the RTCP header [codec timestamps units]; #
+#       #     #                  #       # - if TCP, computed using only data packets [ms]         # All
+#  9    # 45  # Jitter Max       # ms/ts # Jitter (max)                                            #
+#       #     #                  #       # - if RTP, computed by Tstat as in RFC3550 [ms]          #
+#       #     #                  #       # - if RTCP, extracted from the RTCP header [codec timestamps units]
+#       #     #                  #       # - if TCP, computed using only data packets [ms]         # All
+# 10    # 46  # Jitter Min       # ms/ts # Jitter (min)                                            #
+#       #     #                  #       # - if RTP, computed by Tstat as in RFC3550 [ms]          #
+#       #     #                  #       # - if RTCP, extracted from the RTCP header [codec timestamps units]
+#       #     #                  #       # - if TCP, computed using only data packets [ms]         # All
+# 11    # 47  # TTL AVG          # -     # Time to live (TTL) (average)                            # All
+# 12    # 48  # TTL Max          # -     # Time to live (TTL) (max)                                # All
+# 13    # 49  # TTL Min          # -     # Time to live (TTL) (min)                                # All
+# 14    # 50  # Start            # s     # Start time                                              # All
+# 15    # 51  # Duration         # s     # Duration                                                # All
+# 16    # 52  # Data             # bytes # Data transfered                                         # All
+# 17    # 53  # Bitrate          # bit/s # Average speed [bit/s]                                   # All
+# 18    # 54  # SSRC             # -     # SSRC                                                    # RTP, RTCP
+# 19    # 55  # Lost pkts        # -     # Lost packets, computed by Tstat using a window based algorithm  # RTP
+# 20    # 56  # Out of seq. pkts # -     # Out of sequence packets computed by Tstat computed by Tstat using a window based algorithm  # TCP,RTP
+# 21    # 57  # Dup pkts         # -     # Duplicate packets computed by Tstat                     #
+#       #     #                  #       # - if RTP, computed by Tstat using a window based algorithm
+#       #     #                  #       # - if TCP, computed as retrasmissions                    # TCP,RTP
+# 22    # 58  # Late pkts        # -     # Late packets computed by Tstat computed by Tstat using a window based algorithm    #  RTP
+# 23    # 59  # RTP type         # -     # RTP payload type                                        # RTP
+# 24    # 60  # Reset            # -     # Bogus reset                                             # RTP
+# 25    # 61  # Cum lost pkts    # -     # Cumulative packet loss:                                 #
+#       #     #                  #       # - each lost packets increments this counter,            #
+#       #     #                  #       # - each duplicated packets decremnets it from RTCP       # RTCP
+# 26    # 62  # Frac lost pkts   # -     # Extracted from the RTCP header [%]                      # RTCP
+# 27    # 63  # Flow length      # -     # Associated RTP flow length                              # RTCP
+# 28    # 64  # Flow length      # bytes # Associated RTP flow length                              # RTCP
+# 29    # 65  # RTT AVG          # ms    # Round Trip Time (RTT) (average)                         # TCP, RTCP
+# 30    # 66  # RTT Max          # ms    # Round Trip Time (RTT) (max)                             # TCP, RTCP
+# 31    # 67  # RTT Min          # ms    # Round Trip Time (RTT) (min)                             # TCP, RTCP
+# 32    # 68  # RTT              # ms    # Round Trip Time (RTT) (samples)                         # TCP, RTCP
+# 33    # 69  # Truncated RTCP header # - # Truncated RTCP header                                  # RTCP
+# 34    # 70  # First HTTP       # s     # First HTTP packet                                       # TCP
+# 35    # 71  # First RTSP       # s     # First RTSP packet                                       # TCP
+# 36    # 72  # FIRST RTP        # s     # First RTP packet                                        # TCP
+# 37    # 73  # FIRST ICY        # s     # First ICY packet                                        # TCP 
+#################################################################################################################
