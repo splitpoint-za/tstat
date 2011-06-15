@@ -233,6 +233,7 @@ the command is the following:
         tstat [-htuvwpgSL] [-d[-d]]
               [-s dir]
               [-N file]
+              [-C file]
               [-B bayes.conf]
               [-T runtime.conf]
               [-z file]
@@ -270,6 +271,13 @@ the command is the following:
                      255.255.0.0
                  If the option is not specified all networks are
                  considered internal
+
+        -C file: specify the file name which contains the
+                 description of the cloud networks.
+                 This file must contain the subnets that will be
+                 considered as belonging to a specific group of networks
+                 (cloud) during the analysis.
+                 Subnets are specified like in the -N option.
 
         -H ?: print internal histograms names and definitions
         -H file: Read histogram configuration from file
