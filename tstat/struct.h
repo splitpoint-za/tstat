@@ -457,6 +457,9 @@ typedef struct tcb
  u_int seg_size[MAX_COUNT_SEGMENTS];
  double last_seg_time;
  double seg_intertime[MAX_COUNT_SEGMENTS];
+ double data_pkts_sum2;
+ double seg_intertime_sum;
+ double seg_intertime_sum2;
 #endif
 
 #ifdef VIDEO_DETAILS

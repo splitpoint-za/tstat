@@ -982,21 +982,33 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       thisdir->last_data_time = current_time;
 
 #ifdef PACKET_STATS
+      thisdir->data_pkts_sum2 += tcp_data_length*tcp_data_length; 
+      
+      { double current_intertime;
+      if (thisdir->seg_count==0)
+       {
+         thisdir->last_seg_time=time2double(current_time);
+       }
+      else
+       {
+         current_intertime = 
+	      time2double(current_time) - thisdir->last_seg_time;
+         thisdir->last_seg_time=time2double(current_time);
+	 thisdir->seg_intertime_sum += current_intertime;
+	 thisdir->seg_intertime_sum2 += current_intertime*current_intertime;
+       }
+
       if (thisdir->seg_count<MAX_COUNT_SEGMENTS)
        {
          thisdir->seg_size[thisdir->seg_count] = tcp_data_length;
-	 if (thisdir->seg_count==0)
+	 if (thisdir->seg_count>0)
 	  {
-            thisdir->last_seg_time=time2double(current_time);
+	    thisdir->seg_intertime[thisdir->seg_count-1] = current_intertime;
 	  }
-	 else
-	  {
-	    thisdir->seg_intertime[thisdir->seg_count-1] =
-	    time2double(current_time) - thisdir->last_seg_time;
-            thisdir->last_seg_time=time2double(current_time);
-	  }
-	 thisdir->seg_count++;
        }
+
+	 thisdir->seg_count++;
+      }
 #endif
 #ifdef VIDEO_DETAILS
       if (ZERO_TIME (&thisdir->rate_last_sample))
@@ -3001,6 +3013,37 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
           wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
        }
 
+#define MEAN(SUM,ENNE) (((ENNE)>0)?((SUM)*1.0/(ENNE)):0.0)
+#define VAR(ME,SQ,ENNE) (((ENNE)>1)?((SQ)-(ENNE)*(ME)*(ME))/((ENNE)-1):0.0)
+
+       /* Averages */
+          wfprintf (fp, " -");
+        {
+	  double mval,varval;
+	  mval = MEAN(ptp_save->c2s.data_bytes,ptp_save->c2s.data_pkts);
+	  varval = VAR(mval,ptp_save->c2s.data_pkts_sum2,ptp_save->c2s.data_pkts);
+          wfprintf (fp, " %d %f %f",ptp_save->c2s.data_pkts,mval,sqrt(varval));
+
+	  mval = MEAN(ptp_save->s2c.data_bytes,ptp_save->s2c.data_pkts);
+	  varval = VAR(mval,ptp_save->s2c.data_pkts_sum2,ptp_save->s2c.data_pkts);
+          wfprintf (fp, " %d %f %f",ptp_save->s2c.data_pkts,mval,sqrt(varval));
+
+	  mval = MEAN(ptp_save->c2s.seg_intertime_sum,ptp_save->c2s.seg_count-1);
+	  varval = VAR(mval,ptp_save->c2s.seg_intertime_sum2,ptp_save->c2s.seg_count-1);
+          wfprintf (fp, " - %d",(ptp_save->c2s.seg_count>1)?ptp_save->c2s.seg_count:0);
+          wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
+
+	  mval = MEAN(ptp_save->s2c.seg_intertime_sum,ptp_save->s2c.seg_count-1);
+	  varval = VAR(mval,ptp_save->s2c.seg_intertime_sum2,ptp_save->s2c.seg_count-1);
+          wfprintf (fp, " - %d",(ptp_save->s2c.seg_count>1)?ptp_save->s2c.seg_count:0);
+          wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
+
+        }
+
+       /* PSH */
+          wfprintf (fp, " - %d %d",ptp_save->c2s.data_pkts_push,
+	                           ptp_save->s2c.data_pkts_push);
+         
   }
 #endif
       wfprintf (fp, "\n");
