@@ -178,6 +178,10 @@ find_ip_ppp (unsigned char *buf)
 	offset = -1;
       break;
 
+    case 0x0f:			/* It is raw CISCO HDLC encapsulation of IP */
+      offset = 	4;
+      break;
+
     case 0x21:			/* It is raw PPP encapsulation of IP with compressed (1 byte) protocol field */
       offset = 1;
       break;
