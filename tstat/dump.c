@@ -53,6 +53,12 @@
 #define TCP_DUMP_BYTE_LIMIT 2000
 #endif
 
+#ifdef DUMP_UDP_FLOW_START
+/* define the rules for dumping maximum number of packets */
+#define UDP_DUMP_PACKET_LIMIT 5
+#define UDP_DUMP_BYTE_LIMIT 2000
+#endif
+
 struct dump_file {
     FILE            *fp;
     char            *protoname;
@@ -484,7 +490,26 @@ void dump_flow_stat (struct ip *pip,
          // }
         //dump to a complete file
         if (proto2dump[DUMP_UDP_COMPLETE].enabled)
-            dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+#ifndef DUMP_UDP_FLOW_START
+        {
+			dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+		}
+#else
+	    /* check if the underlying flow struct ucb has not yet been released */
+	    if (((ucb*)pdir)->pup != NULL)
+	    {
+	       ucb *thisdir = (ucb*)pdir;
+
+	       /* dump only the first UDP_DUMP_BYTE_LIMIT or the first UDP_DUMP_PACKET_LIMIT packets */
+	       if ( /* we are still interested in this data */
+	  	   	  (thisdir->data_bytes < UDP_DUMP_BYTE_LIMIT) || 
+	  	   	  (thisdir->packets < UDP_DUMP_PACKET_LIMIT)
+	          )
+				dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+		}
+		else /* it should'nt happen, but in case dump the packet in any case */
+			dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+#endif
     }
 
     if (threaded)
