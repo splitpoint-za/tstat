@@ -47,9 +47,11 @@
 #define DUMP_DIR_BASENAME "traces"
 #define DUMP_LOG_FNAME "log.txt"
 
+#ifdef DUMP_TCP_FLOW_START
 /* define the rules for dumping maximum number of packets */
 #define TCP_DUMP_PACKET_LIMIT 5
 #define TCP_DUMP_BYTE_LIMIT 2000
+#endif
 
 struct dump_file {
     FILE            *fp;
@@ -423,46 +425,50 @@ void dump_flow_stat (struct ip *pip,
 
     if (tproto == PROTOCOL_TCP) {
         if (proto2dump[DUMP_TCP_COMPLETE].enabled)
-		{
-			struct tcphdr *ptcp = pproto;
-			/* check if the underlying flow struct tcb has not yet been released */
-			if(((tcb*)pdir)->ptp != NULL)
-			{
-				int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
-				tcb *thisdir = (tcb*)pdir;
-				tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
+#ifndef DUMP_TCP_FLOW_START
+          {
+            dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+	  }
+#else
+	  {
+	    struct tcphdr *ptcp = pproto;
+	    /* check if the underlying flow struct tcb has not yet been released */
+	    if (((tcb*)pdir)->ptp != NULL)
+	     {
+	       int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
+	       
+	       tcb *thisdir = (tcb*)pdir;
+	       tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
 
-				/* dump only the first TCP_DUMP_BYTE_LIMIT or the first TCP_DUMP_PACKET_LIMIT packets - both acks and data packets */
-				if( ( tcp_data_length > 0 && /* this is a valid data packet */
-						( /* and we are interested in this data */
-							(thisdir->seq-thisdir->syn-tcp_data_length<=TCP_DUMP_BYTE_LIMIT) || 
-							(thisdir->data_pkts<=TCP_DUMP_PACKET_LIMIT)
-						)
-					)
-					||
-					(  
-					    tcp_data_length == 0 && /* this is a pure ack */
-						(
-							otherdir->seq <= thisdir->ack && /* which is a valid ack */
-							( /* and we are still interested in otherdir packets */
-								(otherdir->seq-otherdir->syn<=TCP_DUMP_BYTE_LIMIT) ||
-								(otherdir->data_pkts<=TCP_DUMP_PACKET_LIMIT)
-								||
-								(otherdir->fin_count >=1 && thisdir->ack>=(otherdir->fin_seqno +1))
-							)
-						)
-					)
-					||
-					SYN_SET (ptcp) || FIN_SET(ptcp)
-				)
-					dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-			}
-			else
-			if( RESET_SET(ptcp))
-					dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-
-			
-		}
+	       /* dump only the first TCP_DUMP_BYTE_LIMIT or the first TCP_DUMP_PACKET_LIMIT packets - both acks and data packets */
+	       if ( ( tcp_data_length > 0 && /* this is a valid data packet */
+	  	   	( /* and we are interested in this data */
+	  	   	  (thisdir->seq-thisdir->syn-tcp_data_length<=TCP_DUMP_BYTE_LIMIT) || 
+	  	   	  (thisdir->data_pkts<=TCP_DUMP_PACKET_LIMIT)
+	  	   	)
+	  	       )
+	  	       ||
+	  	       (  
+	  	   	 tcp_data_length == 0 && /* this is a pure ack */
+	  	   	 (
+	  	   	   otherdir->seq <= thisdir->ack && /* which is a valid ack */
+	  	   	   ( /* and we are still interested in otherdir packets */
+	  	   	     (otherdir->seq-otherdir->syn<=TCP_DUMP_BYTE_LIMIT) ||
+	  	   	     (otherdir->data_pkts<=TCP_DUMP_PACKET_LIMIT) ||
+	  	   	     (otherdir->fin_count >=1 && thisdir->ack>=(otherdir->fin_seqno +1))
+	  	   	   )
+	  	   	 )
+	  	       )
+	  	       ||
+	  	       SYN_SET (ptcp) || FIN_SET(ptcp)
+	          )
+	  	       dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+	     }
+	    else 
+	     if (RESET_SET(ptcp))
+	       dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+	  }
+#endif
     }
     else {
         //specific controls to find kad obfuscated...
