@@ -491,10 +491,11 @@ void dump_flow_stat (struct ip *pip,
         //dump to a complete file
         if (proto2dump[DUMP_UDP_COMPLETE].enabled)
 #ifndef DUMP_UDP_FLOW_START
-        {
-			dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
-		}
+          {
+	    dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+          }
 #else
+          {
 	    /* check if the underlying flow struct ucb has not yet been released */
 	    if (((ucb*)pdir)->pup != NULL)
 	    {
@@ -507,8 +508,9 @@ void dump_flow_stat (struct ip *pip,
 	          )
 				dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
 		}
-		else /* it should'nt happen, but in case dump the packet in any case */
+		else /* it shouldn't happen, but in case dump the packet in any case */
 			dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+          }
 #endif
     }
 
