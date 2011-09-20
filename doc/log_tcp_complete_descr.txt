@@ -74,7 +74,7 @@ log_tcp_complete - log_udp_complete
 # 93        # S first payload        # ms    # Server first segment with payload since the first flow segment
 # 94        # C last payload         # ms    # Client last segment with payload since the first flow segment
 # 95        # S last payload         # ms    # Server last segment with payload since the first flow segment
-# 96        # First time abs         # s     # Flow first packet absolute time (epoch)
+# 96        # First time abs         # ms    # Flow first packet absolute time (epoch)
 # 97        # Internal               # 0/1   # 1 = client has internal IP, 0 = client has external IP
 ############################################################################
 # 98        # Connection type        # -     # Bitmask stating the connection type as identified by TCPL7 inspection engine (see protocol.h)
