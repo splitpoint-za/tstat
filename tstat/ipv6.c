@@ -198,7 +198,11 @@ IPv6_support (struct ip *pip, struct in6_addr internal_netv6, void *pplast)
       add_histo (ip6_hop_limit_in, (float) ipv6->ip6_hlimit);
       add_histo (ip6_plen_in, (float) ntohs (ipv6->ip6_lngth));
     }
+#ifndef LOG_UNKNOWN
   else if (internal_srcv6 && internal_dstv6)
+#else
+  else
+#endif
     {
       add_histo (ip6_protocol_loc, ipv6->ip6_nheader);
       add_histo (ip6_hop_limit_loc, (float) ipv6->ip6_hlimit);
@@ -323,7 +327,11 @@ ICMPv6_support (char *next, int internal_srcv6, int internal_dstv6)
     {
       add_histo (icmpv6_type_in, picmpv6->icmp6_type);
     }
+#ifndef LOG_UNKNOWN
   else if (internal_srcv6 && internal_dstv6)
+#else
+  else
+#endif
     {
       add_histo (icmpv6_type_loc, picmpv6->icmp6_type);
     }

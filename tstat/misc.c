@@ -161,7 +161,11 @@ int in_out_loc(int internal_src, int internal_dst, int dir)
    {
         return LOC_FLOW;
    } else
+#ifndef LOG_UNKNOWN
     return EXT_FLOW;
+#else
+    return LOC_FLOW;
+#endif
 }
 
 

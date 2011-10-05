@@ -75,22 +75,23 @@ log_tcp_complete - log_udp_complete
 # 94        # C last payload         # ms    # Client last segment with payload since the first flow segment
 # 95        # S last payload         # ms    # Server last segment with payload since the first flow segment
 # 96        # First time abs         # ms    # Flow first packet absolute time (epoch)
-# 97        # Internal               # 0/1   # 1 = client has internal IP, 0 = client has external IP
+# 97        # C Internal             # 0/1   # 1 = client has internal IP, 0 = client has external IP
+# 98        # S Internal             # 0/1   # 1 = server has internal IP, 0 = server has external IP
 ############################################################################
-# 98        # Connection type        # -     # Bitmask stating the connection type as identified by TCPL7 inspection engine (see protocol.h)
+# 99        # Connection type        # -     # Bitmask stating the connection type as identified by TCPL7 inspection engine (see protocol.h)
 ############################################################################
-# 99        # P2P type               # -     # Type of P2P protocol, as identified by the IPP2P engine (see ipp2p_tstat.h)
-# 100       # P2P subtype            # -     # P2P protocol message type, as identified by the IPP2P engine (see ipp2p_tstat.c)
-# 101       # ED2K Data              # -     # For P2P ED2K flows, the number of data messages
-# 102       # ED2K Signaling         # -     # For P2P ED2K flows, the number of signaling (not data) messages
-# 103       # ED2K C2S               # -     # For P2P ED2K flows, the number of client<->server messages
-# 104       # ED2K C2C               # -     # For P2P ED2K flows, the number of client<->client messages
-# 105       # ED2K Chat              # -     # For P2P ED2K flows, the number of chat messages 
+# 100       # P2P type               # -     # Type of P2P protocol, as identified by the IPP2P engine (see ipp2p_tstat.h)
+# 101       # P2P subtype            # -     # P2P protocol message type, as identified by the IPP2P engine (see ipp2p_tstat.c)
+# 102       # ED2K Data              # -     # For P2P ED2K flows, the number of data messages
+# 103       # ED2K Signaling         # -     # For P2P ED2K flows, the number of signaling (not data) messages
+# 104       # ED2K C2S               # -     # For P2P ED2K flows, the number of client<->server messages
+# 105       # ED2K C2C               # -     # For P2P ED2K flows, the number of client<->client messages
+# 106       # ED2K Chat              # -     # For P2P ED2K flows, the number of chat messages 
 ############################################################################
-# 106       # HTTP type              # -     # For HTTP flows, the identified Web2.0 content (see the http_content enum in struct.h)
+# 107       # HTTP type              # -     # For HTTP flows, the identified Web2.0 content (see the http_content enum in struct.h)
 ############################################################################
 
-Connection type - col. 98 (see protocol.h)
+Connection type - col. 99 (see protocol.h)
 ###############################################
 # Bitmask Value # Protocol                    #
 ###############################################
@@ -119,7 +120,7 @@ Since the connection type is a bitmask, it's possible to have combinated
 values. Common combinations are 257 (HTML and P2P), or 16640 (P2P and OBF).
 
 
-P2P type - col. 99 (see ipp2p_tstat.h)
+P2P type - col. 100 (see ipp2p_tstat.h)
 ##################################################################
 # Bitmask n-th bit   # Internal         # Protocol               #
 ##################################################################
@@ -143,7 +144,7 @@ P2P type - col. 99 (see ipp2p_tstat.h)
 # 18                 # IPP2P_KADU       # Adunanza (eMule mod)   #
 ##################################################################
 
-HTTP Web2.0 type - Col 106 (see struct.h)
+HTTP Web2.0 type - Col 107 (see struct.h)
 ##########################################################################
 # Type  # Internal           # Description                               #
 ##########################################################################
@@ -175,7 +176,7 @@ HTTP Web2.0 type - Col 106 (see struct.h)
 ###################################################################################
 
 These values are different from 0 only for identified HTTP connections 
-(column no. 98). There constants are also used in the RRD data and in 
+(column no. 99). There constants are also used in the RRD data and in 
 histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).
 [*] HTTP_VOD connection identification is experimental and not valid for
 usage outside Politecnico di Torino.

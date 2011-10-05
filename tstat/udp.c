@@ -596,6 +596,123 @@ void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
   return;
 }
 
+void check_udp_vod(struct ip * pip, struct udphdr * pudp, void *plast,
+                ucb *thisdir, ucb *otherdir)
+{
+  int payload_len;
+  int data_len;
+  unsigned char *base;
+
+  if (thisdir->is_VOD==1 && otherdir->is_VOD==1)
+    return;  /* Flow already classified */
+
+  payload_len = ntohs (pudp->uh_ulen);
+  /* This is the UDP complete length, included the header size */
+
+  base = (unsigned char *) pudp;
+  data_len = (unsigned char *) plast - (unsigned char *) base + 1;
+
+  if (data_len < 9 || payload_len == 0)
+   {
+     thisdir->first_VOD=TRUE;
+     return;  /* Minimum VOD size is 8+188 bytes */
+   }
+  
+  /* According to the MPEG2 over IP information, we should always have
+    7 PES (i.e. 188*7 bytes) */
+
+  if (payload_len!=1324)
+   {
+     thisdir->first_VOD=TRUE;
+     return;  /* Minimum VOD size is 8+188 bytes */
+   }
+    
+  /* Check if we have at least two PES */
+  
+  if (data_len>196)
+   {
+     if (base[8]==0x47 && base[196]==0x47)
+      {
+        thisdir->is_VOD=1;
+        otherdir->is_VOD=1;
+        thisdir->first_VOD=FALSE;
+        thisdir->type=UDP_VOD;
+        otherdir->type=UDP_VOD;
+        return;
+      }
+   }
+  else  /* Only one PES, check the first byte (and the size 1324) */
+   {
+     if (base[8]==0x47)
+      {
+        thisdir->is_VOD=1;
+        otherdir->is_VOD=1;
+        thisdir->first_VOD=FALSE;
+        thisdir->type=UDP_VOD;
+        otherdir->type=UDP_VOD;
+        return;
+      }
+   }
+  
+  /* Scrambled PES - Signature byte differs among flows, but is the same
+     for all the frames in each flow. Match at least 3 packets */
+
+  if (thisdir->first_VOD==TRUE)
+   {
+     thisdir->first_VOD=FALSE;
+     thisdir->VOD_scrambled_sig[0]=base[8];
+     if (data_len>196) 
+       { thisdir->VOD_scrambled_sig[1]=base[196];}
+     else
+       { thisdir->VOD_scrambled_sig[1]=-1;}
+     thisdir->VOD_count=1;
+   }  
+  else
+   {
+     if (data_len>196)
+      {
+        if (thisdir->VOD_scrambled_sig[0]==base[8] &&
+            thisdir->VOD_scrambled_sig[1]==base[196] )
+         {
+            thisdir->VOD_count++;
+        
+   	    if (thisdir->VOD_count==3)
+	     {
+      	       thisdir->is_VOD=1;
+      	       otherdir->is_VOD=1;
+      	       thisdir->type=UDP_VOD;
+      	       otherdir->type=UDP_VOD;
+      	       return;
+	     }
+      	  }
+     	 else
+     	  {
+     	    thisdir->first_VOD=TRUE;
+     	  }
+      }
+     else
+      {
+        if (thisdir->VOD_scrambled_sig[0]==base[8] )
+         {
+            thisdir->VOD_count++;
+        
+   	    if (thisdir->VOD_count==3)
+	     {
+      	       thisdir->is_VOD=1;
+      	       otherdir->is_VOD=1;
+      	       thisdir->type=UDP_VOD;
+      	       otherdir->type=UDP_VOD;
+      	       return;
+	     }
+      	  }
+     	 else
+     	  {
+     	    thisdir->first_VOD=TRUE;
+     	  }
+      }
+   }  
+  return;
+}
 
 void
 udp_header_stat (struct udphdr * pudp, struct ip * pip)
@@ -626,7 +743,11 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip)
          L4_bitrate.nc_in[UDP_TYPE] += ntohs (pip->ip_len);
        }
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       L4_bitrate.loc[UDP_TYPE] += ntohs (pip->ip_len);
       add_histo (udp_port_dst_loc, (float) ntohs(pudp->uh_dport));
@@ -750,6 +871,9 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     if (pup_save->packets<MAX_UDP_UTP)
        check_uTP(pip, pudp,plast,thisdir,otherdir);
 
+    if (pup_save->packets<MAX_UDP_VOD)
+       check_udp_vod(pip, pudp,plast,thisdir,otherdir);
+
     if (pup_save->packets<MAX_UDP_OBFUSCATE)
        check_udp_obfuscate(thisdir,otherdir,uh_ulen);
     
@@ -853,8 +977,7 @@ make_udp_conn_stats (udp_pair * pup_save, Bool complete)
 	    }
 #ifndef LOG_UNKNOWN
 	  return;
-#endif
-#ifdef LOG_UNKNOWN
+#else
 /* fool the internal and external definition... */
 	  add_histo (udp_cl_b_s_loc, pup_save->s2c.data_bytes);
 	  add_histo (udp_cl_b_s_loc, pup_save->c2s.data_bytes);

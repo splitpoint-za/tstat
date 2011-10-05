@@ -689,6 +689,7 @@ enum udp_type
   DNS,
   P2P_UTP,
   P2P_UTPBT,
+  UDP_VOD,
   LAST_UDP_PROTOCOL
 };
 
@@ -739,6 +740,8 @@ enum udp_type
  printf("P2P_UTP = %d\n",temp); \
  temp = P2P_UTPBT; \
  printf("P2P_UTPBT = %d\n",temp); \
+ temp = UDP_VOD; \
+ printf("UDP_VOD = %d\n",temp); \
 }
 
 
@@ -849,6 +852,10 @@ typedef struct ucb
   int uTP_conn_id;
   int uTP_syn_seq_nr;
   Bool is_uTP;
+  int VOD_scrambled_sig[2];
+  u_short VOD_count;
+  Bool first_VOD;
+  Bool is_VOD;
 
   union
   {

@@ -1016,7 +1016,11 @@ void ip_histo_stat(struct ip *pip)
       L3_bitrate_ip46_in += max(ntohs(pip->ip_len),46);
 #endif
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       L4_bitrate.loc[IP_TYPE] += ntohs (pip->ip_len);
       if (pip->ip_p == IPPROTO_ICMP)
@@ -2852,6 +2856,7 @@ LoadInternalNets (char *file) {
                     full_local_mask & 0xff);
                 inet_aton (s, &(internal_net_mask2[i]));
                 internal_net_mask[i] = inet_addr(s);
+	        internal_net_list[i].s_addr &= internal_net_mask[i];
             }
             //mask in dotted format
             else
@@ -2861,6 +2866,7 @@ LoadInternalNets (char *file) {
                     return 0;
                 }
                 internal_net_mask[i] = inet_addr (mask_string);
+	        internal_net_list[i].s_addr &= internal_net_mask[i];
             }
         }
         //old format
@@ -2885,8 +2891,9 @@ LoadInternalNets (char *file) {
                 return 0;
             }
             internal_net_mask[i] = inet_addr (mask_string);
+	    internal_net_list[i].s_addr &= internal_net_mask[i];
         }
-        if (debug)
+       if (debug)
         {
             fprintf (fp_stdout, "Adding: %s as internal net ",
                     inet_ntoa (internal_net_list[i]));
@@ -2971,6 +2978,7 @@ LoadCloudNets (char *file) {
                     full_local_mask & 0xff);
                 inet_aton (s, &(cloud_net_mask2[i]));
                 cloud_net_mask[i] = inet_addr(s);
+		cloud_net_list[i].s_addr &= cloud_net_mask[i];
             }
             //mask in dotted format
             else
@@ -2980,6 +2988,7 @@ LoadCloudNets (char *file) {
                     return 0;
                 }
                 cloud_net_mask[i] = inet_addr (mask_string);
+		cloud_net_list[i].s_addr &= cloud_net_mask[i];
             }
         }
         //old format
@@ -3004,6 +3013,7 @@ LoadCloudNets (char *file) {
                 return 0;
             }
             cloud_net_mask[i] = inet_addr (mask_string);
+            cloud_net_list[i].s_addr &= cloud_net_mask[i];
         }
        if (debug)
         {

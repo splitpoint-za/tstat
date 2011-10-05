@@ -15,7 +15,7 @@ are separated by spaces.
 ############################################################################
 #  1  #  9  # Client/Server IP addr  # -     # IP addresses of client/server
 #  2  # 10  # Client/Server UDP port # -     # UDP port addresses of client/server
-#  3  # 11  # First time             # s     # client/server first packet in absolute time (epoch)
+#  3  # 11  # First time             # ms    # client/server first packet in absolute time (epoch)
 #  4  # 12  # Completion time        # s     # Time between the first and the last packet from the 'client'
 #  5  # 13  # Data bytes             # bytes # Number of bytes transmitted in the payload
 #  6  # 14  # Packets                # -     # Total number of packets observed from the client/server
@@ -49,4 +49,5 @@ UDP type - col. 8, 16 (see struct.h)
 # 19    # DNS           # DNS protocol                                  #
 # 20    # P2P_UTP       # BitTorrent uTP protocol (only)                #
 # 21    # P2P_UTPBT     # BitTorrent DHT and uTP protocols (mixed)      #
+# 22    # UDP_VOD       # MPEG2 PES Streaming over UDP                  #
 #########################################################################

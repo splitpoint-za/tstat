@@ -129,7 +129,11 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
 	  add_histo (tcp_port_synsrc_in, (float) ntohs (ptcp->th_sport));
 	  add_histo (tcp_port_syndst_in, (float) ntohs (ptcp->th_dport));
 	}
+#ifndef LOG_UNKNOWN
       else if (internal_src && internal_dst)
+#else
+      else
+#endif
 	{
 	  add_histo (tcp_port_synsrc_loc, (float) ntohs (ptcp->th_sport));
 	  add_histo (tcp_port_syndst_loc, (float) ntohs (ptcp->th_dport));
@@ -164,7 +168,11 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
          L4_bitrate.nc_in[TCP_TYPE] += ntohs (pip->ip_len);
        }
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       L4_bitrate.loc[TCP_TYPE] += ntohs (pip->ip_len);
       add_histo (tcp_port_src_loc, (float) ntohs (ptcp->th_sport));
@@ -706,7 +714,11 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     {
       ++tcp_trace_count_incoming;
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       ++tcp_trace_count_local;
     }
@@ -2295,7 +2307,8 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 /* fool the internal and external definition... */
       outgoing = &(ptp_save->s2c);
       incoming = &(ptp_save->c2s);
-      local = FALSE;
+      // local = FALSE;
+      local = TRUE;
 #endif
     }
 
@@ -2477,7 +2490,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	      add_histo (tcp_rtt_cnt_out, outgoing->rtt_count);
 	      add_histo (tcp_rtt_cnt_in, incoming->rtt_count);
 	    }
-	  else if (!local)
+	  else 
 	    {
 	      add_histo (tcp_rtt_avg_loc,
 			 (Average (outgoing->rtt_sum, outgoing->rtt_count) /
@@ -2931,8 +2944,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 /* Absolute time of first packet */
       wfprintf (fp, " %f", time2double(ptp_save->first_time) / 1000.);
 
-      /* printing boolean flag if this is considered internal or not */
+      /* printing boolean flag if source is considered internal or not */
       wfprintf (fp, " %d", ptp_save->internal_src);
+      /* printing boolean flag if destination is considered internal or not */
+      wfprintf (fp, " %d", ptp_save->internal_dst);
 
       /* TOPIX: added 97th column: connection type */
       wfprintf (fp, " %d", ptp_save->con_type);
@@ -2960,8 +2975,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
       /* write to log file */
       /* printing boolean flag if this is considered internal or not */
-//      wfprintf (fp, " %d", ptp_save->internal_src);
-//      wfprintf (fp, " %d", ptp_save->internal_dst);
 //      wfprintf (fp, " %d", ptp_save->cloud_src);
 //      wfprintf (fp, " %d", ptp_save->cloud_dst);
 

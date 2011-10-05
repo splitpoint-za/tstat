@@ -276,7 +276,11 @@ addseg (tcb * ptcb,
     {
       add_histo (tcp_anomalies_in, IN_SEQUENCE);
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       add_histo (tcp_anomalies_loc, IN_SEQUENCE);
     }
@@ -952,7 +956,11 @@ rules_test (tcb * thisdir, segment * pseg, seglen len, quadrant * pquad,
     {
       add_histo (tcp_anomalies_in, aggregateType (type_of_segment));
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
       add_histo (tcp_anomalies_loc, aggregateType (type_of_segment));
     }

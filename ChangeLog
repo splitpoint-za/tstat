@@ -1,3 +1,15 @@
+05/10/11 - MMM
+- Main changes since 2.2:
+  * Additional packet-level statistics (PACKET_STATS)
+  * Added support for CISCO RAW HDLC
+  * Dump optionally limited to the first few packets in each TCP/UDP flow
+  * Added UDP MPEG2 PES classification
+  * Expanded the capability of logging also external traffic (LOG_UNKNOWN)
+  * Changed log_tcp_(no)complete format to register if the server is
+    internal/external
+  * Bugfix: solved problem when specific addresses were used as internal 
+    networks
+
 26/05/10 - MMM 
 - Main changes since 2.1:
   * Modified IPv6 behavior: all traffic is internal if no network is defined

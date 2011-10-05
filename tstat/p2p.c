@@ -858,6 +858,9 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case DNS:
       return L7_FLOW_DNS;
 
+    case UDP_VOD:
+      return L7_FLOW_VOD;
+
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:

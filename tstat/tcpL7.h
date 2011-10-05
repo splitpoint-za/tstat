@@ -40,6 +40,10 @@
 /* trying to identify uTP Bittorrent traffic                   */
 #define MAX_UDP_UTP 40
 
+/* Maximum number of UDP packets to analyze per flow (c2s+s2c) */
+/* trying to identify MPEG2 over UDP traffic (VOD)             */
+#define MAX_UDP_VOD 40
+
 /* Definition of the RTP magic number */
 #define RTP_MAGICNUMBER 0x24
 

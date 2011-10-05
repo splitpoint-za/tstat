@@ -881,7 +881,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 		}
 
 	    }
+#ifndef LOG_UNKNOWN
 	  else if (pup->internal_src && pup->internal_dst)
+#else
+          else
+#endif
 	    {
 	      add_histo (mm_oos_p_loc, 1);
 	    }
@@ -927,7 +931,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 		      add_histo (mm_reord_delay_out, delay);
 		    }
 		}
+#ifndef LOG_UNKNOWN
 	      else if (pup->internal_src && pup->internal_dst)
+#else
+              else
+#endif
 		{
 		  add_histo (mm_reord_p_n_loc, 1);
 		  add_histo (mm_reord_delay_loc, delay);
@@ -993,7 +1001,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 		  add_histo (mm_burst_loss_out, f_rtp->burst);
 		}
 	    }
+#ifndef LOG_UNKNOWN
 	  else if (pup->internal_src && pup->internal_dst)
+#else
+          else
+#endif
 	    {
 	      add_histo (mm_burst_loss_loc, f_rtp->burst);
 	    }
@@ -1038,7 +1050,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 		  add_histo (mm_oos_p_out, 1);
 		}
 	    }
+#ifndef LOG_UNKNOWN
 	  else if (pup->internal_src && pup->internal_dst)
+#else
+          else
+#endif
 	    {
 	      add_histo (mm_oos_p_loc, 1);
 	    }
@@ -1084,7 +1100,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 		      add_histo (mm_reord_delay_out, delay);
 		    }
 		}
+#ifndef LOG_UNKNOWN
 	      else if (pup->internal_src && pup->internal_dst)
+#else
+              else
+#endif
 		{
 		  add_histo (mm_reord_p_n_loc, 1);
 		  add_histo (mm_reord_delay_loc, delay);
@@ -1138,7 +1158,9 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	  (!pup->internal_src && pup->internal_dst && dir == C2S))
 	wfprintf (fp_dup_ooo_log, " %d\n", 0) /* entrante */ ;
 
+#ifndef LOG_UNKNOWN
       if ((pup->internal_src && pup->internal_dst))
+#endif
 	wfprintf (fp_dup_ooo_log, " %d\n", 2) /* Locale */ ;
 
     }
@@ -1232,7 +1254,11 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 		}
 	    }
 	}
+#ifndef LOG_UNKNOWN
       else if (pup->internal_src && pup->internal_dst)
+#else
+      else
+#endif
 	{
 	  if (delta_sr != 0)
 	    {
@@ -1400,7 +1426,11 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 		}
 	    }
 	}
+#ifndef LOG_UNKNOWN
       else if (pup->internal_src && pup->internal_dst)
+#else
+      else
+#endif
 	{
 	  add_histo (rtcp_jitter_loc, jitter);
 	  add_histo (rtcp_f_lost_loc, f_rtcp->f_lost / 256.0 * 100.0);
@@ -1779,7 +1809,11 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 		  add_histo (mm_burst_loss_out, f_rtp->burst);
 		}
 	    }
-	  else if (pup->internal_src && pup->internal_dst)
+#ifndef LOG_UNKNOWN
+          else if (pup->internal_src && pup->internal_dst)
+#else
+          else
+#endif
 	    {
 	      add_histo (mm_burst_loss_loc, f_rtp->burst);
 	    }
@@ -1959,7 +1993,11 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 
 	}
     }
+#ifndef LOG_UNKNOWN
   else if (pup->internal_src && pup->internal_dst)
+#else
+  else
+#endif
     {
       /* topix */
       add_histo (mm_cl_b_loc, f_rtp->data_bytes);
@@ -2116,7 +2154,11 @@ update_rtcp_conn_histo (ucb * thisdir, int dir)
 
 	}
     }
+#ifndef LOG_UNKNOWN
   else if (pup->internal_src && pup->internal_dst)
+#else
+  else
+#endif
     {
       add_histo (rtcp_t_lost_loc, f_rtcp->c_lost);
       add_histo (rtcp_bt_loc, (double) data_bytes / etime * 8.0);
