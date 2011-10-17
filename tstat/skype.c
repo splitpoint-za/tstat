@@ -602,6 +602,8 @@ skype_conn_stats (void *thisdir, int dir, int tproto)
   	  case P2P_KAD:
   	  case P2P_KADU:
   	  case P2P_OKAD:
+	  case P2P_PPSTREAM:
+          case TEREDO:
   	      break;
 
   	  case SKYPE_E2E:

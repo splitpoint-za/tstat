@@ -793,6 +793,53 @@ udp_search_dns (unsigned char *haystack,
 
 }
 
+int
+udp_search_ppstream (unsigned char *haystack, const int packet_len,
+		   int payload_len)
+{
+  unsigned char *t = haystack;
+  unsigned int len;
+  t += 8;
+
+  if (t[2]==0x43)
+   {
+     len = get_u16(haystack,8);
+     if (len==packet_len-8 || len==packet_len-12 || len==packet_len-14)
+       return (IPP2P_PPSTREAM *100 + 0);
+   }
+  return 0;
+}
+
+int
+udp_search_teredo (unsigned char *haystack, const int packet_len,
+		   int payload_len)
+{
+  unsigned char *t = haystack;
+  t += 8;
+
+  if (t[0]==0x60 && t[1]==0x00 && t[2]==0x00 && t[3]==0x00 && 
+      t[8]==0x20 && t[9]==0x01 && t[10]==0x00 && t[11]==0x00 )
+   {
+     /* IPv6 Teredo Tunneling */
+     /* We might get a look inside to distinguish content, but on the 
+        outside it will stay a single UDP flow... */
+     switch (t[6])
+      {
+        case 0x06: /* TCP */
+          return (IPP2P_TEREDO *100 + 1);
+	  break;
+        case 0x11: /* UDP */
+          return (IPP2P_TEREDO *100 + 2);
+	  break;
+        default:   /* IPv6 fragments, IPv6 no-next-header and others */
+          return (IPP2P_TEREDO *100 + 0);
+	  break;
+      }
+   }
+  else
+   return 0;
+}
+
 /*Search for Ares commands*/
 //#define IPP2P_DEBUG_ARES
 int
@@ -1576,5 +1623,7 @@ struct udpmatch udp_list[] = {
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
+  {IPP2P_PPSTREAM, SHORT_HAND_IPP2P, 12, &udp_search_ppstream},
+  {IPP2P_TEREDO, SHORT_HAND_IPP2P, 21, &udp_search_teredo},
   {0, 0, 0, NULL}
 };

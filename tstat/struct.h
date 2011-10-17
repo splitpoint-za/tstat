@@ -690,6 +690,8 @@ enum udp_type
   P2P_UTP,
   P2P_UTPBT,
   UDP_VOD,
+  P2P_PPSTREAM,
+  TEREDO,
   LAST_UDP_PROTOCOL
 };
 
@@ -742,6 +744,10 @@ enum udp_type
  printf("P2P_UTPBT = %d\n",temp); \
  temp = UDP_VOD; \
  printf("UDP_VOD = %d\n",temp); \
+ temp = P2P_PPSTREAM; \
+ printf("P2P_PPSTREAM = %d\n",temp); \
+ temp = TEREDO; \
+ printf("TEREDO = %d\n",temp); \
 }
 
 
