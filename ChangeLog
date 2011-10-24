@@ -11,6 +11,7 @@
     networks
   * Added UDP PPStream (Chinese IP-TV) classification
   * Added Teredo (IPv6 over UDP, mostly used by uTorrent) classification
+  * Bugfix: solved problem with ip_len histograms and RRDs
 
 26/05/10 - MMM 
 - Main changes since 2.1:

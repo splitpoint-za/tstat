@@ -1082,13 +1082,13 @@ create_all_histo (void)
 
   ip_len_out = create_histo ("ip_len_out",
 			     "IP packet length [byte] - outgoing packets", 0,
-			     1500, 4);
+			     1504, 4);
   ip_len_in =
     create_histo ("ip_len_in", "IP packet length [byte] - incoming packets",
-		  0, 1500, 4);
+		  0, 1504, 4);
   ip_len_loc =
     create_histo ("ip_len_loc", "IP packet length [byte] - local packets", 0,
-		  1500, 4);
+		  1504, 4);
 
   ip_ttl_out =
     create_histo ("ip_ttl_out", "IP TTL - outgoing packtes", 0, 255, 1);
