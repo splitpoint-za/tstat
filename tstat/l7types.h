@@ -86,3 +86,9 @@
 #define L7_FLOW_UNKNOWN         49    /* Unknown is set to the largest ID */
 #define L7_FLOW_TOT             50    /* Large to leave space for future  */
 				      /* protocol types */
+
+
+#define VIDEO_FLOW_TRUE			0
+#define VIDEO_FLOW_RTMP			1
+#define VIDEO_FLOW_NOT_VIDEO	2
+#define VIDEO_FLOW_TOT			3

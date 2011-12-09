@@ -70,6 +70,15 @@ proto_init ()
         (void *) dummy_init,
         NULL);
   }
+
+#ifdef STREAMING_CLASSIFIER
+  proto_register (PROTOCOL_TCP, "STREAMING", "HTTP Video Streaming",
+		  (void *) getvideoL7,
+		  (void *) videoL7_flow_stat,
+		  (void *) videoL7_init,
+		  (void *) make_videoL7_conn_stats);
+#endif
+
   
   proto_register (PROTOCOL_TCP, "TCPL7", "Layer 7 TCP Protocols",
 		  (void *) gettcpL7,
@@ -101,6 +110,10 @@ proto_init ()
           (void *) make_skype_conn_stats);
     }
 #endif
+
+
+
+
 
 
   /* 

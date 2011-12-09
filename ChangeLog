@@ -12,6 +12,10 @@
   * Added UDP PPStream (Chinese IP-TV) classification
   * Added Teredo (IPv6 over UDP, mostly used by uTorrent) classification
   * Bugfix: solved problem with ip_len histograms and RRDs
+  * Added detailed video classification (log_streaming_complete and video RRDs/
+    histograms)
+  * Updated Skype engine to cope with unidirectional flows
+  * Added SSL server name logging
 
 26/05/10 - MMM 
 - Main changes since 2.1:

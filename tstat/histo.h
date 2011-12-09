@@ -589,6 +589,23 @@ struct double_histo_list *web_bitrate_in;
 struct double_histo_list *web_bitrate_loc;
 
 
+struct double_histo_list *L7_VIDEO_num_out;
+struct double_histo_list *L7_VIDEO_num_in;
+struct double_histo_list *L7_VIDEO_num_loc;
+struct double_histo_list *L7_VIDEO_num_c_out;
+struct double_histo_list *L7_VIDEO_num_c_in;
+struct double_histo_list *L7_VIDEO_num_nc_out;
+struct double_histo_list *L7_VIDEO_num_nc_in;
+
+struct double_histo_list *video_rate_out;
+struct double_histo_list *video_rate_in;
+struct double_histo_list *video_rate_loc;
+struct double_histo_list *video_rate_c_out;
+struct double_histo_list *video_rate_c_in;
+struct double_histo_list *video_rate_nc_out;
+struct double_histo_list *video_rate_nc_in;
+
+
 /* profiling */
 #define PROFILE_CPU_MAX 1
 #define PROFILE_CPU_USR 2

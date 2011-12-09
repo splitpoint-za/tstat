@@ -32,6 +32,8 @@ static char const copyright[] =
 #include <getopt.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include "videoL7.h"
+
 
 /* version information */
 char *tstat_version = VERSION;
@@ -167,6 +169,8 @@ struct L7_bitrates L7_udp_bitrate;
 struct HTTP_bitrates HTTP_bitrate;
 struct WEB_bitrates WEB_bitrate;
 
+struct VIDEO_rates VIDEO_rate;
+
 #ifdef L3_BITRATE
 unsigned long long L3_bitrate_in;
 unsigned long long L3_bitrate_out;
@@ -283,6 +287,10 @@ FILE *fp_dup_ooo_log;
 
 #ifdef VIDEO_DETAILS
 FILE *fp_video_logc = NULL;
+#endif
+
+#ifdef STREAMING_CLASSIFIER
+FILE *fp_streaming_logc = NULL;
 #endif
 
 /* discriminate Direction */
@@ -662,6 +670,7 @@ main (int argc, char *argv[]) {
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
   memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
+  memset (&VIDEO_rate, 0, sizeof (struct VIDEO_rates));
 
   /* init profile variables */
   prof_last_clk = (int)clock();
@@ -866,6 +875,13 @@ create_new_outfiles (char *filename)
       reopen_logfile(&fp_video_logc,basename,"log_video_complete");
 #endif
 
+#ifdef STREAMING_CLASSIFIER
+      /* Video log */
+      reopen_logfile(&fp_streaming_logc,basename,"log_streaming_complete");
+#endif
+
+
+
 #ifdef LOG_OOO
       /* MGM start */
       /* Open the files for dup and ooo logging */
@@ -915,6 +931,10 @@ void close_all_logfiles()
       if (fp_video_logc != NULL) { gzclose(fp_video_logc); fp_video_logc=NULL; }
 #endif
 
+#ifdef STREAMING_CLASSIFIER
+      if (fp_streaming_logc != NULL) { gzclose(fp_streaming_logc); fp_streaming_logc=NULL; }
+#endif
+
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { gzclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
@@ -951,6 +971,10 @@ void close_all_logfiles()
 
 #ifdef VIDEO_DETAILS
       if (fp_video_logc != NULL) { fclose(fp_video_logc); fp_video_logc=NULL; }
+#endif
+
+#ifdef STREAMING_CLASSIFIER
+      if (fp_streaming_logc != NULL) { fclose(fp_streaming_logc); fp_streaming_logc=NULL; }
 #endif
 
 #ifdef LOG_OOO
@@ -1342,6 +1366,7 @@ void InitAfterFirstPacketReaded(char *filename, int file_count) {
       memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
       memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
       memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
+      memset (&VIDEO_rate, 0, sizeof (struct VIDEO_rates));
       
       tot_conn_TCP = 0;
       tot_conn_UDP = 0;
@@ -3328,4 +3353,5 @@ void flush_histo_engine(void) {
     memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
     memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
+    memset (&VIDEO_rate, 0, sizeof (struct VIDEO_rates));
 }

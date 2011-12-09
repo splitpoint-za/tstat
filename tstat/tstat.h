@@ -710,6 +710,16 @@ void id16to11(char *id11, char *id16);
 
 /* generic UDP */
 
+/* Video Streaming Plugin */
+
+void videoL7_init ();
+void *getvideoL7 (struct udphdr *pudp, int tproto, void *pdir, void *plast);
+void videoL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
+	       int dir, void *hdr, void *plast);
+void make_videoL7_conn_stats (void * thisdir, int tproto);
+void make_videoL7_rate_stats (tcp_pair *thisflow, int len);
+
+
 /* P2P plugin */
 void p2p_init ();
 void *getp2p (struct udphdr *pudp, int tproto, void *pdir, void *plast);

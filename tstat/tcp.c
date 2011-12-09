@@ -19,12 +19,14 @@
 
 #include "tstat.h"
 #include "tcpL7.h"
+#include "videoL7.h"
 
 /* provided globals  */
 extern FILE *fp_logc;
 extern FILE *fp_lognc;
 extern FILE *fp_rtp_logc;
 extern FILE *fp_video_logc;
+extern FILE *fp_streaming_logc;
 
 extern Bool is_stdin;
 extern Bool printticks;
@@ -83,6 +85,11 @@ void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 #ifdef VIDEO_DETAILS
 Bool is_video(tcp_pair *ptp_save);
 void update_video_log (tcp_pair *tcp_save, tcb *pab, tcb *pba);
+#endif
+
+#ifdef STREAMING_CLASSIFIER
+Bool is_streaming(tcp_pair *ptp_save);
+void update_streaming_log(tcp_pair *tcp_save, tcb *pab, tcb *pba);
 #endif
 
 #ifdef CHECK_TCP_DUP
@@ -378,6 +385,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 #ifdef VIDEO_DETAILS
   memset(&ptp->http_meta,0,sizeof(struct flv_metadata));
 #endif
+
+  ptp->ssl_client_subject = NULL;
+  ptp->ssl_server_subject = NULL;
 
   return (&ttp[num_tcp_pairs]);
 }
@@ -1315,6 +1325,14 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if (SYN_SET (ptcp) && !ACK_SET (ptcp))
     {
       thisdir->highest_seqno = thisdir->max_seq;
+    }
+
+  if (ACK_SET(ptcp) && !SYN_SET(ptcp))
+    {
+       if (ZERO_TIME(&(thisdir->ack_start_time)))
+        {
+	  thisdir->ack_start_time = current_time;
+	}    
     }
 
   /* check if this segment is carrying the first data */
@@ -2941,6 +2959,14 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	       elapsed (ptp_save->first_time,
 			pba->payload_end_time) / 1000.0);
 
+/* first ACK pkt time */
+      wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->ack_start_time) / 1000.0);
+      wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->ack_start_time) / 1000.0);
+
 /* Absolute time of first packet */
       wfprintf (fp, " %f", time2double(ptp_save->first_time) / 1000.);
 
@@ -2977,6 +3003,36 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       /* printing boolean flag if this is considered internal or not */
 //      wfprintf (fp, " %d", ptp_save->cloud_src);
 //      wfprintf (fp, " %d", ptp_save->cloud_dst);
+
+/* 
+// Code for sequence_number checking - still not precise  
+      if (pab->max_seq!=pab->min_seq)
+       {
+         if ( (pab->fin_count > 0) &&  pab->max_seq > pab->fin_seqno ) 
+            wfprintf (fp, " %u",pab->max_seq - pab->min_seq - 2);
+	 else 
+            wfprintf (fp, " %u",pab->max_seq - pab->min_seq - 1);
+       }
+      else
+       {
+         wfprintf (fp, " 0");
+       }
+      
+      if (pba->max_seq!=pba->min_seq)
+       {
+         if ( (pba->fin_count > 0) &&  pba->max_seq > pba->fin_seqno ) 
+            wfprintf (fp, " %u",pba->max_seq - pba->min_seq - 2);
+	 else 
+            wfprintf (fp, " %u",pba->max_seq - pba->min_seq - 1);
+       }
+      else
+       {
+         wfprintf (fp, " 0");
+       }
+*/
+
+  wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
+  wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
 
 #ifdef PACKET_STATS
   {
@@ -3070,6 +3126,11 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     }
 #endif
    
+#ifdef STREAMING_CLASSIFIER
+	if (fp_streaming_logc && is_streaming(ptp_save) && complete)
+		update_streaming_log(ptp_save, pab, pba);
+#endif
+
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))
       return;
@@ -3362,6 +3423,272 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 
 }
 #endif
+
+#ifdef STREAMING_CLASSIFIER
+Bool is_streaming(tcp_pair *ptp_save) {
+	if (!(ptp_save->con_type & HTTP_PROTOCOL))
+		return FALSE;
+
+	if (ptp_save->streaming.video_content_type != VIDEO_NOT_DEFINED
+			|| ptp_save->streaming.video_payload_type != VIDEO_NOT_DEFINED) {
+		return TRUE;
+	} else
+		return FALSE;
+}
+
+void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
+	double etime;
+	//int i;
+	char id_string[20];
+
+	etime = elapsed(ptp_save->first_time, ptp_save->last_time);
+	etime = etime / 1000;
+
+	if (!log_engine)
+		return;
+	if (fp_streaming_logc != NULL) {
+		wfprintf(fp_streaming_logc,
+				"%s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu", HostName(
+						ptp_save->addr_pair.a_address), ServiceName(
+						ptp_save->addr_pair.a_port), pab->packets,
+				pab->reset_count, pab->unique_bytes, pab->data_pkts,
+				pab->data_bytes, pab->rexmit_pkts, pab->rexmit_bytes,
+				pab->out_order_pkts, pab->fin_count, pab->max_seg_size,
+				pab->cwin_max, pab->cwin_min);
+
+		wfprintf(fp_streaming_logc, " %f %f %f %f %u %u %u", (Average(
+				ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) / 1000.0),
+				(ptp_save->c2s.rtt_min / 1000.0), (ptp_save->c2s.rtt_max
+						/ 1000.0), (Stdev(ptp_save->c2s.rtt_sum,
+						ptp_save->c2s.rtt_sum2, ptp_save->c2s.rtt_count)
+						/ 1000.0), ptp_save->c2s.rtt_count,
+				ptp_save->c2s.ttl_min, ptp_save->c2s.ttl_max);
+
+		/* Rate c2s */
+		if (ptp_save->c2s.rate_samples > 1) {
+			wfprintf(fp_streaming_logc, " %d %d %d %.3f %.3f %.3f %.3f",
+					ptp_save->c2s.rate_samples,
+					ptp_save->c2s.rate_empty_samples,
+					ptp_save->c2s.rate_empty_streak, 8e-3
+							* ptp_save->c2s.rate_sum
+							/ ptp_save->c2s.rate_samples, 8e-3 * sqrt(
+							(ptp_save->c2s.rate_sum2 - ptp_save->c2s.rate_sum
+									* ptp_save->c2s.rate_sum
+									/ ptp_save->c2s.rate_samples)
+									/ (ptp_save->c2s.rate_samples - 1)), 8e-3
+							* ptp_save->c2s.rate_min, 8e-3
+							* ptp_save->c2s.rate_max);
+		} else {
+			wfprintf(fp_streaming_logc, " 0 0 0 0.000 0.000 0.000 0.000");
+		}
+
+		/* printing boolean flag if this is considered internal or not */
+		wfprintf(fp_streaming_logc, " %d", ptp_save->internal_src);
+
+		wfprintf(fp_streaming_logc,
+				" %s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu", HostName(
+						ptp_save->addr_pair.b_address), ServiceName(
+						ptp_save->addr_pair.b_port), pba->packets,
+				pba->reset_count, pba->unique_bytes, pba->data_pkts,
+				pba->data_bytes, pba->rexmit_pkts, pba->rexmit_bytes,
+				pba->out_order_pkts, pba->fin_count, pba->max_seg_size,
+				pba->cwin_max, pba->cwin_min);
+
+		wfprintf(fp_streaming_logc, " %f %f %f %f %u %u %u", (Average(
+				ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) / 1000.0),
+				(ptp_save->s2c.rtt_min / 1000.0), (ptp_save->s2c.rtt_max
+						/ 1000.0), (Stdev(ptp_save->s2c.rtt_sum,
+						ptp_save->s2c.rtt_sum2, ptp_save->s2c.rtt_count)
+						/ 1000.0), ptp_save->s2c.rtt_count,
+				ptp_save->s2c.ttl_min, ptp_save->s2c.ttl_max);
+
+		/* Rate s2c */
+		if (ptp_save->s2c.rate_samples > 1) {
+			wfprintf(fp_streaming_logc, " %d %d %d %.3f %.3f %.3f %.3f",
+					ptp_save->s2c.rate_samples,
+					ptp_save->s2c.rate_empty_samples,
+					ptp_save->s2c.rate_empty_streak, 8e-3
+							* ptp_save->s2c.rate_sum
+							/ ptp_save->s2c.rate_samples, 8e-3 * sqrt(
+							(ptp_save->s2c.rate_sum2 - ptp_save->s2c.rate_sum
+									* ptp_save->s2c.rate_sum
+									/ ptp_save->s2c.rate_samples)
+									/ (ptp_save->s2c.rate_samples - 1)), 8e-3
+							* ptp_save->s2c.rate_min, 8e-3
+							* ptp_save->s2c.rate_max);
+		} else {
+			wfprintf(fp_streaming_logc, " 0 0 0 0.000 0.000 0.000 0.000");
+		}
+
+		/* printing boolean flag if this is considered internal or not */
+		wfprintf(fp_streaming_logc, " %d", ptp_save->internal_dst);
+
+		/* elapsed time */
+		wfprintf(fp_streaming_logc, " %f", etime);
+
+		/* first pkt time */
+		wfprintf(fp_streaming_logc, " %f", elapsed(first_packet,
+				ptp_save->first_time) / 1000.0);
+		/* last pkt time */
+		wfprintf(fp_streaming_logc, " %f", elapsed(first_packet,
+				ptp_save->last_time) / 1000.0);
+
+		/* first DATA pkt time */
+		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
+				pab->payload_start_time) / 1000.0);
+		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
+				pba->payload_start_time) / 1000.0);
+
+		/* last DATA pkt time */
+		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
+				pab->payload_end_time) / 1000.0);
+		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
+				pba->payload_end_time) / 1000.0);
+
+		/* Absolute time of first packet */
+		wfprintf(fp_streaming_logc, " %f", time2double(ptp_save->first_time)
+				/ 1000.);
+
+		/* TOPIX: 67th column: connection type */
+		wfprintf(fp_streaming_logc, " %d", ptp_save->con_type);
+
+		/* P2P: 68th column: p2p protocol   */
+		wfprintf(fp_streaming_logc, " %d", ptp_save->p2p_type / 100);
+
+		/* Web2.0: 69th column: HTTP content type */
+		/*
+		 Using http_data+1 so that valid values are > 0, i.e. GET is 1,
+		 POST is 2, etc.
+		 */
+		wfprintf(fp_streaming_logc, " %d",
+				ptp_save->con_type & HTTP_PROTOCOL ? ptp_save->http_data + 1
+						: 0);
+
+		wfprintf(fp_streaming_logc, " %s",
+				(ptp_save->con_type & HTTP_PROTOCOL) ? ptp_save->http_response
+						: "---");
+
+		/* Web 2.0 and YouTube video identification:
+		 Column 71: Request ID (16 char) - '--' if missing or not relevant
+		 Column 72: Video ID (11 char) - '--' if missing or not relevant
+		 Column 73: YouTube itag ('fmt' video quality)
+		 Column 74: YouTube seek flag
+		 */
+
+#ifndef HIDE_YOUTUBE_REQUEST_ID
+		if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
+				== HTTP_YOUTUBE_VIDEO || ptp_save->http_data
+				== HTTP_YOUTUBE_VIDEO204 || ptp_save->http_data
+				== HTTP_YOUTUBE_204)) {
+			id16to11(id_string, ptp_save->http_ytid);
+			wfprintf(fp_streaming_logc, " %s %s", ptp_save->http_ytid,
+					id_string);
+		} else if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
+				== HTTP_YOUTUBE_SITE || ptp_save->http_data
+				== HTTP_YOUTUBE_SITE_DIRECT || ptp_save->http_data
+				== HTTP_YOUTUBE_SITE_EMBED)) {
+			id11to16(id_string, ptp_save->http_ytid);
+			wfprintf(fp_streaming_logc, " %s %s", id_string,
+					ptp_save->http_ytid);
+		} else {
+			wfprintf(fp_streaming_logc, " -- --");
+		}
+#else
+		if ((ptp_save->con_type & HTTP_PROTOCOL) &&
+				( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+						ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+						ptp_save->http_data==HTTP_YOUTUBE_204 ))
+		{
+			wfprintf (fp_streaming_logc, " %s --", ptp_save->http_ytid);
+		}
+		else if ((ptp_save->con_type & HTTP_PROTOCOL) &&
+				( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
+						ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+						ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
+		{
+			id11to16(id_string,ptp_save->http_ytid);
+			wfprintf (fp_streaming_logc, " %s --", id_string);
+		}
+		else
+		{
+			wfprintf (fp_streaming_logc, " -- --");
+		}
+#endif
+
+		if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
+				== HTTP_YOUTUBE_VIDEO || ptp_save->http_data
+				== HTTP_YOUTUBE_VIDEO204 || ptp_save->http_data
+				== HTTP_YOUTUBE_204)) {
+			wfprintf(
+					fp_streaming_logc,
+					" %s %d ",
+					ptp_save->http_ytitag, ptp_save->http_ytseek);
+		} else {
+			wfprintf(fp_streaming_logc,
+					" -- 0 ");
+		}
+		/*
+		 Column 75: Content Type
+		 Column 76: Payload
+
+		 Column 77: Duration
+		 Column 78: Bitrate
+		 Column 79: Width
+		 Column 80: Height
+
+  	 */
+		/* Streaming : 75th column : Classification based on Content Type */
+
+		wfprintf(fp_streaming_logc, " %d",
+				ptp_save->streaming.video_content_type);
+
+		/* Streaming : 76th column : Classification based on Payload signature */
+		wfprintf(fp_streaming_logc, " %d",
+				ptp_save->streaming.video_payload_type);
+
+		/* Streaming : 77th column : Video Duration*/
+		wfprintf(fp_streaming_logc, " %f",
+				ptp_save->streaming.metadata.duration);
+
+		/* Streaming : 78th column : Overall Video Bitrate*/
+		wfprintf(fp_streaming_logc, " %f",
+				ptp_save->streaming.metadata.videodatarate);
+
+		/* Streaming : 79th column : Video Width*/
+		wfprintf(fp_streaming_logc, " %d",
+				ptp_save->streaming.metadata.width);
+
+		/* Streaming : 80th column : Video Height*/
+		wfprintf(fp_streaming_logc, " %d",
+				ptp_save->streaming.metadata.height);
+
+
+
+		//	      /* write to log file */
+		//
+		//	      for (i=0;i<10;i++)
+		//	       {
+		//	          wfprintf (fp_video_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
+		//	       }
+		//
+		//	      for (i=0;i<10;i++)
+		//	       {
+		//	          wfprintf (fp_video_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
+		//	       }
+		//
+		//	      wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_count);
+		//	      for (i=0;i<MAX_COUNT_MESSAGES;i++)
+		//	       {
+		//	          wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_size[i]);
+		//	       }
+
+		wfprintf(fp_streaming_logc, "\n");
+
+	}
+
+}
+#endif
+
 
 void
 update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)

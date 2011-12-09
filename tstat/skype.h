@@ -84,7 +84,7 @@ consider blocks of 32 bits
 #define OUT_EXPECTED_PROB (1.0/(N_RANDOM_BIT_VALUES))
 
 #define SKYPE_EARLY_CLASSIF                 
-#define SKYPE_EARLY_CLASSIF_WINDOW 5000000	/* time between two updates in a runtime
+#define SKYPE_EARLY_CLASSIF_WINDOW 20000000	/* time between two updates in a runtime
 					                           classification [us] */
 
 struct skype_hdr

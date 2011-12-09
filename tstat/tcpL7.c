@@ -47,6 +47,9 @@ extern int yt_redir_count;
 extern int yt_mobile;
 #endif
 
+regex_t re_ssl_subject;
+char cname[80];
+
 enum http_content YTMAP(enum http_content X)
 {
   switch (X)
@@ -69,6 +72,7 @@ tcpL7_init ()
 #ifdef VIDEO_DETAILS
    init_web_patterns();
 #endif
+   regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,4}$",REG_EXTENDED);
 }
 
 void *
@@ -79,9 +83,13 @@ gettcpL7 (struct udphdr *pudp, int tproto, void *pdir, void *plast)
   return (void *) pudp;
 }
 
-Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len)
+Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_length)
 {
   int record_length;
+  char *base;
+  int idx,ext_len,ext_type,name_len;
+  int ii,j;
+  
   if (  *(char *)pdata == 0x16 && 
       *(char *)(pdata + 1) == 0x03 && 
     ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 ) && 
@@ -91,6 +99,48 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len)
    { 
      /* Match SSL 3 - TLS 1.x Handshake Client HELLO */
       ptp->state = SSL_HANDSHAKE;
+
+      base = (char *)pdata;
+
+      idx = 43;
+      idx += base[idx] + 1;
+      idx += ntohs(*(tt_uint16 *)(base+idx)) + 2;
+      idx += base[idx] + 1;
+
+      ext_len = ntohs(*(tt_uint16 *)(base+idx));
+      idx += 2;
+      ii = 0;
+      while (ii<ext_len && idx+ii<data_length)
+       {
+         ext_type = ntohs(*(tt_uint16 *)(base+idx+ii));
+	 ii += 2;
+	 if (idx+ii>=data_length) 
+	   break;
+	 if (ext_type!=0)
+	  { 
+	    ii += ntohs(*(tt_uint16 *)(base+idx+ii));
+	    continue;
+	  }
+	 else
+	  {
+	    ii += 5;
+	    if (idx+ii>=data_length) 
+	       break;
+	    name_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+	    ii +=2;
+	    if (idx+ii>=data_length) 
+	       break;
+	    for (j=0;j<name_len && j<79 && idx+ii+j<data_length;j++)
+	     {
+	        cname[j]=base[idx+ii+j];
+	     }
+	    cname[j]='\0';
+	    ptp->ssl_client_subject = strdup(cname);
+	  }
+       }
+    //   if (ptp->ssl_client_subject!=NULL)
+    //     printf("TLS %s\n",ptp->ssl_client_subject);
+
       return TRUE;
    }
   else if (  *(char *)(pdata + 2) == 0x01 &&
@@ -122,6 +172,49 @@ Bool ssl_server_check(void *pdata)
       return TRUE;
    }
   return FALSE;
+}
+
+int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
+{
+  static char cname[80];
+  char *base;
+  int i,j,max;
+  int  done;
+  
+  base = (char *)pdata;
+  
+  if (data_length < 30 ) return 0; // Suppose the packet is large enough
+  
+  done = 0;
+  
+  for (i=0;i<data_length-7 && !done ;i++)
+   {
+     if (base[i]!=0x06) continue;
+     if ( base[i]==0x06   && base[i+1]==0x03 && base[i+2]==0x55 && 
+          base[i+3]==0x04 && base[i+4]==0x03 )
+      {
+        max = base[i+6];
+	for (j=0;j<max && j<79 && i+j<data_length; j++)
+	 {
+	   cname[j]=base[i+7+j];
+	 }
+	cname[j]='\0';
+	
+	//    printf ("SSL %s\n",cname);
+	if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
+	  {
+	    ptp->ssl_server_subject = strdup(cname);
+	    done = 1;
+	  }
+
+       // if (ptp->ssl_server_subject!=NULL)
+//	  {
+	//    printf ("SSL %s\n",ptp->ssl_server_subject);
+         // }
+      }
+   }
+ //  printf("-\n");
+  return 0;
 }
 
 Bool ssh_header_check(void *pdata)
@@ -704,7 +797,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
            default:
              if ( dir==C2S && 
 	         ((char *) pdata + 6 <= (char *) plast) &&
-	          ssl_client_check(ptp,pdata,payload_len) )
+	          ssl_client_check(ptp,pdata,payload_len,data_length) )
 	        break;
 
 	     if (ptp->packets > MAX_UNKNOWN_PACKETS)
@@ -1129,10 +1222,13 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
         if (dir == S2C && ((char *) pdata + 6 <= (char *) plast) &&
 	    ssl_server_check(pdata) )
 	  {
+            ssl_certificate_check(ptp,pdata,data_length);
+
 	    ptp->con_type |= SSL_PROTOCOL;
 	    ptp->con_type &= ~OBF_PROTOCOL;
 	    ptp->con_type &= ~MSE_PROTOCOL;
 	    ptp->state = IGNORE_FURTHER_PACKETS;
+	    
 	  }
          else
 	  {

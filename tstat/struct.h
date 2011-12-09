@@ -303,6 +303,7 @@ typedef struct tcb
   Bool data_to_be_acked;	/* true if waiting for an ack */
   timeval payload_start_time;	/* time of first data pkt ... */
   timeval payload_end_time;	/* time of last valid ack... */
+  timeval ack_start_time;	/* time of first ack (not syn) */
 
   /* TCP information */
   seqnum ack;
@@ -522,6 +523,54 @@ enum state_type
   IGNORE_FURTHER_PACKETS
 };
 
+
+
+enum video_content
+{
+	VIDEO_NOT_DEFINED = 0,				/*  0 - Unclassified  		*/
+	VIDEO_FLV,							/*  1 - FLV 		*/
+	VIDEO_MP4,							/*  2 - MP4 		*/
+	VIDEO_AVI,							/*  3 - AVI 		*/
+	VIDEO_WMV,							/*  4 - WMV 		*/
+	VIDEO_MPEG,							/*  5 - MPEG 		*/
+	VIDEO_WEBM,							/*  6 - WEBM 		*/
+	VIDEO_3GPP,							/*  7 - 3GPP 		*/
+	VIDEO_OGG,							/*  8 - OGG 		*/
+	VIDEO_QUICKTIME,					/*  9 - QUICKTIME 		*/
+	VIDEO_ASF,							/*  10 - x-ms-asf		*/
+	VIDEO_UNKNOWN,						/*  11 - Unclassified VIDEO 		*/
+	VIDEO_LAST_TYPE
+};
+
+
+struct video_metadata {
+  double duration;
+
+  u_int32_t totalFrames;
+  double framerate;
+
+  u_int32_t width;
+  u_int32_t height;
+
+  double starttime;
+  double totalduration;
+  double videodatarate;
+  double audiodatarate;
+  double totaldatarate;
+
+  u_int32_t bytelength;
+};
+
+struct sstreaming_meta {
+	enum state_type state;
+	enum video_content video_content_type;
+	enum video_content video_payload_type;
+
+	struct video_metadata metadata;
+	int packets;
+};
+
+
 enum http_content
 {
   HTTP_GET = 0,		/*  0 - Unclassified GET command 		*/
@@ -645,9 +694,14 @@ struct stcp_pair
   unsigned state_rtmp_c2s_hand:1;
   unsigned state_rtmp_s2c_hand:1;
 
+  struct sstreaming_meta streaming;
+
   /* Cloud identification */
   Bool cloud_src;
   Bool cloud_dst;
+  
+  char *ssl_client_subject;
+  char *ssl_server_subject;
 };
 typedef struct stcp_pair tcp_pair;
 
@@ -958,6 +1012,18 @@ struct HTTP_bitrates
   unsigned long long nc_in[HTTP_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
   unsigned long long nc_out[HTTP_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
 };
+
+struct VIDEO_rates
+	{
+	  unsigned long long in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+	  unsigned long long out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+	  unsigned long long loc[VIDEO_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+	  unsigned long long c_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+	  unsigned long long c_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+	  unsigned long long nc_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+	  unsigned long long nc_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+	};
+
 
 struct WEB_bitrates
 {

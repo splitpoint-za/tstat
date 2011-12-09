@@ -35,6 +35,9 @@ extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 extern struct WEB_bitrates WEB_bitrate;
 
+
+extern struct VIDEO_rates VIDEO_rate;
+
 extern unsigned long tot_conn_TCP;
 extern unsigned long tot_conn_UDP;
 extern unsigned long adx2_bitrate_delta;
@@ -2177,6 +2180,66 @@ create_all_histo (void)
 				   "HTTP content bitrate [bit/s] - cloud outgoing segments", 0,
 				   HTTP_LAST_TYPE, 1);
 
+  L7_VIDEO_num_out =
+    create_histo ("L7_VIDEO_num_out",
+		  "Number of tracked VIDEO flows - outgoing flows",
+                  0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_in =
+    create_histo ("L7_VIDEO_num_in",
+		  "Number of tracked VIDEO flows - incoming flows ",
+                   0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_loc =
+    create_histo ("L7_VIDEO_num_loc",
+		  "Number of tracked VIDEO flows - local flows",
+                   0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_c_out =
+    create_histo ("L7_VIDEO_num_c_out",
+		  "Number of tracked VIDEO flows - cloud outgoing flows",
+                  0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_c_in =
+    create_histo ("L7_VIDEO_num_c_in",
+		  "Number of tracked VIDEO flows - cloud incoming flows ",
+                   0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_nc_out =
+    create_histo ("L7_VIDEO_num_nc_out",
+		  "Number of tracked VIDEO flows - non-cloud outgoing flows",
+                  0, VIDEO_LAST_TYPE, 1);
+
+  L7_VIDEO_num_nc_in =
+    create_histo ("L7_VIDEO_num_nc_in",
+		  "Number of tracked VIDEO flows - non-cloud incoming flows ",
+                   0, VIDEO_LAST_TYPE, 1);
+
+  video_rate_in = create_histo ("video_rate_in",
+				  "VIDEO content bitrate [bit/s] - incoming segments", 0,
+				  VIDEO_LAST_TYPE, 1);
+  video_rate_out = create_histo ("video_rate_out",
+				   "VIDEO content bitrate [bit/s] - outgoing segments", 0,
+				   VIDEO_LAST_TYPE, 1);
+  video_rate_loc = create_histo ("video_rate_loc",
+				   "VIDEO content bitrate [bit/s] - local segments", 0,
+				   VIDEO_LAST_TYPE, 1);
+  video_rate_c_in = create_histo ("video_rate_c_in",
+				  "VIDEO content bitrate [bit/s] - cloud incoming segments", 0,
+				  VIDEO_LAST_TYPE, 1);
+  video_rate_c_out = create_histo ("video_rate_c_out",
+				   "VIDEO content bitrate [bit/s] - cloud outgoing segments", 0,
+				   VIDEO_LAST_TYPE, 1);
+  video_rate_nc_in = create_histo ("video_rate_nc_in",
+				  "VIDEO content bitrate [bit/s] - cloud incoming segments", 0,
+				  VIDEO_LAST_TYPE, 1);
+  video_rate_nc_out = create_histo ("video_rate_nc_out",
+				   "VIDEO content bitrate [bit/s] - cloud outgoing segments", 0,
+				   VIDEO_LAST_TYPE, 1);
+
+
+
+
   L7_WEB_num_out =
     create_histo ("L7_WEB_num_out",
 		  "Number of tracked Web 2.0 flows - outgoing flows",
@@ -2313,6 +2376,14 @@ update_fake_histos ()
   fake_histo_bitrate_update (web_bitrate_in, elapsed_time, WEB_bitrate.in, WEB_LAST_TYPE);
   fake_histo_bitrate_update (web_bitrate_out, elapsed_time, WEB_bitrate.out, WEB_LAST_TYPE);
   fake_histo_bitrate_update (web_bitrate_loc, elapsed_time, WEB_bitrate.loc, WEB_LAST_TYPE);
+
+  fake_histo_bitrate_update (video_rate_in, elapsed_time, VIDEO_rate.in, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_out, elapsed_time, VIDEO_rate.out, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_loc, elapsed_time, VIDEO_rate.loc, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_c_in, elapsed_time, VIDEO_rate.c_in, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_c_out, elapsed_time, VIDEO_rate.c_out, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_nc_in, elapsed_time, VIDEO_rate.nc_in, VIDEO_LAST_TYPE);
+  fake_histo_bitrate_update (video_rate_nc_out, elapsed_time, VIDEO_rate.nc_out, VIDEO_LAST_TYPE);
 
 #ifdef MSN_CLASSIFIER
   msn_get_average ();

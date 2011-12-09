@@ -134,7 +134,7 @@ tp_alloc (void)
 }
 
 void
-tp_release (tcp_pair * relesased_tcp_pair)
+tp_release (tcp_pair * released_tcp_pair)
 {
   struct tp_list_elem *new_tplist_elem;
   seqspace *sstemp1, *sstemp2;
@@ -145,42 +145,54 @@ tp_release (tcp_pair * relesased_tcp_pair)
   IN_USE_TP--;
 #endif
 
-  memset (relesased_tcp_pair->c2s.ss, 0, sizeof (seqspace));
-  memset (relesased_tcp_pair->s2c.ss, 0, sizeof (seqspace));
-  sstemp1 = relesased_tcp_pair->c2s.ss;
-  sstemp2 = relesased_tcp_pair->s2c.ss;
-
-  if (relesased_tcp_pair->c2s.skype!=NULL)
+  if (released_tcp_pair->ssl_client_subject!=NULL)
    {
-     memset (relesased_tcp_pair->c2s.skype, 0, sizeof (skype_stat));
-     skypetemp1 = relesased_tcp_pair->c2s.skype;
+     free(released_tcp_pair->ssl_client_subject);
+     released_tcp_pair->ssl_client_subject=NULL;
+   }
+
+  if (released_tcp_pair->ssl_server_subject!=NULL)
+   {
+     free(released_tcp_pair->ssl_server_subject);
+     released_tcp_pair->ssl_server_subject=NULL;
+   }
+  
+  memset (released_tcp_pair->c2s.ss, 0, sizeof (seqspace));
+  memset (released_tcp_pair->s2c.ss, 0, sizeof (seqspace));
+  sstemp1 = released_tcp_pair->c2s.ss;
+  sstemp2 = released_tcp_pair->s2c.ss;
+
+  if (released_tcp_pair->c2s.skype!=NULL)
+   {
+     memset (released_tcp_pair->c2s.skype, 0, sizeof (skype_stat));
+     skypetemp1 = released_tcp_pair->c2s.skype;
    }
   else 
     skypetemp1 = NULL;
    
-  if (relesased_tcp_pair->s2c.skype!=NULL)
+  if (released_tcp_pair->s2c.skype!=NULL)
    {
-     memset (relesased_tcp_pair->s2c.skype, 0, sizeof (skype_stat));
-     skypetemp2 = relesased_tcp_pair->s2c.skype;
+     memset (released_tcp_pair->s2c.skype, 0, sizeof (skype_stat));
+     skypetemp2 = released_tcp_pair->s2c.skype;
    }
   else 
     skypetemp2 = NULL;
    
-  bayes_reset0 (bctemp1 = relesased_tcp_pair->c2s.bc_pktsize);
-  bayes_reset0 (bctemp2 = relesased_tcp_pair->s2c.bc_pktsize);
-  bayes_reset0 (bctemp3 = relesased_tcp_pair->c2s.bc_avgipg);
-  bayes_reset0 (bctemp4 = relesased_tcp_pair->s2c.bc_avgipg);
+  bayes_reset0 (bctemp1 = released_tcp_pair->c2s.bc_pktsize);
+  bayes_reset0 (bctemp2 = released_tcp_pair->s2c.bc_pktsize);
+  bayes_reset0 (bctemp3 = released_tcp_pair->c2s.bc_avgipg);
+  bayes_reset0 (bctemp4 = released_tcp_pair->s2c.bc_avgipg);
 
-  memset (relesased_tcp_pair, 0, sizeof (tcp_pair));
+  memset (released_tcp_pair, 0, sizeof (tcp_pair));
 
-  relesased_tcp_pair->c2s.skype = skypetemp1;
-  relesased_tcp_pair->s2c.skype = skypetemp2;
-  relesased_tcp_pair->c2s.ss = sstemp1;
-  relesased_tcp_pair->s2c.ss = sstemp2;
-  relesased_tcp_pair->c2s.bc_pktsize = bctemp1;
-  relesased_tcp_pair->s2c.bc_pktsize = bctemp2;
-  relesased_tcp_pair->c2s.bc_avgipg = bctemp3;
-  relesased_tcp_pair->s2c.bc_avgipg = bctemp4;
+  released_tcp_pair->c2s.skype = skypetemp1;
+  released_tcp_pair->s2c.skype = skypetemp2;
+  released_tcp_pair->c2s.ss = sstemp1;
+  released_tcp_pair->s2c.ss = sstemp2;
+  released_tcp_pair->c2s.bc_pktsize = bctemp1;
+  released_tcp_pair->s2c.bc_pktsize = bctemp2;
+  released_tcp_pair->c2s.bc_avgipg = bctemp3;
+  released_tcp_pair->s2c.bc_avgipg = bctemp4;
 
   if ((last_tp_flist == NULL)
       || ((last_tp_flist->ptp != NULL) && (last_tp_flist->prev == NULL)))
@@ -189,7 +201,7 @@ tp_release (tcp_pair * relesased_tcp_pair)
       new_tplist_elem =
 	(struct tp_list_elem *) MMmalloc (sizeof (struct tp_list_elem),
 					  "tplist_release");
-      new_tplist_elem->ptp = relesased_tcp_pair;
+      new_tplist_elem->ptp = released_tcp_pair;
       new_tplist_elem->prev = NULL;
       new_tplist_elem->next = top_tp_flist;
       if (new_tplist_elem->next != NULL)
@@ -203,7 +215,7 @@ tp_release (tcp_pair * relesased_tcp_pair)
 	new_tplist_elem = last_tp_flist;
       else
 	new_tplist_elem = last_tp_flist->prev;
-      new_tplist_elem->ptp = relesased_tcp_pair;
+      new_tplist_elem->ptp = released_tcp_pair;
       last_tp_flist = new_tplist_elem;
     }
 }
