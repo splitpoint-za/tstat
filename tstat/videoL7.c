@@ -330,8 +330,8 @@ enum video_content
 				printf("FLV - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
 						meta->duration / 60, meta->width, meta->height,
 						meta->videodatarate);
-			return VIDEO_FLV;
 			}
+			return VIDEO_FLV;
 		}
 
 		break;
