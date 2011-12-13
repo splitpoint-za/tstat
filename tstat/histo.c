@@ -2405,8 +2405,10 @@ update_fake_histos ()
   if (profile_flows->flag == HISTO_ON) {
       set_histo(profile_flows, PROFILE_FLOWS_ACTIVE_TCP, AVE_get_stat(current_time, &active_flows_win_TCP));
       set_histo(profile_flows, PROFILE_FLOWS_ACTIVE_UDP, AVE_get_stat(current_time, &active_flows_win_UDP));
-      set_histo(profile_flows, PROFILE_FLOWS_MISSED_TCP, AVE_get_stat(current_time, &missed_flows_win_TCP));
-      set_histo(profile_flows, PROFILE_FLOWS_MISSED_UDP, AVE_get_stat(current_time, &missed_flows_win_UDP));
+      // set_histo(profile_flows, PROFILE_FLOWS_MISSED_TCP, AVE_get_stat(current_time, &missed_flows_win_TCP));
+      // set_histo(profile_flows, PROFILE_FLOWS_MISSED_UDP, AVE_get_stat(current_time, &missed_flows_win_UDP));
+      set_histo(profile_flows, PROFILE_FLOWS_MISSED_TCP, missed_flows_win_TCP.n);
+      set_histo(profile_flows, PROFILE_FLOWS_MISSED_UDP, missed_flows_win_UDP.n);
       missed_flows_win_TCP.n = 0;
       missed_flows_win_UDP.n = 0;
   }

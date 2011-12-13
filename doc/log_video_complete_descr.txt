@@ -53,36 +53,38 @@ Here it follows a brief description of the columns.
 # 63  # S first payload              # ms    # Server first segment with payload since the first flow segment
 # 64  # C last payload               # ms    # Client last segment with payload since the first flow segment
 # 65  # S last payload               # ms    # Server last segment with payload since the first flow segment
-# 66  # First time abs               # ms    # Flow first packet absolute time (epoch)
-# 67  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 68  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 69  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
-# 70  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
+# 66  # C first ack            	     # ms    # Client first ACK segment (without SYN) since the first flow segment
+# 67  # S first ack                  # ms    # Server first ACK segment (without SYN) since the first flow segment
+# 68  # First time abs               # ms    # Flow first packet absolute time (epoch)
+# 69  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 70  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 71  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 72  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
 ############################################################################
-# 71  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
-# 72  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 73  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
-# 74  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
+# 73  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
+# 74  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
+# 75  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
+# 76  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
 ############################################################################
-# 75  # FLV duration	             # s     # Video duration as indicated in the FLV file metadata [+]
-# 76  # FLV start time	             # s     # Video start time as indicated in the FLV file metadata [+]
-# 77  # FLV total dur.               # s     # Total Video duration as indicated in the FLV file metadata [+]
-# 78  # FLV width                    # pixel # Video width as indicated in the FLV file metadata [+]
-# 79  # FLV height                   # pixel # Video heigth as indicated in the FLV file metadata [+]
-# 80  # FLV video datarate           # kbps  # Video data rate as indicated in the FLV file metadata [+]
-# 81  # FLV audio datarate           # kbps  # Audio data rate as indicated in the FLV file metadata [+]
-# 82  # FLV total datarate           # kbps  # Total data rate as indicated in the FLV file metadata [+]
-# 83  # FLV framerate                # fps   # Video framerate as indicated in the FLV file metadata [+]
-# 84  # FLV size	             # bytes # Video size as indicated in the FLV file metadata [+]
+# 77  # FLV duration	             # s     # Video duration as indicated in the FLV file metadata [+]
+# 78  # FLV start time	             # s     # Video start time as indicated in the FLV file metadata [+]
+# 79  # FLV total dur.               # s     # Total Video duration as indicated in the FLV file metadata [+]
+# 80  # FLV width                    # pixel # Video width as indicated in the FLV file metadata [+]
+# 81  # FLV height                   # pixel # Video heigth as indicated in the FLV file metadata [+]
+# 82  # FLV video datarate           # kbps  # Video data rate as indicated in the FLV file metadata [+]
+# 83  # FLV audio datarate           # kbps  # Audio data rate as indicated in the FLV file metadata [+]
+# 84  # FLV total datarate           # kbps  # Total data rate as indicated in the FLV file metadata [+]
+# 85  # FLV framerate                # fps   # Video framerate as indicated in the FLV file metadata [+]
+# 86  # FLV size	             # bytes # Video size as indicated in the FLV file metadata [+]
 ############################################################################
-# 85  # Redir Mode	             # -     # Server Redirection Type [=]
-# 86  # Redir Count                  # -     # Redirection counter [=]
-# 87  # Mobile Media                 # 0/1   # 1 = video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
+# 87  # Redir Mode	             # -     # Server Redirection Type [=]
+# 88  # Redir Count                  # -     # Redirection counter [=]
+# 89  # Mobile Media                 # 0/1   # 1 = video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
 ############################################################################
-# 88-97   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
-# 98-107  # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
-# 108     # PSH-Messages             # -     # Number of PSH-separated 'messages' in the S2C flow
-# 109-118 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
+# 90-99   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
+# 100-109 # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
+# 110     # PSH-Messages             # -     # Number of PSH-separated 'messages' in the S2C flow
+# 111-120 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
 ############################################################################
 
 [*] The YouTube video format is the 'fmt/itag' value indicated in 

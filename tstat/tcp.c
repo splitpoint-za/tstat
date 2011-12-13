@@ -3298,6 +3298,14 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 	       elapsed (ptp_save->first_time,
 			pba->payload_end_time) / 1000.0);
 
+/* first ACK pkt time */
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->ack_start_time) / 1000.0);
+      wfprintf (fp_video_logc, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->ack_start_time) / 1000.0);
+
 /* Absolute time of first packet */
       wfprintf (fp_video_logc, " %f", time2double(ptp_save->first_time) / 1000.);
 
@@ -3545,6 +3553,14 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
 				pba->payload_end_time) / 1000.0);
 
+               /* first ACK pkt time */
+                wfprintf (fp_streaming_logc, " %f",
+	                 elapsed (ptp_save->first_time,
+			          pab->ack_start_time) / 1000.0);
+                wfprintf (fp_streaming_logc, " %f",
+	                 elapsed (ptp_save->first_time,
+			          pba->ack_start_time) / 1000.0);
+
 		/* Absolute time of first packet */
 		wfprintf(fp_streaming_logc, " %f", time2double(ptp_save->first_time)
 				/ 1000.);
@@ -3668,18 +3684,18 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 		//
 		//	      for (i=0;i<10;i++)
 		//	       {
-		//	          wfprintf (fp_video_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
+		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
 		//	       }
 		//
 		//	      for (i=0;i<10;i++)
 		//	       {
-		//	          wfprintf (fp_video_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
+		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
 		//	       }
 		//
-		//	      wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_count);
+		//	      wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.msg_count);
 		//	      for (i=0;i<MAX_COUNT_MESSAGES;i++)
 		//	       {
-		//	          wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_size[i]);
+		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.msg_size[i]);
 		//	       }
 
 		wfprintf(fp_streaming_logc, "\n");

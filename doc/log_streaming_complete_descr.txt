@@ -53,27 +53,29 @@ Here it follows a brief description of the columns.
 # 63  # S first payload              # ms    # Server first segment with payload since the first flow segment
 # 64  # C last payload               # ms    # Client last segment with payload since the first flow segment
 # 65  # S last payload               # ms    # Server last segment with payload since the first flow segment
-# 66  # First time abs               # ms    # Flow first packet absolute time (epoch)
-# 67  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 68  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 69  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
-# 70  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
+# 66  # C first ack            	     # ms    # Client first ACK segment (without SYN) since the first flow segment
+# 67  # S first ack                  # ms    # Server first ACK segment (without SYN) since the first flow segment
+# 68  # First time abs               # ms    # Flow first packet absolute time (epoch)
+# 69  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 70  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 71  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 72  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
 ############################################################################
-# 71  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
-# 72  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 73  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
-# 74  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
+# 73  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
+# 74  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
+# 75  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
+# 76  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
 ############################################################################
-# 75  # Video Content-Type           # -     # The identified video format, based on the HTTP Content-Type information. See (1) for the description
-# 76  # Video Payload                # -     # The identified video format, based on the video payload information. See (1) for the description
+# 77  # Video Content-Type           # -     # The identified video format, based on the HTTP Content-Type information. See (1) for the description
+# 78  # Video Payload                # -     # The identified video format, based on the video payload information. See (1) for the description
 ############################################################################
-# 77  # Video duration	             # s     # Video duration as indicated in the payload [+]
-# 78  # Video total datarate         # kbps  # Total data rate as indicated in payload [+*]
-# 79  # Video width                  # pixel # Video width as indicated in the payload [+]
-# 80  # Video height                 # pixel # Video heigth as indicated in the payload [+]
+# 79  # Video duration	             # s     # Video duration as indicated in the payload [+]
+# 80  # Video total datarate         # kbps  # Total data rate as indicated in payload [+*]
+# 81  # Video width                  # pixel # Video width as indicated in the payload [+]
+# 82  # Video height                 # pixel # Video heigth as indicated in the payload [+]
 ############################################################################
 
-VIDEO format - col. 75/76 (1)
+VIDEO format - col. 77/78 (1)
 ###############################################
 #         Value # VIDEO FORMAT                #
 ###############################################
