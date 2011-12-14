@@ -389,6 +389,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->ssl_client_subject = NULL;
   ptp->ssl_server_subject = NULL;
 
+  ptp->ssl_client_spdy = 0;
+  ptp->ssl_server_spdy = 0;
+
   return (&ttp[num_tcp_pairs]);
 }
 
@@ -3033,6 +3036,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
   wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
   wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
+
+/* At the moment, do not expose the SPDY identification
+  wfprintf(fp," %d %d",ptp_save->ssl_client_spdy,ptp_save->ssl_server_spdy);
+*/
 
 #ifdef PACKET_STATS
   {

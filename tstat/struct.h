@@ -518,6 +518,7 @@ enum state_type
   IMAP_OPENING,
   IMAP_COMMAND,
   SSL_HANDSHAKE,
+  SSL_SERVER,
   SSH_SERVER,
   RTMP_HANDSHAKE,
   IGNORE_FURTHER_PACKETS
@@ -702,6 +703,8 @@ struct stcp_pair
   
   char *ssl_client_subject;
   char *ssl_server_subject;
+  Bool ssl_client_spdy;
+  Bool ssl_server_spdy;
 };
 typedef struct stcp_pair tcp_pair;
 

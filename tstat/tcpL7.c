@@ -88,7 +88,7 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
   int record_length;
   char *base;
   int idx,ext_len,ext_type,name_len;
-  int ii,j;
+  int ii,j,next;
   
   if (  *(char *)pdata == 0x16 && 
       *(char *)(pdata + 1) == 0x03 && 
@@ -110,36 +110,44 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
       ext_len = ntohs(*(tt_uint16 *)(base+idx));
       idx += 2;
       ii = 0;
+      next = 0;
       while (ii<ext_len && idx+ii<data_length)
        {
          ext_type = ntohs(*(tt_uint16 *)(base+idx+ii));
 	 ii += 2;
+	 next += 2;
 	 if (idx+ii>=data_length) 
 	   break;
-	 if (ext_type!=0)
-	  { 
-	    ii += ntohs(*(tt_uint16 *)(base+idx+ii));
-	    continue;
-	  }
-	 else
+         switch (ext_type)
 	  {
-	    ii += 5;
-	    if (idx+ii>=data_length) 
-	       break;
-	    name_len = ntohs(*(tt_uint16 *)(base+idx+ii));
-	    ii +=2;
-	    if (idx+ii>=data_length) 
-	       break;
-	    for (j=0;j<name_len && j<79 && idx+ii+j<data_length;j++)
-	     {
-	        cname[j]=base[idx+ii+j];
-	     }
-	    cname[j]='\0';
-	    ptp->ssl_client_subject = strdup(cname);
+            case 0x00:
+	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
+	      ii += 5;
+	      if (idx+ii>=data_length) 
+	         break;
+	      name_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+	      ii +=2;
+	      if (idx+ii>=data_length) 
+	         break;
+	      for (j=0;j<name_len && j<79 && idx+ii+j<data_length;j++)
+	       {
+	          cname[j]=base[idx+ii+j];
+	       }
+	      cname[j]='\0';
+	      ptp->ssl_client_subject = strdup(cname);
+              ii = next;
+	      break;
+	    case 0x3374:
+	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
+              ptp->ssl_client_spdy = 1;
+              ii = next;
+	      break;
+	    default:
+	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
+	      ii = next;
+	      break;
 	  }
        }
-    //   if (ptp->ssl_client_subject!=NULL)
-    //     printf("TLS %s\n",ptp->ssl_client_subject);
 
       return TRUE;
    }
@@ -189,7 +197,7 @@ int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
   
   for (i=0;i<data_length-7 && !done ;i++)
    {
-     if (base[i]!=0x06) continue;
+     if (base[i]!=0x06 && base[i]!=0x33) continue;
      if ( base[i]==0x06   && base[i+1]==0x03 && base[i+2]==0x55 && 
           base[i+3]==0x04 && base[i+4]==0x03 )
       {
@@ -200,20 +208,19 @@ int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
 	 }
 	cname[j]='\0';
 	
-	//    printf ("SSL %s\n",cname);
 	if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
 	  {
 	    ptp->ssl_server_subject = strdup(cname);
 	    done = 1;
 	  }
 
-       // if (ptp->ssl_server_subject!=NULL)
-//	  {
-	//    printf ("SSL %s\n",ptp->ssl_server_subject);
-         // }
+      }
+     else if ( base[i]==0x33   && base[i+1]==0x74 && base[i+5]==0x73 && 
+          base[i+6]==0x70 && base[i+7]==0x64 && base[i+8]==0x79)
+      {
+        ptp->ssl_server_spdy = 1;
       }
    }
- //  printf("-\n");
   return 0;
 }
 
@@ -1228,7 +1235,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    ptp->con_type &= ~OBF_PROTOCOL;
 	    ptp->con_type &= ~MSE_PROTOCOL;
 	    ptp->state = IGNORE_FURTHER_PACKETS;
-	    
+
+	    if (ptp->ssl_server_subject != NULL)
+	       ptp->state = IGNORE_FURTHER_PACKETS;
+	    else
+	       ptp->state = SSL_SERVER;
 	  }
          else
 	  {
@@ -1238,6 +1249,17 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	       ptp->state = UNKNOWN_TYPE;
 	     }
 	  }  
+        break;
+
+     case SSL_SERVER:
+        if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))
+	  {
+            if ( *(char *)pdata == 0x16 && *(char *)(pdata + 5) == 0x0B)
+	     {
+               ssl_certificate_check(ptp,pdata,data_length);
+	     }
+	    ptp->state = IGNORE_FURTHER_PACKETS;
+	  }
         break;
 
      case SSH_SERVER:
