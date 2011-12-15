@@ -156,7 +156,6 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
            ( *(char *)(pdata + 4) >= 0x00 && *(char *)(pdata + 4) <= 0x03 )
           ) 
    { 
-   printf("HERE\n");
      /* Match SSL 2.0 Handshake CLient HELLO */
       record_length = ((*(char *)pdata & 0x7f) << 8) | ((*(char *)(pdata + 1)) & 0x00ff);
       if (record_length == payload_len-2)
