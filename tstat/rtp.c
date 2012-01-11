@@ -316,9 +316,6 @@
  * +-------+-------------------------------------------------------------+-----------+
  */
 
-#include <stdio.h>
-#include <assert.h>
-
 #include "tstat.h"
 
 extern unsigned long int f_RTP_count;

@@ -306,93 +306,119 @@ int extract_payload_contentType(void *pdata, int data_length) {
 	}
 }
 
-enum video_content
-		classify_video_by_payload(tcp_pair *ptp, void *pdata,
-										int data_length, int offset) {
-	struct video_metadata *meta;
-	meta = &(ptp->streaming.metadata);
-	char *base = (char *) (pdata + offset);
-	int available_data = data_length - offset;
+enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
+           int data_length, int offset)
+{
+  struct video_metadata *meta;
+  meta = &(ptp->streaming.metadata);
+  char *base = (char *) (pdata + offset);
+  int available_data = data_length - offset;
 
-	switch (*((u_int32_t *) pdata)) {
-	case FLV:
-		/* parse header of an FLV video */
-		if (available_data >= 27) {
-			parse_flv_metadata(meta, pdata, available_data);
-			if (meta->duration > 0 && meta->bytelength > 0
-					&& meta->videodatarate == 0) {
-				meta->videodatarate = (double) 8 * meta->bytelength
-						/ meta->duration / 1000;
-			} else if (meta->videodatarate != 0 && meta->audiodatarate != 0) {
-				meta->videodatarate += meta->audiodatarate;
-			}
-			if (debug > 0){
-				printf("FLV - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
-						meta->duration / 60, meta->width, meta->height,
-						meta->videodatarate);
-			}
-			return VIDEO_FLV;
-		}
-
-		break;
-	case AVI: /* parse header of an AVI container */
-		if ((available_data >= 16) && memcmp(base + 8, "AVI LIST", 8) == 0) {
-			parse_avi_metadata(meta, pdata, available_data);
-			if (debug > 0)
-				printf("AVI - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
-						meta->duration / 60, meta->width, meta->height,
-						meta->videodatarate / 1000);
-			return VIDEO_AVI;
-		}
-		break;
-	case WMV_1: /* parse header of an ASF container */
-	case WMV_2:
-		if ((available_data >= 8) && (memcmp(base + 4, "\x8E\x66\xCF\x11", 4)
-				== 0 || memcmp(base + 4, "\x00\x62\xCE\x6C", 4) == 0)) {
-			return VIDEO_WMV;
-		}
-		break;
-	case WEBM: /* parse header of an WEBM container */
-		if (((available_data >= 28) && memcmp(base + 24, "webm", 4) == 0)
-				|| ((available_data >= 36) && memcmp(base + 31, "webm", 4) == 0))
-
-		{
-			return VIDEO_WEBM;
-		}
-		break;
-	default:
-		/* parse header of an MP4 container
-		 * As suggested in http://www.garykessler.net/library/file_sigs.html
-		 * MP4 container is matched as 00 00 00 XX 66 74 79 70*/
-
-		if ((available_data >= 12) && memcmp(base, "\x00\x00\x00", 3) == 0
-				&& memcmp(base + 4, "ftyp", 4) == 0)
-			{
-				parse_mp4_metadata(meta, pdata, available_data);
-
-			if (debug > 0){
-				printf("MP4 - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
-						meta->duration / 60, meta->width, meta->height,
-						meta->videodatarate / 1000);
-			}
-			return VIDEO_MP4;
-		}
-		else if ((available_data >= 8) && memcmp(base + 4, "moof", 4) == 0) {
-			return VIDEO_MP4;
-		}
-		else if ((available_data >= 4) && memcmp(base, "\x00\x00\x01", 3) == 0
-				&& HINIBBLE(*(base+3)) == 0xB) {
-			return VIDEO_MPEG;
-		}
-		else if ((available_data >= 16) && memcmp(base, "\x24\x4D", 2) == 0
-				&& memcmp(base + 12, "play", 4) == 0) {
-			return VIDEO_WMV;
-		}
-		return VIDEO_NOT_DEFINED;
-		break;
+  switch (*((u_int32_t *) pdata)) 
+   {
+     case FLV: /* parse header of an FLV video */
+       if (available_data >= 27)
+	{
+	  parse_flv_metadata(meta, pdata, available_data);
+	  if (meta->duration > 0 && meta->bytelength > 0
+			  && meta->videodatarate == 0)
+	    {
+	      meta->videodatarate = (double) 8 * meta->bytelength
+				  / meta->duration / 1000;
+	    }
+	  else if (meta->videodatarate != 0 && meta->audiodatarate != 0)
+            {
+	      meta->videodatarate += meta->audiodatarate;
+	    }
+	  if (debug > 0)
+            {
+	      printf("FLV - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
+		  meta->duration / 60, meta->width, meta->height,
+		  meta->videodatarate);
+	    }
+	  return VIDEO_FLV;
 	}
-	return VIDEO_NOT_DEFINED;
+       break;
+     case AVI: /* parse header of an AVI container */
+       if ((available_data >= 16) && memcmp(base + 8, "AVI LIST", 8) == 0)
+        {
+	  parse_avi_metadata(meta, pdata, available_data);
+	  if (debug > 0)
+	     printf("AVI - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
+		  meta->duration / 60, meta->width, meta->height,
+		  meta->videodatarate / 1000);
+	  return VIDEO_AVI;
+	}
+       break;
+     case WMV_1: /* parse header of an ASF container */
+     case WMV_2:
+       if ((available_data >= 8) && 
+           (memcmp(base + 4, "\x8E\x66\xCF\x11", 4) == 0 || 
+            memcmp(base + 4, "\x00\x62\xCE\x6C", 4) == 0)) 
+        {
+	  return VIDEO_WMV;
+	}
+       break;
+     case WEBM: /* parse header of an WEBM container */
+       if (((available_data >= 28) && memcmp(base + 24, "webm", 4) == 0) || 
+           ((available_data >= 36) && memcmp(base + 31, "webm", 4) == 0))
+	{
+	  return VIDEO_WEBM;
+	}
+       break;
+     case OGG: /* parse header of an OGG container
+			   Obs. can also match OGG audio files*/
+       if (((available_data >= 8) && memcmp(base + 4, "\x00\x02\x00\x00", 4) == 0))
+	{
+	  return VIDEO_OGG;
+	}
+       break;
+     default:
+       /* parse header of an MP4 container
+	* As suggested in http://www.garykessler.net/library/file_sigs.html
+	* MP4 container is matched as 00 00 00 XX 66 74 79 70*/
 
+       if ((available_data >= 12) && 
+            memcmp(base, "\x00\x00\x00", 3) == 0 && 
+            memcmp(base + 4, "ftyp", 4) == 0)
+	{
+	  if ((*(base +3 ) == 0x14)  //3GPP v1
+	      || (*(base ) == 0x20)  //3GPP v2
+	      || (*(base ) == 0x1C)) //3GPP Release 4
+	   {
+	     return VIDEO_3GPP;
+	   }
+          else
+           {
+	     parse_mp4_metadata(meta, pdata, available_data);
+	     if (debug > 0)
+               {
+		 printf("MP4 - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
+		       meta->duration / 60, meta->width, meta->height,
+		       meta->videodatarate / 1000);
+	       }
+	     return VIDEO_MP4;
+	   }
+	}
+       else if ((available_data >= 8) && memcmp(base + 4, "moof", 4) == 0)
+        {
+	  return VIDEO_MP4;
+	}
+       else if ((available_data >= 4) && 
+        	 memcmp(base, "\x00\x00\x01", 3) == 0 && 
+        	 HINIBBLE(*(base+3)) == 0xB) 
+        {
+	  return VIDEO_MPEG;
+	}
+       else if ((available_data >= 16) && 
+        	 memcmp(base, "\x24\x4D", 2) == 0 && 
+        	 memcmp(base + 12, "play", 4) == 0)
+        {
+	  return VIDEO_WMV;
+	}
+       return VIDEO_NOT_DEFINED;
+   }
+  return VIDEO_NOT_DEFINED;
 }
 
 enum video_content classify_video_by_ctype(void *pdata, int data_length) {

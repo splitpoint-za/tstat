@@ -598,6 +598,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
          /* matching '/dl/[a-zA-Z0-9]{32}/[a-zA-Z0-9]{8}/" */
 	 /* mostly video downloads, seldom file downloads */
           return HTTP_FLASHVIDEO;
+       else if (memcmp(base, "/dialog/oauth?api_key=",
+               ( available_data < 22 ? available_data : 22)) == 0)
+         return HTTP_FACEBOOK;
        break;
 
      case 'e':
@@ -1227,6 +1230,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
       if (memcmp(base, "/pagead/",
         	    ( available_data < 8 ? available_data : 8)) == 0)
          return HTTP_ADV;
+      else if (memcmp(base, "/pull?channel=",
+        	       ( available_data < 14 ? available_data : 14)) == 0)
+         return HTTP_FACEBOOK;
       else if (memcmp(base, "/photo.php?fbid=",
         	    ( available_data < 16 ? available_data : 16)) == 0)
          return HTTP_FACEBOOK;

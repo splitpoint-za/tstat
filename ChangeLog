@@ -16,6 +16,9 @@
     histograms)
   * Updated Skype engine to cope with unidirectional flows
   * Added SSL server name logging
+  * Added dump of captured video streams
+  * Bugfix: configure.ac modified to cope with recent Debian/Ubuntu architecture
+
 
 26/05/10 - MMM 
 - Main changes since 2.1:

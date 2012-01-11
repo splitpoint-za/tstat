@@ -19,56 +19,6 @@
 #include <stdio.h>
 #include "tstat.h"
 
-/* Miscellanea */
-
-#define MODULE  2147483647
-#define A       16807
-#define LASTXN  127773
-#define UPTOMOD -2836
-#define RATIO   0.46566128e-9	/* 1/MODULE */
-
-
-/*        
-**  Function  : long rnd32(long seed) 
-**  Return    : the updated value of 'seed'.
-**  Remarks   : congruential generator of pseudorandom sequences of numbers
-**              uniformly distributed between 1 and 2147483646, using the 
-**              congruential relation: Xn+1 = 16807 * Xn  mod  2147483647 . 
-**              The input to the routine is the integer Xn, while the returned 
-**              integer is the number Xn+1.
-*/
-inline long
-rnd32 (long *seed)
-{
-  long times, rest, prod1, prod2;
-
-  times = *seed / LASTXN;
-  rest = *seed - times * LASTXN;
-  prod1 = times * UPTOMOD;
-  prod2 = rest * A;
-  *seed = prod1 + prod2;
-  if (*seed < 0)
-    *seed = *seed + MODULE;
-  return *seed;
-}
-
-
-/*
-**  Function  : double uniform(double a, double b, long seed)
-**  Return    : a value uniformly distributed between 'a' and 'b'
-*/
-
-double
-uniform (double a, double b, long *seed)
-{
-  double u;
-  *seed = rnd32 (seed);
-  u = (*seed) * RATIO;
-  u = a + u * (b - a);
-  return (int) floor (u);
-}
-
-
 /* Function to estimate the average of an birth and death process n(t) */
 
 #define DEBUG_AVERAGE 2

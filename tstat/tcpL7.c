@@ -23,9 +23,7 @@
 #include "jabber.h"
 #include "p2p.h"
 
-#ifdef VIDEO_DETAILS
 #include <regex.h>
-#endif
 
 int map_flow_type(tcp_pair *thisflow);
 

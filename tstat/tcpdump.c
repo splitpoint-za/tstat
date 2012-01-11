@@ -228,6 +228,8 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
     callback_phdr = phdr;
     pcap_current_hdr = *phdr;
     pcap_current_buf = buf;
+    if (debug > 2)
+       fprintf (fp_stderr, "tcpdump: read a type %d frame\n", type);
 
     /* kindof ugly, but about the only way to make them fit together :-( */
     switch (type)
@@ -344,6 +346,8 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
 	    ip_buf = (char *)(buf + offset);
 #endif
             callback_plast = ip_buf + iplen - 1;
+            /* we use a fake ether type here */
+            eth_header.ether_type = htons (ETHERTYPE_IP);
             break;
         case PCAP_DLT_ATM_RFC1483:
             /* ATM RFC1483 - LLC/SNAP ecapsulated atm */

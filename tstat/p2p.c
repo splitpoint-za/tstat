@@ -16,9 +16,6 @@
  *
 */
 
-#include <stdio.h>
-#include <assert.h>
-
 #include "tstat.h"
 #include "tcpL7.h"
 

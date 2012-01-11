@@ -3644,11 +3644,11 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 				== HTTP_YOUTUBE_204)) {
 			wfprintf(
 					fp_streaming_logc,
-					" %s %d ",
+					" %s %d",
 					ptp_save->http_ytitag, ptp_save->http_ytseek);
 		} else {
 			wfprintf(fp_streaming_logc,
-					" -- 0 ");
+					" -- 0");
 		}
 		/*
 		 Column 75: Content Type

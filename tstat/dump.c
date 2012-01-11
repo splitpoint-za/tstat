@@ -47,18 +47,6 @@
 #define DUMP_DIR_BASENAME "traces"
 #define DUMP_LOG_FNAME "log.txt"
 
-#ifdef DUMP_TCP_FLOW_START
-/* define the rules for dumping maximum number of packets */
-#define TCP_DUMP_PACKET_LIMIT 5
-#define TCP_DUMP_BYTE_LIMIT 2000
-#endif
-
-#ifdef DUMP_UDP_FLOW_START
-/* define the rules for dumping maximum number of packets */
-#define UDP_DUMP_PACKET_LIMIT 5
-#define UDP_DUMP_BYTE_LIMIT 2000
-#endif
-
 struct dump_file {
     FILE            *fp;
     char            *protoname;
@@ -74,6 +62,7 @@ enum dump_proto_index{
     */
     DUMP_IP_COMPLETE = LAST_UDP_PROTOCOL,
     DUMP_UDP_COMPLETE,
+    DUMP_TCP_VIDEOSTREAMING,
     DUMP_TCP_COMPLETE,
     DUMP_PROTOS
 };
@@ -90,6 +79,11 @@ static int snap_len = 0;    //snapshot length of the packet to dump
                             //0 == the complete packet
 static long slice_win = 0;   //each trace generated contains packet 
                             //in a time window (in sec) as big as the specified value
+
+static long udp_maxbytes = 0;
+static long tcp_maxbytes = 0;
+static long udp_maxpackets = 0;
+static long tcp_maxpackets = 0;
 
 // monitor for writing access to dump files
 static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;                            
@@ -244,6 +238,26 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
         }
         slice_win = param_value;
     }
+    else if (strcmp(param_name, "tcp_maxpackets") == 0) {
+        if (param_value > 0) {
+            tcp_maxpackets = param_value;
+        }
+    }
+    else if (strcmp(param_name, "tcp_maxbytes") == 0) {
+        if (param_value > 0) {
+            tcp_maxbytes = param_value;
+        }
+    }
+    else if (strcmp(param_name, "udp_maxpackets") == 0) {
+        if (param_value > 0) {
+            udp_maxpackets = param_value;
+        }
+    }
+    else if (strcmp(param_name, "udp_maxbytes") == 0) {
+        if (param_value > 0) {
+            udp_maxbytes = param_value;
+        }
+    }
     else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
         exit(1);
@@ -256,6 +270,10 @@ void dump_init(void) {
     int i;
 
     dump_engine = FALSE;
+    tcp_maxpackets = 0;
+    udp_maxpackets = 0;
+    tcp_maxbytes = 0;
+    udp_maxbytes = 0;
     /* UDP dump protocols 
      * for semplicity we use a vector with as long as the number of classes
      * identified by the DPI. Among these there are some useless classes
@@ -285,6 +303,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, TEREDO, "udp_teredo");
     dump_reset_dump_file(proto2dump, DUMP_IP_COMPLETE, "ip_complete");
     dump_reset_dump_file(proto2dump, DUMP_UDP_COMPLETE, "udp_complete");
+    dump_reset_dump_file(proto2dump, DUMP_TCP_VIDEOSTREAMING, "tcp_videostreaming");
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
 }
 
@@ -432,89 +451,109 @@ void dump_flow_stat (struct ip *pip,
     if (threaded)
         pthread_mutex_lock(&dump_mutex);
 
+    /***** TCP packets *****/
     if (tproto == PROTOCOL_TCP) {
-        if (proto2dump[DUMP_TCP_COMPLETE].enabled)
-#ifndef DUMP_TCP_FLOW_START
-          {
-            dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-	  }
-#else
-	  {
-	    struct tcphdr *ptcp = pproto;
-	    /* check if the underlying flow struct tcb has not yet been released */
-	    if (((tcb*)pdir)->ptp != NULL)
-	     {
-	       int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
-	       
-	       tcb *thisdir = (tcb*)pdir;
-	       tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
+        if (proto2dump[DUMP_TCP_COMPLETE].enabled) {
+            /* dump all the packets of all the flows */
+            if (tcp_maxbytes == 0 && tcp_maxpackets == 0) {
+                dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+	        }
+	        /* dump acks and data packets up to reach 
+             * - tcp_maxbytes 
+             * - tcp_maxpackets 
+             */
+            else
+            {
+                struct tcphdr *ptcp = pproto;
+                /* check if the underlying flow struct tcb has not yet been released */
+                if (((tcb*)pdir)->ptp != NULL)
+                {
+                    int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
 
-	       /* dump only the first TCP_DUMP_BYTE_LIMIT or the first TCP_DUMP_PACKET_LIMIT packets - both acks and data packets */
-	       if ( ( tcp_data_length > 0 && /* this is a valid data packet */
-	  	   	( /* and we are interested in this data */
-	  	   	  (thisdir->seq-thisdir->syn-tcp_data_length<=TCP_DUMP_BYTE_LIMIT) || 
-	  	   	  (thisdir->data_pkts<=TCP_DUMP_PACKET_LIMIT)
-	  	   	)
-	  	       )
-	  	       ||
-	  	       (  
-	  	   	 tcp_data_length == 0 && /* this is a pure ack */
-	  	   	 (
-	  	   	   otherdir->seq <= thisdir->ack && /* which is a valid ack */
-	  	   	   ( /* and we are still interested in otherdir packets */
-	  	   	     (otherdir->seq-otherdir->syn<=TCP_DUMP_BYTE_LIMIT) ||
-	  	   	     (otherdir->data_pkts<=TCP_DUMP_PACKET_LIMIT) ||
-	  	   	     (otherdir->fin_count >=1 && thisdir->ack>=(otherdir->fin_seqno +1))
-	  	   	   )
-	  	   	 )
-	  	       )
-	  	       ||
-	  	       SYN_SET (ptcp) || FIN_SET(ptcp)
-	          )
-	  	       dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-	     }
-	    else 
-	     if (RESET_SET(ptcp))
-	       dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-	  }
+                    tcb *thisdir = (tcb*)pdir;
+                    tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
+
+                    if ((
+                        /* packets with payload */
+                        tcp_data_length > 0 && 
+                            /* check the thresholds */
+                            ((tcp_maxbytes > 0   && thisdir->seq - thisdir->syn - tcp_data_length <= tcp_maxbytes) || 
+                             (tcp_maxpackets > 0 && thisdir->data_pkts <= tcp_maxpackets))
+                        ) || (
+                        /* this is a pure ack */
+                        tcp_data_length == 0 && 
+                            (otherdir->seq <= thisdir->ack && /* which is a valid ack */
+                              ( /* and we are still interested in otherdir packets */
+                                (tcp_maxbytes > 0 && otherdir->seq - otherdir->syn <= tcp_maxbytes) ||
+                                (tcp_maxpackets > 0 && otherdir->data_pkts <= tcp_maxpackets) ||
+                                (otherdir->fin_count >= 1 && thisdir->ack >= (otherdir->fin_seqno+1))
+                            ))
+                        ) ||
+                        SYN_SET (ptcp) || 
+                        FIN_SET(ptcp)
+                       ) 
+                        {
+                            dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+                        }
+                       
+                }
+                else {
+                    if (RESET_SET(ptcp)) {
+                        dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+                    }
+                }
+            }
+        }
+
+#ifdef STREAMING_CLASSIFIER
+        if (proto2dump[DUMP_TCP_VIDEOSTREAMING].enabled && ((tcb*)pdir)->ptp != NULL)
+        {
+            struct stcp_pair * p = ((tcb *)pdir)->ptp;
+            if (p->streaming.video_content_type || p->streaming.video_payload_type) {
+                    dump_to_file(&proto2dump[DUMP_TCP_VIDEOSTREAMING], pip, plast);
+            }
+        }
 #endif
     }
+    
+    /***** UDP packets *****/
     else {
         //specific controls to find kad obfuscated...
         ucb_type = UDP_p2p_to_logtype(pdir);
 
-        //dump to a DPI file
+        /* dump to a specific DPI file */
         if (proto2dump[ucb_type].enabled) {
             dump_to_file(&proto2dump[ucb_type], pip, plast);
         }
         // dump to unknown
-         // else if (proto2dump[UDP_UNKNOWN].enabled) {
-         //    dump_to_file(&proto2dump[UDP_UNKNOWN], pip, plast);
-         // }
-        //dump to a complete file
-        if (proto2dump[DUMP_UDP_COMPLETE].enabled)
-#ifndef DUMP_UDP_FLOW_START
-          {
-	    dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
-          }
-#else
-          {
-	    /* check if the underlying flow struct ucb has not yet been released */
-	    if (((ucb*)pdir)->pup != NULL)
-	    {
-	       ucb *thisdir = (ucb*)pdir;
+        // else if (proto2dump[UDP_UNKNOWN].enabled) {
+        //    dump_to_file(&proto2dump[UDP_UNKNOWN], pip, plast);
+        // }
 
-	       /* dump only the first UDP_DUMP_BYTE_LIMIT or the first UDP_DUMP_PACKET_LIMIT packets */
-	       if ( /* we are still interested in this data */
-	  	   	  (thisdir->data_bytes < UDP_DUMP_BYTE_LIMIT) || 
-	  	   	  (thisdir->packets < UDP_DUMP_PACKET_LIMIT)
-	          )
-				dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
-		}
-		else /* it shouldn't happen, but in case dump the packet in any case */
-			dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+        if (proto2dump[DUMP_UDP_COMPLETE].enabled) {
+            /* dump all the packets of all the flows */
+            if (udp_maxpackets == 0 && udp_maxbytes == 0) {
+	            dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+            }
+            else {
+                /* check if the underlying flow struct ucb has not yet been released */
+                if (((ucb*)pdir)->pup != NULL)
+                {
+                   ucb *thisdir = (ucb*)pdir;
+                   /* dump acks and data packets up to reach 
+                    * - udp_maxbytes 
+                    * - udp_maxpackets 
+                    */
+                   if ( (thisdir->data_bytes <= udp_maxbytes) || 
+                        (thisdir->packets <= udp_maxpackets)) 
+                    {
+                        dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
+                    }
+                }
+                else /* it shouldn't happen, but in case dump the packet in any case */
+                    dump_to_file(&proto2dump[DUMP_UDP_COMPLETE], pip, plast);
           }
-#endif
+        }
     }
 
     if (threaded)

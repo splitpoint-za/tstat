@@ -36,22 +36,27 @@
 /*Flash header*/
 #define FLV  		0x464C5601UL
 
-/* MP4 header */
-#define MP4  		0x00000018UL
+/* AVI header */
+#define AVI  		0x53494646UL
+
+/* WEBM header */
+#define WEBM  		0x1A45DFA3UL
+
+/* ASF header */
+#define WMV_1  		0x3026B275UL
+#define WMV_2  		0xA6D900AAUL
+
+
+/* MPEG header */
+#define MPEG  		0x000001B3UL
+
+/* OGG header */
+#define OGG  		0x4F676753FUL
 
 #else
 
 /*Flash header*/
 #define FLV  		0x01564C46UL
-
-/* MP4 header */
-#define MP4  		0x18000000UL
-#define M4A  		0x20000000UL
-#define MP4_YT  	0x1C000000UL
-
-/* MP4-MOOF header */
-#define MP4_MOOF_1  0x80000000UL
-#define MP4_MOOF_2  0x0000014AUL
 
 /* AVI header */
 #define AVI  		0x46464952UL
@@ -62,10 +67,10 @@
 /* ASF header */
 #define WMV_1  		0x75B22630UL
 #define WMV_2  		0xAA00D9A6UL
-#define WMV_3  		0x01AD4D24UL
 
-/* MPEG header */
-#define MPEG  		0xB3010000UL
+/* OGG header */
+#define OGG  		0x5367674FUL
+
 
 #endif
 /* end Keyword definitions */
