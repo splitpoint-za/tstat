@@ -63,6 +63,10 @@
 #endif /* strncpy */
 #endif /* linux */
 
+#ifdef __APPLE__
+   #include "TargetConditionals.h"
+#endif
+
 /* #include "memwatch.h" */
 /* #include <mpatrol.h> */
 
@@ -98,6 +102,12 @@ extern struct bayes_settings *bayes_settings_pktsize;
 
 #define min(x,y) (((x)<(y))?(x):(y))
 #define max(x,y) (((x)>(y))?(x):(y))
+
+#if !(TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#define my_finite(x) finite(x)
+#else
+#define my_finite(x) isfinite(x)
+#endif
 
 
 /* several places in the code NEED numbers of a specific size. */

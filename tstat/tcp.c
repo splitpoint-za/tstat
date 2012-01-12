@@ -2666,11 +2666,11 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 			      pab->payload_end_time) * 8000.0);
       add_histo (tcp_tot_time, etime);
       /* throughput in kbps */
-      if (finite (thru))
+      if (my_finite (thru))
 	add_histo (tcp_thru_c2s, thru);
       thru = ((double) ptp_save->s2c.unique_bytes /
 	      elapsed (ptp_save->first_time, pba->payload_end_time) * 8000.0);
-      if (finite (thru))
+      if (my_finite (thru))
 	add_histo (tcp_thru_s2c, thru);
 
     }

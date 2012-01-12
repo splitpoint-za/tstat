@@ -1012,8 +1012,8 @@ bayes_sample (struct bayes_classifier *classifier, int sample)
       // maximum belief
       double x =
 	classifier->belief[class_num] / ((double) classifier->sample_num);
-      argmax = finite (x) && (x > max) ? class_num : argmax;
-      max = finite (x) && (x > max) ? x : max;
+      argmax = my_finite (x) && (x > max) ? class_num : argmax;
+      max = my_finite (x) && (x > max) ? x : max;
 
       // mean beliefs
       classifier->mean_belief[class_num] +=
