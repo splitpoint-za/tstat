@@ -94,8 +94,7 @@ char *dev;
 
 static Bool basedirspecified = FALSE;
 static char *basenamedir;
-static char basename[100];
-char *outdir_basename = &basename[0];
+static char basename[FILENAME_SIZE];
 Bool internal_src = FALSE;
 Bool internal_dst = FALSE;
 
@@ -750,12 +749,12 @@ void reopen_logfile(FILE **fp_ref,
                     const char *basename, 
 		    const char *filename)
 {
-  static char logfile[200];
+  static char logfile[FILENAME_SIZE+50];
 
 #ifdef HAVE_ZLIB
   if (zlib_logs)
    {
-    snprintf (logfile,200,"%s/%s.gz", basename, filename);
+    snprintf (logfile,FILENAME_SIZE,"%s/%s.gz", basename, filename);
     if (*fp_ref != NULL)
       gzclose (*fp_ref);
     *fp_ref = gzopen (logfile, "w");
@@ -763,7 +762,7 @@ void reopen_logfile(FILE **fp_ref,
   else
 #endif
    {
-    snprintf (logfile,200,"%s/%s", basename, filename);
+    snprintf (logfile,FILENAME_SIZE,"%s/%s", basename, filename);
     if (*fp_ref != NULL)
       fclose (*fp_ref);
     *fp_ref = fopen (logfile, "w");
@@ -780,7 +779,7 @@ void reopen_logfile(FILE **fp_ref,
 void
 create_new_outfiles (char *filename)
 {
-  char tmpstr[200];
+  char tmpstr[FILENAME_SIZE+20];
   struct stat fbuf;
   char date[50];
 

@@ -454,6 +454,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
            	if (memcmp(base + 6, "like/participants.php",
         		   ((available_data - 6) < 21 ? available_data - 6 : 21)) == 0)
            	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "log_ticker_render.php",
+        		   ((available_data - 6) < 21 ? available_data - 6 : 21)) == 0)
+           	  return HTTP_FACEBOOK;
 	        break;
 
 	      case 'n':
@@ -477,6 +480,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
            	  return HTTP_FACEBOOK;
            	else if (memcmp(base + 6, "photos",
         		   ((available_data - 6) < 8 ? available_data - 6 : 8)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "pagelet/generic.php",
+        		   ((available_data - 6) < 19 ? available_data - 6 : 19)) == 0)
            	  return HTTP_FACEBOOK;
 	        break;
 
@@ -527,6 +533,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
        if (memcmp(base, "/blog/ajax_",
         	     ( available_data < 11 ? available_data : 11)) == 0)
           return HTTP_SOCIAL;
+       break;
+
+     case 'B':
+       if (memcmp(base, "/Bursting",
+        	     ( available_data < 9 ? available_data : 9)) == 0 )
+          return HTTP_ADV;
        break;
 
      case 'c':
@@ -698,6 +710,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/feeds/api/users/",
                ( available_data < 17 ? available_data : 17)) == 0)
          return HTTP_YOUTUBE_SITE;
+       else if (memcmp(base, "/feeds/base/",
+               ( available_data < 12 ? available_data : 12)) == 0)
+         return HTTP_YOUTUBE_SITE;
+
        else if ( available_data > 27 && (memcmp(base, "/friends_online_list/",21) == 0) )
          {
 	   if ( isdigit(*(char *)(base + 21 )) &&
@@ -1151,23 +1167,21 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'm':
-       if (memcmp(base, "/maps/gen_",
+       if ( available_data >16 && memcmp(base, "/maps",5)==0 )
+         {
+	   if (
+                memcmp(base + 5 , "/gen_", 5)==0 || 
+                memcmp(base + 5 , "/vp?", 4)==0 || 
+                memcmp(base + 5 , "/l?", 3)==0 || 
+                memcmp(base + 5 , "/trends?", 8)==0 || 
+                memcmp(base + 5 , "lt?lyrs=", 8)==0 || 
+                memcmp(base + 5 , "/api/", 5)==0 || 
+                memcmp(base + 5 , "lt/ft?lyrs=", 11)==0
+	      )     
+           return HTTP_GMAPS;
+	  }
+       else if (memcmp(base, "/mapfiles/",
                ( available_data < 10 ? available_data : 10)) == 0)
-         return HTTP_GMAPS;
-       else if (memcmp(base, "/maps/vp?",
-               ( available_data < 9 ? available_data : 9)) == 0)
-         return HTTP_GMAPS;
-       else if (memcmp(base, "/maps/l?",
-               ( available_data < 8 ? available_data : 8)) == 0)
-         return HTTP_GMAPS;
-       else if (memcmp(base, "/maps/trends?",
-               ( available_data < 13 ? available_data : 13)) == 0)
-         return HTTP_GMAPS;
-       else if (memcmp(base, "/mapslt?lyrs=",
-               ( available_data < 13 ? available_data : 13)) == 0)
-         return HTTP_GMAPS;
-       else if (memcmp(base, "/mapslt/ft?lyrs=",
-               ( available_data < 16 ? available_data : 16)) == 0)
          return HTTP_GMAPS;
        else if (memcmp(base, "/might_know/listJSON/",
                ( available_data < 21 ? available_data : 21)) == 0)
@@ -1257,6 +1271,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
                 memcmp(base + 9 , "activity.php?", 13)==0 || 
                 memcmp(base + 9 , "likebox.php?", 12)==0 || 
                 memcmp(base + 9 , "like.php?", 9)==0 || 
+                memcmp(base + 9 , "subscribe.php?", 14)==0 || 
+                memcmp(base + 9 , "registration.php?", 17)==0 || 
+                memcmp(base + 9 , "facepile.php?", 12)==0 || 
+                memcmp(base + 9 , "fan.php?", 8)==0 || 
+		memcmp(base + 9 , "send.php?", 9)==0 || 
+                memcmp(base + 9 , "comments.php?", 13)==0 || 
                 memcmp(base + 9 , "recommendations.php?", 20)==0 
 	      )
             return HTTP_FACEBOOK;
@@ -1292,23 +1312,6 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      )
             return HTTP_SOCIAL;
 	 }
-       else if (available_data > 14 && (memcmp(base, "/profile",8) == 0))
-        {
-          status1=0;
-          i = 8;
-          while (i<14)
-           {
-             c = *(char *)(base + i );
-             if (!isdigit(c) && c!='/') 
-              {
-        	status1=1;
-        	break;
-              }
-             i++;
-           }
-          if (status1==0)
-            return HTTP_FACEBOOK;
-        }		 
        else if ( available_data >26 && memcmp(base, "/profile/",9)==0 )
          {
 	   if (
