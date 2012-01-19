@@ -2597,7 +2597,8 @@ ParseArgs (int *pargc, char *argv[])
 	     if (slen>0 && slen<65536)
 	      {
 	        snaplen = slen;
-	        fprintf (fp_stdout, "SnapLen set to %d\n", snaplen);
+ 	        if (debug > 1)
+	          fprintf (fp_stdout, "SnapLen set to %d\n", snaplen);
 	      }
 	     else
 	      { 

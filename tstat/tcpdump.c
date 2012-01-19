@@ -690,7 +690,7 @@ init_live_tcpdump (char *filename)
 
   tcpdump_install_filter (pcap, 0);
 
-  fprintf (fp_stdout, "Live capturing on: %s\n", dev);
+  fprintf (fp_stdout, "Live capturing on: %s - snaplen = %d\n", dev, snaplen);
 
 
   memset (&eth_header, 0, EH_SIZE);

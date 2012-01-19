@@ -25,6 +25,9 @@ use strict;
 	       19=>"dns",    
 	       20=>"utp",    
 	       21=>"utpbt",    
+	       22=>"vod",
+	       23=>"ppstream",
+	       24=>"teredo",    
 );
 	 
 # substitute here the database name, username and password

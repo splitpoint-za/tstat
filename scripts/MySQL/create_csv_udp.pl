@@ -26,7 +26,10 @@ use strict;
 	       18=>"okad",
 	       19=>"dns",    
 	       20=>"utp",    
-	       21=>"utpbt",    
+	       21=>"utpbt",
+	       22=>"vod",
+	       23=>"ppstream",
+	       24=>"teredo",    
 );
 	 
 # substitute here the CSV filename, that must be the same than the

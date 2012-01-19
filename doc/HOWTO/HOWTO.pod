@@ -353,22 +353,22 @@ order to distinguish forward and backward paths, Tstat needs to know which host
 IP addresses can be considered as ``internal'' to the monitored network. 
 There are three different format to specify the internal subnets and
 if, for example, we use Politecnico di Torino subnets, which are C<130.192.0.0/16> and
-C<193.204.134.0/24>, we can choose to use one of the following formats:
+C<192.204.134.0/24>, we can choose to use one of the following formats:
 
 =over 4
 
-
-=item <Network IP/NetMask> on a single line 
-
-    130.192.0.0/255.255.0.0
-    192.204.134.0/255.255.0.0
-                             
 
 =item <Network IP/MaskLen> on a single line 
 
     130.192.0.0/16
     192.204.134.0/16
                                                          
+
+=item <Network IP/NetMask> on a single line 
+
+    130.192.0.0/255.255.0.0
+    192.204.134.0/255.255.0.0
+                             
 
 =item (only for backward compatibility) pairs of lines with <Network IP> and <NetMask>
 
@@ -643,7 +643,8 @@ maintained in the C<log_udp_complete> file. Being UDP basically a
 connectionless protocol, it is impossible to distinguish among C<complete> and
 C<nocomplete> flows in this case.
 
-Furthermore the following log files are created: C<log_video_complete> for TCP video 
+Furthermore the following log files are created: C<log_video_complete> and
+C<log_streaming_complete> for TCP video 
 streaming flows (i.e. RTMP or HTTP-based video services like YouTube), 
 C<log_mm_complete> for multimedia flows
 (i.e. RTP, RTCP, etc), C<log_chat_complete> for IM protocols (i.e. MSN, Jabber, etc) and
@@ -1123,14 +1124,21 @@ The configuration file has an C<ini> file syntax:
     udp_vod = 0
     udp_unknown = 0    # all the udp traffic that the DPI doesn't recognize
 
+    tcp_videostreaming = 0 
+
     ip_complete = 0    # all the ip traffic (not consider L4 type and if it's used)
     udp_complete = 0   # all the udp traffic
     tcp_complete = 0   # all the tcp traffic
 
+    udp_maxpackets = 0
+    udp_maxbytes = 0
+    tcp_maxpackets = 0
+    tcp_maxbytes = 0
+
 The file in composed of the two sections C<log> and C<dump> which indicate which
 type of log and dump trace to create.
-Except for C<snap_len> all features are on/off type i.e. 1 and 0 values are used to 
-enable/disable them. Instead C<snap_len> indicate the maximum number of bytes
+Except for a few exceptions, all features are on/off type i.e. 1 and 0 values are used to 
+enable/disable them. One exception is C<snap_len>, used to indicate the maximum number of bytes
 dump from the input packet starting from IP level included. For example, supposing
 to have a simple IP + UDP packet, using C<snap_len> = 40 it will be written a
 packet of 54 bytes
@@ -1150,6 +1158,15 @@ For example, using the following configuration
 it's expected to have 4 traces i.e. three protocols/applications (RTP, eMule, Bittorrent)
 and the unknown (for example DNS traffic).
 
+Classified TCP complete flows cannot be "safely" dumped, since classification
+happens after the 3-way handshaking finished, so saved flows would be
+incomplete. 
+C<tcp_videostreaming> is an exception, used to dump TCP flows that were classified
+as video through the Streaming DPI engine (the ones logged in
+C<log_streaming_complete>), even if the 3-way handshaking and the first flow payload
+packets would be skipped. This could be activated if you're interested in performing
+a secondary analysis on characteristics of the video stream.
+
 Beside the traces at application level, it's possible to create three type of aggregated
 traces. In particular, C<udp_complete> is all the UDP traffic (both applications specific and unknown),
 C<tcp_complete> is all the TCP traffic, while
@@ -1158,6 +1175,21 @@ In other words, C<ip_complete> is the aggregation of TCP, UDP and all the other 
 (ICMP, IPIP, ESP, ...). The three options are NOT to complementary so
 it's possible to enable all of them contemporary but this obviously means that a TCP/UDP packet
 it will appear in more than one trace so particular attention should be taken.
+
+When dumping all TCP (C<tcp_complete>) or UDP (C<udp_complete>) traffic, 
+it is possible to limit the dumping of each
+flow to either a maximum number of packets or a maximum number of bytes trasferred.
+For example, to save just the first 30000 bytes or the first 30 segments of
+each TCP flow (whichever condition if reached first), you can use
+ 
+    snap_len = 0
+    tcp_complete = 1
+    tcp_maxpackets = 30
+    tcp_maxbytes = 30000
+
+C<udp_maxpackets> and C<udp_maxbytes> provide the same functionality for UDP flows.
+If both C<xxx_maxpackets> and C<xxx_maxbytes> are set to 0, the complete TCP/UDP 
+flows will be saved, with no size limitation.
 
 During the runtime execution of Tstat, the configuration file is controlled periodically
 looking for changes in the options. In this way, when Tstat is used for online monitoring, 
@@ -1539,6 +1571,7 @@ using tstat_report data.
 
     Marco Mellia <mellia@mail.tlc.polito.it>
     Dario Rossi  <dario.rossi@enst.fr> 
+    Vinicius Gehleb <vinicius@gehlen.us>
 
 =item Other authors:
 

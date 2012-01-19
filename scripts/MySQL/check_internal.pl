@@ -5,6 +5,8 @@ use strict;
 
 # Check if an IP address is internal (local) or not
 # returns '1' for internal addresses, '0' otherwise
+# Needed for versions of Tstat before 2.2 (r330), where 
+# internal_dst (column 100) was included in the log.
 
 {
  # @internal contains the list of internal networks,
