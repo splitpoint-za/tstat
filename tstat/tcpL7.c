@@ -264,7 +264,8 @@ void rtmp_handshake_check(tcp_pair *ptp, void *pdata, int payload_len, int dir)
 {
   char c;
   
-  /* Check first byte of the first data segment in both directions...*/
+  /* Check first byte of the first data segment in both directions, */
+  /* checking that it is actually the first byte even if segments are not ordered */
 
   if (ptp->state_rtmp_c2s_seen==1 && ptp->state_rtmp_s2c_seen==1)
     return;
@@ -274,14 +275,14 @@ void rtmp_handshake_check(tcp_pair *ptp, void *pdata, int payload_len, int dir)
                          or 0x08 (further encrypted)
 		      */ 
     
-  if (dir == C2S && ptp->state_rtmp_c2s_seen==0)
+  if (dir == C2S && (ptp->c2s.seq-ptp->c2s.syn-payload_len)==1 && ptp->state_rtmp_c2s_seen==0)
     { 
       ptp->state_rtmp_c2s_seen=1;
       if ( c == 0x03 || c==0x06 || c==0x08 )
          ptp->state_rtmp_c2s_hand=1;
     }
 
-  if (dir == S2C && ptp->state_rtmp_s2c_seen==0)
+  if (dir == S2C && (ptp->s2c.seq-ptp->s2c.syn-payload_len)==1 && ptp->state_rtmp_s2c_seen==0)
     { 
       ptp->state_rtmp_s2c_seen=1;
       if ( c == 0x03 || c==0x06 || c==0x08 )
