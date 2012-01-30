@@ -1266,8 +1266,10 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       proto_analyzer (pip, ptcp, PROTOCOL_TCP, thisdir, *dir, plast);
 
       if (thisdir != NULL && thisdir->ptp != NULL)
+       {
         make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
-
+        make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+       }
       return (FLOW_STAT_OK);
     }
 
@@ -1395,7 +1397,10 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     mse_protocol_check(thisdir->ptp);
 
   if (thisdir != NULL && thisdir->ptp != NULL)
-    make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+   {
+     make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+     make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+   }
   
 
   /* Check if the connection is completed */
@@ -3392,7 +3397,7 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
                    ptp_save->http_data==HTTP_YOUTUBE_204  )
 	 )
        {
-         wfprintf (fp_video_logc, " %s %d %.3f %.3f %.3f %d %d %.3f %.3f %.3f %.3f %d %d %d %d", 
+         wfprintf (fp_video_logc, " %s %d %.3f %.3f %.3f %d %d %.3f %.3f %.3f %.3f %d %d %d %d %d %d", 
                                  ptp_save->http_ytitag,
 				 ptp_save->http_ytseek,
 				 ptp_save->http_meta.duration,
@@ -3407,11 +3412,13 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 				 ptp_save->http_meta.bytelength,
 				 ptp_save->http_ytredir_mode,
 				 ptp_save->http_ytredir_count,
-				 ptp_save->http_ytmobile );
+				 ptp_save->http_ytmobile,
+				 ptp_save->http_ytmobile2,
+				 ptp_save->http_ytdevice );
        }
       else
        {
-         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0");
+         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0 0 0");
        }
 
       /* write to log file */

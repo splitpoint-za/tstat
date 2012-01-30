@@ -667,7 +667,9 @@ struct stcp_pair
   int  http_ytredir_count;
   struct flv_metadata http_meta;
   char http_response[4];
-  int  http_ytmobile;
+  int  http_ytmobile;   /* Rough mobile classification, old style */
+  int  http_ytmobile2;  /* Detailed mobile classificatio, new style */
+  int  http_ytdevice;   /* Mobile device 0=Undef 1=Apple 2=Android 3=Other */
 #endif
 
   /* obfuscate ed2k identification */

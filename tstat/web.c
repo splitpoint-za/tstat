@@ -32,24 +32,31 @@ char yt_redir[7];
 int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
+int  yt_mobile2;
+int  yt_device;
 regex_t re[10];
 regmatch_t re_res[2];
 
 void init_web_patterns()
 {
+  int i;
+  
   patterns[0] = "[?&]id=([0-9a-f]{16})[& ]";
   patterns[1] = "[?&]begin=([0-9]+)[& ]";
   patterns[2] = "[?&]itag=([0-9]+)[& ]";
   patterns[3] = "[?&]st=(lc|nx|tcts)[& ]";
   patterns[4] = "[?&]redirect_counter=([0-9]+)[& ]";
   patterns[5] = "[?&]?video_id=([A-Za-z0-9_-]{11})[& ]";
+  patterns[6] = "[?&]app=([^&]+)[& ]";
+  patterns[7] = "[?&]client=([^&]+)[& ]";
+  patterns[8] = "[?&]key=([^& ]+)[& ]";
+  patterns[9] = "[?&]androidcid=([^& ]+)[& ]";
 
-  regcomp(&re[0],patterns[0],REG_EXTENDED);
-  regcomp(&re[1],patterns[1],REG_EXTENDED);
-  regcomp(&re[2],patterns[2],REG_EXTENDED);
-  regcomp(&re[3],patterns[3],REG_EXTENDED);
-  regcomp(&re[4],patterns[4],REG_EXTENDED);
-  regcomp(&re[5],patterns[5],REG_EXTENDED);
+  for (i=0;i<10;i++)
+   {
+     regcomp(&re[i],patterns[i],REG_EXTENDED);
+   }
+
 }
 
 double read_double(char *base)
@@ -783,6 +790,85 @@ enum http_content classify_http_get(void *pdata,int data_length)
 #ifdef VIDEO_DETAILS
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
+	   char url_param[4][80];
+	   int  url_found[4];
+	   int  idx;
+
+           memcpy(match_buffer,base,(available_data<445?available_data:445));
+           match_buffer[(available_data<445?available_data:445)]='\0';
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      url_found[idx]=0;
+	      url_param[idx][0]='\0';
+	    }
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      /* Match from pattern[6] to pattern[9] */ 
+              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
+               {
+                int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
+                  (msize<79?msize:79));
+                  url_param[idx][msize<79?msize:79]='\0';
+		 url_found[idx]=1;
+               }
+	    }
+           
+	   /* Normally here we have the traditional nomobile connection 
+	      In any case we apply the complete rule, that is:
+	      If key==yt1 and app==youtube_mobile -> mobile
+	      else -> nomobile
+	      We keep also the rule for the device, that is:
+	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
+	      else if (client =~ /android/ || androidcid !empty) -> android
+	      else -> other
+	      
+           */
+ 
+           yt_mobile2 = 0;
+
+           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+	    {
+	      if ( url_found[0]!=0 && 
+	                 memcmp(url_param[0],"youtube_mobile",14)==0)
+		yt_mobile2 = 1;	 
+	    }
+	   else
+	    {
+	      /* key==yta1 or ck1 */
+	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+		yt_mobile2 = 1;	 
+	    } 
+	     
+	   yt_device = 0;
+
+	   if ( (url_found[1]!=0) && 
+	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	      )
+	    {
+	      yt_device = 1;
+	    }
+	   else if ( (url_found[1]!=0) && 
+	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	           )
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[3]!=0))
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[1]!=0))
+	    { 
+	      yt_device = 3;
+	    }
+	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	    { 
+	      yt_device = 3;
+	    }
 	   
 	   if (available_data>110)
 	    {
@@ -915,9 +1001,86 @@ enum http_content classify_http_get(void *pdata,int data_length)
 #ifdef VIDEO_DETAILS
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
+	   char url_param[4][80];
+	   int  url_found[4];
+	   int  idx;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      url_found[idx]=0;
+	      url_param[idx][0]='\0';
+	    }
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      /* Match from pattern[6] to pattern[9] */ 
+              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
+               {
+                int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
+                  (msize<79?msize:79));
+                  url_param[idx][msize<79?msize:79]='\0';
+		 url_found[idx]=1;
+               }
+	    }
+           
+	   /* Normally here we have the potentially mobile connection 
+	      In any case we apply the complete rule, that is:
+	      If key==yt1 and app==youtube_mobile -> mobile
+	      else -> nomobile
+	      We keep also the rule for the device, that is:
+	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
+	      else if (client =~ /android/ || androidcid !empty) -> android
+	      else -> other
+	      
+           */
+ 
+           yt_mobile2 = 0;
+
+           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+	    {
+	      if ( url_found[0]!=0 && 
+	                 memcmp(url_param[0],"youtube_mobile",14)==0)
+		yt_mobile2 = 1;	 
+	    }
+	   else
+	    {
+	      /* key==yta1 or ck1 */
+	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+		yt_mobile2 = 1;	 
+	    } 
+	     
+	   yt_device = 0;
+
+	   if ( (url_found[1]!=0) && 
+	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	      )
+	    {
+	      yt_device = 1;
+	    }
+	   else if ( (url_found[1]!=0) && 
+	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	           )
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[3]!=0))
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[1]!=0))
+	    { 
+	      yt_device = 3;
+	    }
+	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	    { 
+	      yt_device = 3;
+	    }
+
 
             /* itag=fmt */
            if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
@@ -1475,6 +1638,86 @@ enum http_content classify_http_get(void *pdata,int data_length)
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
 
+	   char url_param[4][80];
+	   int  url_found[4];
+	   int  idx;
+
+           memcpy(match_buffer,base,(available_data<445?available_data:445));
+           match_buffer[(available_data<445?available_data:445)]='\0';
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      url_found[idx]=0;
+	      url_param[idx][0]='\0';
+	    }
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      /* Match from pattern[6] to pattern[9] */ 
+              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
+               {
+                int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
+                  (msize<79?msize:79));
+                  url_param[idx][msize<79?msize:79]='\0';
+		 url_found[idx]=1;
+               }
+	    }
+           
+	   /* Normally here we have the traditional nomobile connection 
+	      In any case we apply the complete rule, that is:
+	      If key==yt1 and app==youtube_mobile -> mobile
+	      else -> nomobile
+	      We keep also the rule for the device, that is:
+	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
+	      else if (client =~ /android/ || androidcid !empty) -> android
+	      else -> other
+	      
+           */
+ 
+           yt_mobile2 = 0;
+
+           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+	    {
+	      if ( url_found[0]!=0 && 
+	                 memcmp(url_param[0],"youtube_mobile",14)==0)
+		yt_mobile2 = 1;	 
+	    }
+	   else
+	    {
+	      /* key==yta1 or ck1 */
+	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+		yt_mobile2 = 1;	 
+	    } 
+	     
+	   yt_device = 0;
+
+	   if ( (url_found[1]!=0) && 
+	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	      )
+	    {
+	      yt_device = 1;
+	    }
+	   else if ( (url_found[1]!=0) && 
+	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	           )
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[3]!=0))
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[1]!=0))
+	    { 
+	      yt_device = 3;
+	    }
+	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	    { 
+	      yt_device = 3;
+	    }
+
 	   if (available_data>110)
 	    {
             memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
@@ -1606,9 +1849,85 @@ enum http_content classify_http_get(void *pdata,int data_length)
 #ifdef VIDEO_DETAILS
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
+	   char url_param[4][80];
+	   int  url_found[4];
+	   int  idx;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      url_found[idx]=0;
+	      url_param[idx][0]='\0';
+	    }
+
+           for (idx=0;idx<4;idx++)
+	    {
+	      /* Match from pattern[6] to pattern[9] */ 
+              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
+               {
+                int msize = re_res[1].rm_eo-re_res[1].rm_so;
+                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
+                  (msize<79?msize:79));
+                  url_param[idx][msize<79?msize:79]='\0';
+		 url_found[idx]=1;
+               }
+	    }
+           
+	   /* Normally here we have the potentially mobile connection 
+	      In any case we apply the complete rule, that is:
+	      If key==yt1 and app==youtube_mobile -> mobile
+	      else -> nomobile
+	      We keep also the rule for the device, that is:
+	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
+	      else if (client =~ /android/ || androidcid !empty) -> android
+	      else -> other
+	      
+           */
+ 
+           yt_mobile2 = 0;
+
+           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+	    {
+	      if ( url_found[0]!=0 && 
+	                 memcmp(url_param[0],"youtube_mobile",14)==0)
+		yt_mobile2 = 1;	 
+	    }
+	   else
+	    {
+	      /* key==yta1 or ck1 */
+	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+		yt_mobile2 = 1;	 
+	    } 
+	     
+	   yt_device = 0;
+
+	   if ( (url_found[1]!=0) && 
+	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	      )
+	    {
+	      yt_device = 1;
+	    }
+	   else if ( (url_found[1]!=0) && 
+	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	           )
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[3]!=0))
+	    { 
+	      yt_device = 2;
+	    }
+	   else if ( (url_found[1]!=0))
+	    { 
+	      yt_device = 3;
+	    }
+	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	    { 
+	      yt_device = 3;
+	    }
 
             /* itag=fmt */
            if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)

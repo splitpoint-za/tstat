@@ -43,6 +43,8 @@ extern int yt_seek;
 extern int yt_redir_mode;
 extern int yt_redir_count;
 extern int yt_mobile;
+extern int yt_mobile2;
+extern int yt_device;
 #endif
 
 regex_t re_ssl_subject;
@@ -610,6 +612,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                   yt_redir_mode = 0;
                   yt_redir_count = 0;
 		  yt_mobile = 0;
+		  yt_mobile2 = 0;
+		  yt_device = 0;
 #endif
 
                   ptp->http_data = classify_http_get(pdata,data_length);
@@ -627,6 +631,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
 			  ptp->http_ytmobile = yt_mobile;
+			  ptp->http_ytmobile2 = yt_mobile2;
+			  ptp->http_ytdevice = yt_device;
                    }
 #endif
 	        }
@@ -646,6 +652,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                   yt_redir_mode = 0;
                   yt_redir_count = 0;
 		  yt_mobile = 0;
+		  yt_mobile2 = 0;
+		  yt_device = 0;
 #endif
                   ptp->http_data = classify_http_post(pdata,data_length);
 	        }
@@ -1050,6 +1058,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
 			  ptp->http_ytmobile = yt_mobile;
+			  ptp->http_ytmobile2 = yt_mobile2;
+			  ptp->http_ytdevice = yt_device;
 #endif			
 		     }
 		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
@@ -1069,6 +1079,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
 			  ptp->http_ytmobile = yt_mobile;
+			  ptp->http_ytmobile2 = yt_mobile2;
+			  ptp->http_ytdevice = yt_device;
                         }
 #endif			
 	             }
@@ -1097,6 +1109,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
 			  ptp->http_ytmobile = yt_mobile;
+			  ptp->http_ytmobile2 = yt_mobile2;
+			  ptp->http_ytdevice = yt_device;
 #endif			
 		     }
 		   else if ( new_http_data != HTTP_GET && new_http_data != HTTP_POST)
@@ -1116,6 +1130,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytredir_mode=yt_redir_mode;
 			  ptp->http_ytredir_count=yt_redir_count;
 			  ptp->http_ytmobile = yt_mobile;
+			  ptp->http_ytmobile2 = yt_mobile2;
+			  ptp->http_ytdevice = yt_device;
                        }
 #endif
 		    }
@@ -1574,7 +1590,11 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
          }
        }
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
        L7_bitrate.loc[type] += len;
       if (type==L7_FLOW_HTTP)
@@ -1624,7 +1644,11 @@ make_udpL7_rate_stats (ucb * thisflow, int len)
           L7_udp_bitrate.nc_in[type] += len;
         }
     }
+#ifndef LOG_UNKNOWN
   else if (internal_src && internal_dst)
+#else
+  else
+#endif
     {
        L7_udp_bitrate.loc[type] += len;
     }
