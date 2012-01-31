@@ -32,10 +32,15 @@ char yt_redir[7];
 int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
-int  yt_mobile2;
 int  yt_device;
 regex_t re[10];
 regmatch_t re_res[2];
+
+/* Indexes for YouTube Mobile parameters */
+#define PARAM_APP	 0
+#define PARAM_CLIENT	 1
+#define PARAM_KEY	 2
+#define PARAM_ANDROIDCID 3
 
 void init_web_patterns()
 {
@@ -793,6 +798,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   char url_param[4][80];
 	   int  url_found[4];
 	   int  idx;
+           int  yt_mobile2,mobile_set;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
@@ -828,44 +834,57 @@ enum http_content classify_http_get(void *pdata,int data_length)
            */
  
            yt_mobile2 = 0;
+           mobile_set = 0;
 
-           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
 	    {
-	      if ( url_found[0]!=0 && 
-	                 memcmp(url_param[0],"youtube_mobile",14)==0)
-		yt_mobile2 = 1;	 
+	      if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
+	      else if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
+		{ 
+		  /* I had, at least, the data to decide that it might have been mobile */
+                  mobile_set = 1;
+		}	 
 	    }
 	   else
 	    {
 	      /* key==yta1 or ck1 */
-	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
-		yt_mobile2 = 1;	 
+	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
 	    } 
 	     
 	   yt_device = 0;
 
-	   if ( (url_found[1]!=0) && 
-	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
+	   if ( (url_found[PARAM_CLIENT]!=0) && 
+	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
                    memcmp(url_param[1],"iPhone",6)==0 ) 
 	      )
 	    {
 	      yt_device = 1;
 	    }
-	   else if ( (url_found[1]!=0) && 
-	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	   else if ( (url_found[PARAM_CLIENT]!=0) && 
+	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[3]!=0))
+	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[1]!=0))
+	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
 	      yt_device = 3;
 	    }
-	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
 	    { 
 	      yt_device = 3;
 	    }
@@ -989,7 +1008,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		 }
               }
 	     }
-          yt_mobile = 0;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
 #endif
           return HTTP_YOUTUBE_204;
          }
@@ -1004,6 +1023,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   char url_param[4][80];
 	   int  url_found[4];
 	   int  idx;
+           int  yt_mobile2,mobile_set;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
@@ -1039,44 +1059,57 @@ enum http_content classify_http_get(void *pdata,int data_length)
            */
  
            yt_mobile2 = 0;
+           mobile_set = 0;
 
-           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
 	    {
-	      if ( url_found[0]!=0 && 
-	                 memcmp(url_param[0],"youtube_mobile",14)==0)
-		yt_mobile2 = 1;	 
+	      if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
+	      else if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
+		{ 
+		  /* I had, at least, the data to decide that it might have been mobile */
+                  mobile_set = 1;
+		}	 
 	    }
 	   else
 	    {
 	      /* key==yta1 or ck1 */
-	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
-		yt_mobile2 = 1;	 
+	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
 	    } 
 	     
 	   yt_device = 0;
 
-	   if ( (url_found[1]!=0) && 
-	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
-                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	   if ( (url_found[PARAM_CLIENT]!=0) && 
+	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
 	      )
 	    {
 	      yt_device = 1;
 	    }
-	   else if ( (url_found[1]!=0) && 
-	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	   else if ( (url_found[PARAM_CLIENT]!=0) && 
+	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[3]!=0))
+	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[1]!=0))
+	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
 	      yt_device = 3;
 	    }
-	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
 	    { 
 	      yt_device = 3;
 	    }
@@ -1199,7 +1232,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = 1;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 1 ;
 #endif
           return HTTP_YOUTUBE_204;
          }
@@ -1641,6 +1674,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   char url_param[4][80];
 	   int  url_found[4];
 	   int  idx;
+           int  yt_mobile2,mobile_set;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
@@ -1676,44 +1710,57 @@ enum http_content classify_http_get(void *pdata,int data_length)
            */
  
            yt_mobile2 = 0;
+           mobile_set = 0;
 
-           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
 	    {
-	      if ( url_found[0]!=0 && 
-	                 memcmp(url_param[0],"youtube_mobile",14)==0)
-		yt_mobile2 = 1;	 
+	      if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
+	      else if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
+		{ 
+		  /* I had, at least, the data to decide that it might have been mobile */
+                  mobile_set = 1;
+		}	 
 	    }
 	   else
 	    {
 	      /* key==yta1 or ck1 */
-	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
-		yt_mobile2 = 1;	 
+	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
 	    } 
 	     
 	   yt_device = 0;
 
-	   if ( (url_found[1]!=0) && 
-	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
-                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	   if ( (url_found[PARAM_CLIENT]!=0) && 
+	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
 	      )
 	    {
 	      yt_device = 1;
 	    }
-	   else if ( (url_found[1]!=0) && 
-	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	   else if ( (url_found[PARAM_CLIENT]!=0) && 
+	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[3]!=0))
+	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[1]!=0))
+	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
 	      yt_device = 3;
 	    }
-	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
 	    { 
 	      yt_device = 3;
 	    }
@@ -1837,7 +1884,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 		 }
               }
             }
-          yt_mobile = 0;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
 #endif
           return HTTP_YOUTUBE_VIDEO;
          }
@@ -1852,6 +1899,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   char url_param[4][80];
 	   int  url_found[4];
 	   int  idx;
+           int  yt_mobile2,mobile_set;
 
            memcpy(match_buffer,base,(available_data<445?available_data:445));
            match_buffer[(available_data<445?available_data:445)]='\0';
@@ -1887,44 +1935,57 @@ enum http_content classify_http_get(void *pdata,int data_length)
            */
  
            yt_mobile2 = 0;
+           mobile_set = 0;
 
-           if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)==0)
+           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
 	    {
-	      if ( url_found[0]!=0 && 
-	                 memcmp(url_param[0],"youtube_mobile",14)==0)
-		yt_mobile2 = 1;	 
+	      if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
+	      else if ( url_found[PARAM_APP]!=0 && 
+	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
+		{ 
+		  /* I had, at least, the data to decide that it might have been mobile */
+                  mobile_set = 1;
+		}	 
 	    }
 	   else
 	    {
 	      /* key==yta1 or ck1 */
-	      if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
-		yt_mobile2 = 1;	 
+	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+		{ 
+		  yt_mobile2 = 1;
+                  mobile_set = 1;
+		}	 
 	    } 
 	     
 	   yt_device = 0;
 
-	   if ( (url_found[1]!=0) && 
-	         ( memcmp(url_param[1],"ytapi-apple",11)==0 ||
-                   memcmp(url_param[1],"iPhone",6)==0 ) 
+	   if ( (url_found[PARAM_CLIENT]!=0) && 
+	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
+                   memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
 	      )
 	    {
 	      yt_device = 1;
 	    }
-	   else if ( (url_found[1]!=0) && 
-	             ( memcmp(url_param[1],"mvapp-android",13)==0 )
+	   else if ( (url_found[PARAM_CLIENT]!=0) && 
+	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[3]!=0))
+	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
 	      yt_device = 2;
 	    }
-	   else if ( (url_found[1]!=0))
+	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
 	      yt_device = 3;
 	    }
-	   else if (url_found[2]!=0 && memcmp(url_param[2],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
 	    { 
 	      yt_device = 3;
 	    }
@@ -2046,7 +2107,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = 1;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 1 ;
 #endif
           return HTTP_YOUTUBE_VIDEO;
          }

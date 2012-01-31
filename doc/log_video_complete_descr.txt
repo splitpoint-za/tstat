@@ -80,11 +80,12 @@ Here it follows a brief description of the columns.
 # 87  # Redir Mode	             # -     # Server Redirection Type [=]
 # 88  # Redir Count                  # -     # Redirection counter [=]
 # 89  # Mobile Media                 # 0/1   # 1 = video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
+# 90  # Mobile Device                # -     # Type of mobile device 0=None/Undefined 1=Apple iOS 2=Android 3=Other
 ############################################################################
-# 90-99   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
-# 100-109 # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
-# 110     # PSH-Messages             # -     # Number of PSH-separated 'messages' in the S2C flow
-# 111-120 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
+# 91-100   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
+# 101-110 # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
+# 111     # PSH-Messages             # -     # Number of PSH-separated 'messages' in the S2C flow
+# 112-121 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
 ############################################################################
 
 [*] The YouTube video format is the 'fmt/itag' value indicated in 
