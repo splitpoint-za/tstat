@@ -3042,6 +3042,11 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
   wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
 
+#ifdef SNOOP_DROPBOX
+  wfprintf(fp," %s",(ptp_save->con_type & HTTP_PROTOCOL) && 
+                    (ptp_save->http_data==HTTP_DROPBOX) ? ptp_save->http_ytid:"-");
+#endif
+
 /* At the moment, do not expose the SPDY identification
   wfprintf(fp," %d %d",ptp_save->ssl_client_spdy,ptp_save->ssl_server_spdy);
 */

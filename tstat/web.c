@@ -1342,6 +1342,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	  if (memcmp(base + 26, "1.jpg",5) == 0)
            return HTTP_YOUTUBE_SITE;
 	}
+       else if (memcmp(base, "/i/widget-logo.png",
+               ( available_data < 18 ? available_data : 18)) == 0)
+         return HTTP_TWITTER;
        else if (memcmp(base, "/iframe/11?r=",
                ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
@@ -1354,6 +1357,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
        if (memcmp(base, "/js/api_lib/v0.4/",
                ( available_data < 17 ? available_data : 17)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/j/2/",
+               ( available_data < 5 ? available_data : 5)) == 0)
+         return HTTP_TWITTER;
+       else if (memcmp(base, "/j/1/",
+               ( available_data < 5 ? available_data : 5)) == 0)
+         return HTTP_TWITTER;
        break;
 
      case 'k':
@@ -1477,6 +1486,24 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      )
             return HTTP_FACEBOOK;
 	 }
+       else if ( available_data > 24 && memcmp(base, "/profile_images/",16)==0 )
+         {
+           status1=0;
+   	   i = 16;
+    	   while (i<24)
+   	    {
+   	      c = *(char *)(base + i );
+    	      if (!isdigit(c))
+   	       {
+   		 status1=1;
+   	 	 break;
+   	       }
+   	      i++;
+   	    }
+   	   if (status1==0)
+             return HTTP_TWITTER;
+	 }
+
        else if ( available_data >22 && memcmp(base, "/pages/",7)==0 )
          {
 	   if (
@@ -1571,7 +1598,27 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 's':
-       if (memcmp(base, "/safe_image.php?d=",
+       if (memcmp(base, "/subscribe?host_int=",
+        	       ( available_data < 20 ? available_data : 20)) == 0)
+        {
+#ifdef SNOOP_DROPBOX	
+   	  i = 20;
+    	  while (i<32)
+   	   {
+   	     c = *(char *)(base + i );
+    	     if (!isdigit(c))
+   	      {
+   	 	break;
+   	      }
+	     else
+	      yt_id[i-20]=c;
+   	     i++;
+   	   }
+	  yt_id[i-20]='\0';
+#endif
+          return HTTP_DROPBOX;
+	}
+       else if (memcmp(base, "/safe_image.php?d=",
         	       ( available_data < 18 ? available_data : 18)) == 0)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/s.php?",
@@ -2213,6 +2260,21 @@ enum http_content classify_http_get(void *pdata,int data_length)
                 memcmp(base + 9 , "like.php?", 9)==0 
 	      )
             return HTTP_FACEBOOK;
+           else if (memcmp(base + 9, "follow_button",13) ==0 ||
+                memcmp(base + 9 , "hub.", 4)==0 || 
+                memcmp(base + 9 , "images/f.gif?", 13)==0 || 
+                memcmp(base + 9 , "images/t.gif?", 13)==0 || 
+                memcmp(base + 9 , "tweet_button.", 13)==0
+	      )
+            return HTTP_TWITTER;
+	 }
+       else if ( available_data >48 && memcmp(base, "/widgets.js",11)==0 )
+         {
+	   if (
+                memcmp(base + 11 , "?_=", 3)==0 || 
+		memcmp(base + 22 , "Host: platform.twitter.com", 26)==0 
+	      )
+            return HTTP_TWITTER;
 	 }
        else if (memcmp(base, "/watch?v=",
         	       ( available_data < 9 ? available_data : 9)) == 0)
@@ -2410,6 +2472,18 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_SOCIAL;
 	 /* no break here to fall back to the other rules for digits */
      case '1':
+       if ( *(base+2)=='/' )
+        {
+          if (memcmp(base, "/1/statuses/",
+          		 ( available_data < 12 ? available_data : 12)) == 0)
+            return HTTP_TWITTER;
+          else if (memcmp(base, "/1/urls/count.json?",
+          		 ( available_data < 19 ? available_data : 19)) == 0)
+            return HTTP_TWITTER;
+          else if (memcmp(base, "/1/users/show",
+          		 ( available_data < 13 ? available_data : 13)) == 0)
+            return HTTP_TWITTER;
+        }
      case '2':
      case '3':
      case '5':
@@ -2603,6 +2677,9 @@ enum http_content classify_http_post(void *pdata,int data_length)
        else if (memcmp(base, "/gateway/gateway.dll?SessionID=",
         	      ( available_data < 31 ? available_data : 31)) == 0)
          return HTTP_MSN;
+       else if (memcmp(base, "/glm/mmap ",
+               ( available_data < 10 ? available_data : 10)) == 0)
+         return HTTP_GMAPS;
        else if (memcmp(base, "/gadgets/makeRequest ",
                ( available_data < 21 ? available_data : 21)) == 0)
          return HTTP_SOCIAL;
@@ -2661,7 +2738,10 @@ enum http_content classify_http_post(void *pdata,int data_length)
        break;
 
      case 'p':
-       if (memcmp(base, "/pins/friends ",
+       if (memcmp(base, "/profile_ajax?action_ajax=",
+        	      ( available_data < 26 ? available_data : 26)) == 0)
+         return HTTP_YOUTUBE_SITE;
+       else if (memcmp(base, "/pins/friends ",
         	      ( available_data < 14 ? available_data : 14)) == 0)
          return HTTP_SOCIAL;
        else if (memcmp(base, "/pins/get ",
@@ -2725,6 +2805,9 @@ enum http_content classify_http_post(void *pdata,int data_length)
        else if (memcmp(base, "/school/",
         	    ( available_data < 8 ? available_data : 8)) == 0)
          return HTTP_SOCIAL;
+       else if (memcmp(base, "/search.json?",
+        	    ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_TWITTER;
        break;
      case 'S':
        if (memcmp(base, "/SEND/",
@@ -2738,10 +2821,19 @@ enum http_content classify_http_post(void *pdata,int data_length)
          return HTTP_SOCIAL;
        break;
 
+     case 'v':
+       if (memcmp(base, "/video_info_ajax?",
+        	      ( available_data < 17 ? available_data : 17)) == 0)
+         return HTTP_YOUTUBE_SITE;
+       break;
+
      case 'w':
        if (memcmp(base, "/watched_events/",
         	      ( available_data < 16 ? available_data : 16)) == 0)
          return HTTP_SOCIAL;
+       else if (memcmp(base, "/watch_actions_ajax?",
+        	      ( available_data < 20 ? available_data : 20)) == 0)
+         return HTTP_YOUTUBE_SITE;
        break;
 
      default:
@@ -2766,6 +2858,7 @@ enum web_category map_http_to_web(enum http_content http_type)
      case HTTP_RTMPT:
      case HTTP_FACEBOOK:
      case HTTP_SOCIAL:
+     case HTTP_TWITTER:
        return WEB_SOCIAL;
        
      case HTTP_YOUTUBE_VIDEO:
@@ -2793,6 +2886,7 @@ enum web_category map_http_to_web(enum http_content http_type)
      case HTTP_YOUTUBE_SITE:
      case HTTP_YOUTUBE_SITE_DIRECT:
      case HTTP_YOUTUBE_SITE_EMBED:
+     case HTTP_DROPBOX:
        return WEB_OTHER;
 
      default:

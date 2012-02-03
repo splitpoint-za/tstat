@@ -177,7 +177,9 @@ HTTP Web2.0 type - Col 109 (see struct.h)
 # 23    # HTTP_YOUTUBE_VIDEO204    # YouTube "pre-loading" and video (GET)[%]     #
 # 24    # HTTP_YOUTUBE_SITE_DIRECT # YouTube: video request on YouTube site (GET) [~] #
 # 25    # HTTP_YOUTUBE_SITE_EMBED  # YouTube: embedded video request (GET) [~]    #
-###################################################################################
+# 26    # HTTP_TWITTER       # Twitter unencrypted traffic (GET/POST) [$] #
+# 27    # HTTP_DROPBOX       # Dropbox presence traffic (GET) [^]        #
+##########################################################################
 
 These values are different from 0 only for identified HTTP connections 
 (column no. 101). These constants are also used in the RRD data and in 
@@ -193,4 +195,10 @@ distribution sites.
 [%] HTTP_YOUTUBE_204 and HTTP_YOUTUBE_VIDEO204 are counted as HTTP_YOUTUBE_VIDEO
 in RRDs and histograms (i.e. they are classified in idx4 ). 
 [~] HTTP_YOUTUBE_SITE_DIRECT and HTTP_YOUTUBE_SITE_EMBED are counted as HTTP_YOUTUBE_SITE
-in RRDs and histograms (i.e. they are classified in idx15 ). 
+and WEB_OTHER in RRDs and histograms (i.e. they are classified in idx15 ). 
+[$] HTTP_TWITTER refers just to Twitter unencrypted connections, mostly related to
+the Twitter widgets in web pages. HTTP_TWITTER is counted as HTTP_SOCIAL and WEB_SOCIAL in 
+RRDs and histograms (i.e. it is classified in idx16 ).
+[^] HTTP_DROPBOX refers to the presence/keep-alive connections maintained by the
+Dropbox client. Experimental. It is counted as HTTP_GET and WEB_OTHER in RRDs and 
+histograms.

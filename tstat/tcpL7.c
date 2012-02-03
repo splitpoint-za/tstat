@@ -59,6 +59,10 @@ enum http_content YTMAP(enum http_content X)
      case HTTP_YOUTUBE_SITE_DIRECT:
      case HTTP_YOUTUBE_SITE_EMBED:
        return HTTP_YOUTUBE_SITE;
+     case HTTP_TWITTER:
+       return HTTP_SOCIAL;
+     case HTTP_DROPBOX:
+       return HTTP_GET;
      default:
        return X;      
    }
@@ -632,6 +636,12 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytdevice = yt_device;
                    }
 #endif
+#ifdef SNOOP_DROPBOX
+                  if (ptp->http_data==HTTP_DROPBOX )
+                   {
+                     strncpy(ptp->http_ytid,yt_id,19);
+                   }
+#endif
 	        }
 	      break;
 	    case POST:
@@ -1077,6 +1087,12 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 			  ptp->http_ytdevice = yt_device;
                         }
 #endif			
+#ifdef SNOOP_DROPBOX
+                       if (ptp->http_data==HTTP_DROPBOX )
+                        {
+                          strncpy(ptp->http_ytid,yt_id,19);
+                        }
+#endif
 	             }
                  }
 	        break;

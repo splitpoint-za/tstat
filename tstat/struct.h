@@ -600,6 +600,8 @@ enum http_content
   HTTP_YOUTUBE_VIDEO204, /* 22 - YouTube "pre-loading" and video (GET)  */
   HTTP_YOUTUBE_SITE_DIRECT, /* 23 - YouTube site direct video access (GET) */
   HTTP_YOUTUBE_SITE_EMBED, /* 24 - YouTube embedded video access (GET) */
+  HTTP_TWITTER,         /* 25 - Twitter (not-encrypted) */
+  HTTP_DROPBOX,         /* 26 - Dropbox */
   HTTP_LAST_TYPE
 };
 
