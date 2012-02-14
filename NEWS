@@ -1,5 +1,17 @@
 News in 2.3
 -------------
+* New additional DPI engine for classification of video streams,
+  with a new associated log file (log_streaming_complete)
+* New dump options
+* Updated DPI classification
+  - UDP MPEG2 PES video streams, PPStream P2P TV, TEREDO
+  - Updated Facebook and YouTube classification
+  - Added Twitter and Dropbox services
+  - Added additional SSL logging
+* General improvements and bugfixes
+
+News in 2.2
+-------------
 * Direct generation of compressed (.gz) logs and dumps
 * Updated DPI classification:
   - Bittorrent uTP
