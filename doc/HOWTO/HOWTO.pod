@@ -1607,7 +1607,7 @@ continue investing in Tstat.
 
 
 
-Copyright (c) 2001 Politecnico di Torino.  All rights reserved.
+Copyright (c) 2001-2012 Politecnico di Torino.  All rights reserved.
 
  
 This program is free software; you can redistribute it and/or modify
