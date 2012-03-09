@@ -1361,7 +1361,7 @@ create_all_histo (void)
 		  "TCP flow average RTT [ms] - non-cloud outgoing flows", 0, 3500, 10);
   tcp_rtt_nc_avg_in =
     create_histo ("tcp_rtt_nc_avg_in",
-		  "TCP flow average RTT [ms] - non-incoming flows", 0, 3500, 10);
+		  "TCP flow average RTT [ms] - non-cloud incoming flows", 0, 3500, 10);
 
 /* v1.2.0 ---------------------------------------------------------------------------*/
 
