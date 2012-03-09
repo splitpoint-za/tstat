@@ -1348,6 +1348,21 @@ create_all_histo (void)
   tcp_rtt_avg_s2c =
     create_histo ("tcp_rtt_avg_s2c",
 		  "TCP flow average RTT [ms] - server flows", 0, 3500, 10);
+
+  tcp_rtt_c_avg_out =
+    create_histo ("tcp_rtt_c_avg_out",
+		  "TCP flow average RTT [ms] - cloud outgoing flows", 0, 3500, 10);
+  tcp_rtt_c_avg_in =
+    create_histo ("tcp_rtt_c_avg_in",
+		  "TCP flow average RTT [ms] - cloud incoming flows", 0, 3500, 10);
+
+  tcp_rtt_nc_avg_out =
+    create_histo ("tcp_rtt_nc_avg_out",
+		  "TCP flow average RTT [ms] - non-cloud outgoing flows", 0, 3500, 10);
+  tcp_rtt_nc_avg_in =
+    create_histo ("tcp_rtt_nc_avg_in",
+		  "TCP flow average RTT [ms] - non-incoming flows", 0, 3500, 10);
+
 /* v1.2.0 ---------------------------------------------------------------------------*/
 
   tcp_rtt_max_out =
@@ -1580,11 +1595,32 @@ create_all_histo (void)
   tcp_tot_time = create_histo ("tcp_tot_time",
 			       "TCP flow lifetime [ms]", 0, 720000, 50);
   tcp_thru_c2s = create_histo ("tcp_thru_c2s",
-			       "TCP throughput [Kbps] - client flows", 0,
+			       "TCP throughput [kbps] - client flows", 0,
 			       1000, 1);
-  tcp_thru_s2c =
-    create_histo ("tcp_thru_s2c", "TCP throughput [Kbps] - server flows", 0,
-		  1000, 1);
+  tcp_thru_s2c = create_histo ("tcp_thru_s2c", 
+                               "TCP throughput [kbps] - server flows", 0,
+		               1000, 1);
+
+  tcp_thru_lf_c2s = create_histo ("tcp_thru_lf_c2s",
+			       "TCP throughput [x 10 kbps] - client large flows", 0,
+			       2000, 1);
+  tcp_thru_lf_s2c = create_histo ("tcp_thru_lf_s2c", 
+                               "TCP throughput [x 10 kbps] - server large flows", 0,
+		               2000, 1);
+		  
+  tcp_thru_lf_c_c2s = create_histo ("tcp_thru_lf_c_c2s",
+			       "TCP throughput [x 10 kbps] - cloud client large flows", 0,
+			       2000, 1);
+  tcp_thru_lf_c_s2c = create_histo ("tcp_thru_lf_c_s2c",
+                               "TCP throughput [x 10 kbps] - cloud server large flows", 0,
+		               2000, 1);
+
+  tcp_thru_lf_nc_c2s = create_histo ("tcp_thru_lf_nc_c2s",
+			       "TCP throughput [x 10 kbps] - non-cloud client large flows", 0,
+			       2000, 1);
+  tcp_thru_lf_nc_s2c = create_histo ("tcp_thru_lf_nc_s2c",
+                               "TCP throughput [x 10 kbps] - non-cloud server large flows", 0,
+		               2000, 1);
 
   tcp_interrupted =
     create_histo ("tcp_interrupted", "TCP Early interrupted flows", 0, 1, 1);

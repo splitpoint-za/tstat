@@ -163,19 +163,6 @@ void fake_histo_bitrate_update (struct double_histo_list *phisto,
 				double elapsed_time,
 				unsigned long long *, int );
 
-
-#define fake_histo_set(histo,value,bin)\
-(histo)->current_data[(bin)] = (value);
-
-#define fake_histo_add(histo,value,bin)\
-(histo)->current_data[(bin)]+= (value);
-
-#define fake_histo_get(histo,index)\
-i(histo)->current_data[(index)];
-
-
-
-
 /*-------------------------------------------------------------*/
 /* here are all the histo tracked by tstat                     */
 /* struct double_histo_list *test;                             */
@@ -294,12 +281,18 @@ struct double_histo_list *tcp_rtt_min_c2s;
 struct double_histo_list *tcp_rtt_min_s2c;
 
 /* v.1.2.0 -----------------------------------*/
-struct hyper_histo *check_rtt_avg;
+
 struct double_histo_list *tcp_rtt_avg_out;
 struct double_histo_list *tcp_rtt_avg_in;
 struct double_histo_list *tcp_rtt_avg_loc;
 struct double_histo_list *tcp_rtt_avg_c2s;
 struct double_histo_list *tcp_rtt_avg_s2c;
+
+struct double_histo_list *tcp_rtt_c_avg_out;
+struct double_histo_list *tcp_rtt_c_avg_in;
+struct double_histo_list *tcp_rtt_nc_avg_out;
+struct double_histo_list *tcp_rtt_nc_avg_in;
+
 /* v.1.2.0 -----------------------------------*/
 
 struct double_histo_list *tcp_rtt_max_out;
@@ -378,6 +371,13 @@ struct double_histo_list *tcp_unnrtx_FR_loc;
 struct double_histo_list *tcp_tot_time;
 struct double_histo_list *tcp_thru_c2s;
 struct double_histo_list *tcp_thru_s2c;
+
+struct double_histo_list *tcp_thru_lf_c2s;
+struct double_histo_list *tcp_thru_lf_s2c;
+struct double_histo_list *tcp_thru_lf_c_c2s;
+struct double_histo_list *tcp_thru_lf_c_s2c;
+struct double_histo_list *tcp_thru_lf_nc_c2s;
+struct double_histo_list *tcp_thru_lf_nc_s2c;
 
 struct double_histo_list *tcp_interrupted;
 

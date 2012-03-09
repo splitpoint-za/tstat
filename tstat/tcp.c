@@ -2495,6 +2495,24 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	      add_histo (tcp_rtt_avg_in,
 			 (Average (incoming->rtt_sum, incoming->rtt_count) /
 			  1000.0));
+	      if (ptp_save->cloud_src || ptp_save->cloud_dst)
+	       {
+	         add_histo (tcp_rtt_c_avg_out,
+	        	 (Average (outgoing->rtt_sum, outgoing->rtt_count) /
+	        	  1000.0));
+	         add_histo (tcp_rtt_c_avg_in,
+	        	 (Average (incoming->rtt_sum, incoming->rtt_count) /
+	        	  1000.0));
+	       }
+	      else
+	       {
+	         add_histo (tcp_rtt_nc_avg_out,
+	        	 (Average (outgoing->rtt_sum, outgoing->rtt_count) /
+	        	  1000.0));
+	         add_histo (tcp_rtt_nc_avg_in,
+	        	 (Average (incoming->rtt_sum, incoming->rtt_count) /
+	        	  1000.0));
+	       }
 
 	      /* min */
 	      add_histo (tcp_rtt_min_out, (outgoing->rtt_min / 1000.0));
@@ -2672,12 +2690,42 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       add_histo (tcp_tot_time, etime);
       /* throughput in kbps */
       if (my_finite (thru))
-	add_histo (tcp_thru_c2s, thru);
+       {
+	 add_histo (tcp_thru_c2s, thru);
+         /* Large flow stats */
+	 if ( ptp_save->c2s.unique_bytes >= 1000000)
+	  {
+	    add_histo (tcp_thru_lf_c2s, thru/10.0);
+	    if (ptp_save->cloud_src || ptp_save->cloud_dst)
+	     {
+	       add_histo (tcp_thru_lf_c_c2s, thru/10.0);
+	     }
+	    else
+	     {
+	       add_histo (tcp_thru_lf_nc_c2s, thru/10.0);
+	     }
+	  }
+       }
+
       thru = ((double) ptp_save->s2c.unique_bytes /
 	      elapsed (ptp_save->first_time, pba->payload_end_time) * 8000.0);
       if (my_finite (thru))
-	add_histo (tcp_thru_s2c, thru);
-
+       {
+	 add_histo (tcp_thru_s2c, thru);
+         /* Large flow stats */
+	 if ( ptp_save->s2c.unique_bytes >= 1000000)
+	  {
+	    add_histo (tcp_thru_lf_s2c, thru/10.0);
+	    if (ptp_save->cloud_src || ptp_save->cloud_dst)
+	     {
+	       add_histo (tcp_thru_lf_c_s2c, thru/10.0);
+	     }
+	    else
+	     {
+	       add_histo (tcp_thru_lf_nc_s2c, thru/10.0);
+	     }
+	  }
+       }
     }
 
   /* check if this flow has been abruptly interrupted by the user       */
