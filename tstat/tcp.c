@@ -2695,14 +2695,14 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
          /* Large flow stats */
 	 if ( ptp_save->c2s.unique_bytes >= 1000000)
 	  {
-	    add_histo (tcp_thru_lf_c2s, thru/10.0);
+	    add_histo (tcp_thru_lf_c2s, thru);
 	    if (ptp_save->cloud_src || ptp_save->cloud_dst)
 	     {
-	       add_histo (tcp_thru_lf_c_c2s, thru/10.0);
+	       add_histo (tcp_thru_lf_c_c2s, thru);
 	     }
 	    else
 	     {
-	       add_histo (tcp_thru_lf_nc_c2s, thru/10.0);
+	       add_histo (tcp_thru_lf_nc_c2s, thru);
 	     }
 	  }
        }
@@ -2715,14 +2715,14 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
          /* Large flow stats */
 	 if ( ptp_save->s2c.unique_bytes >= 1000000)
 	  {
-	    add_histo (tcp_thru_lf_s2c, thru/10.0);
+	    add_histo (tcp_thru_lf_s2c, thru);
 	    if (ptp_save->cloud_src || ptp_save->cloud_dst)
 	     {
-	       add_histo (tcp_thru_lf_c_s2c, thru/10.0);
+	       add_histo (tcp_thru_lf_c_s2c, thru);
 	     }
 	    else
 	     {
-	       add_histo (tcp_thru_lf_nc_s2c, thru/10.0);
+	       add_histo (tcp_thru_lf_nc_s2c, thru);
 	     }
 	  }
        }
