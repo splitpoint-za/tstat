@@ -1340,7 +1340,7 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	  if (type==L7_FLOW_HTTP)
 	   {
  	     add_histo (L7_HTTP_num_out, YTMAP(ptp->http_data));
- 	     add_histo (L7_WEB_num_out, map_http_to_web(YTMAP(ptp->http_data)));
+ 	     add_histo (L7_WEB_num_out, map_http_to_web(ptp));
              if (ptp->cloud_dst)
 	      {
  	     add_histo (L7_HTTP_num_c_out, YTMAP(ptp->http_data));
@@ -1364,7 +1364,7 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	  if (type==L7_FLOW_HTTP)
 	   {
  	     add_histo (L7_HTTP_num_in, YTMAP(ptp->http_data));
- 	     add_histo (L7_WEB_num_in, map_http_to_web(YTMAP(ptp->http_data)));
+ 	     add_histo (L7_WEB_num_in, map_http_to_web(ptp));
              if (ptp->cloud_src)
 	      {
  	     add_histo (L7_HTTP_num_c_in, YTMAP(ptp->http_data));
@@ -1380,7 +1380,7 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	  if (type==L7_FLOW_HTTP)
 	   {
  	     add_histo (L7_HTTP_num_loc, YTMAP(ptp->http_data));
- 	     add_histo (L7_WEB_num_loc, map_http_to_web(YTMAP(ptp->http_data)));
+ 	     add_histo (L7_WEB_num_loc, map_http_to_web(ptp));
 	   }
 	  break;
 	}
@@ -1554,7 +1554,7 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
       if (type==L7_FLOW_HTTP)
        {
 	 HTTP_bitrate.out[YTMAP(thisflow->http_data)] += len;
-	 WEB_bitrate.out[map_http_to_web(YTMAP(thisflow->http_data))] += len;
+	 WEB_bitrate.out[map_http_to_web(thisflow)] += len;
        }
       if (cloud_dst)
        {
@@ -1579,7 +1579,7 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
       if (type==L7_FLOW_HTTP)
        {
 	 HTTP_bitrate.in[YTMAP(thisflow->http_data)] += len;
-	 WEB_bitrate.in[map_http_to_web(YTMAP(thisflow->http_data))] += len;
+	 WEB_bitrate.in[map_http_to_web(thisflow)] += len;
        }
       if (cloud_src)
        {
@@ -1608,7 +1608,7 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
       if (type==L7_FLOW_HTTP)
        {
 	 HTTP_bitrate.loc[YTMAP(thisflow->http_data)] += len;
-	 WEB_bitrate.loc[map_http_to_web(YTMAP(thisflow->http_data))] += len;
+	 WEB_bitrate.loc[map_http_to_web(thisflow)] += len;
        }
     }
 

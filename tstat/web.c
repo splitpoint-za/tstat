@@ -21,6 +21,10 @@
 #include <regex.h>
 #endif
 
+extern enum video_content VIDEO_MAP(tcp_pair *);
+extern enum http_content YTMAP(enum http_content );
+
+
 #ifdef VIDEO_DETAILS
 char *patterns[10];
 char match_buffer[450];
@@ -2844,53 +2848,79 @@ enum http_content classify_http_post(void *pdata,int data_length)
 
 }
 
-enum web_category map_http_to_web(enum http_content http_type)
+enum web_category map_http_to_web(tcp_pair *ptp)
 {
-  switch(http_type)
+  enum http_content http_type = YTMAP(ptp->http_data);
+  enum video_content video_type = VIDEO_MAP(ptp);
+
+  if (video_type == VIDEO_NOT_DEFINED)
    {
-     case HTTP_GET:
-       return WEB_GET;
+     switch(http_type)
+      {
+   	case HTTP_GET:
+   	  return WEB_GET;
 
-     case HTTP_POST:
-       return WEB_POST;
+   	case HTTP_POST:
+   	  return WEB_POST;
 
-     case HTTP_MSN:
-     case HTTP_RTMPT:
-     case HTTP_FACEBOOK:
-     case HTTP_SOCIAL:
-     case HTTP_TWITTER:
-       return WEB_SOCIAL;
-       
-     case HTTP_YOUTUBE_VIDEO:
-     case HTTP_YOUTUBE_VIDEO204:
-     case HTTP_YOUTUBE_204:
-       return WEB_YOUTUBE;
+   	case HTTP_MSN:
+   	case HTTP_RTMPT:
+   	case HTTP_FACEBOOK:
+   	case HTTP_SOCIAL:
+   	case HTTP_TWITTER:
+   	  return WEB_SOCIAL;
+ 
+   	case HTTP_YOUTUBE_VIDEO:
+   	case HTTP_YOUTUBE_VIDEO204:
+   	case HTTP_YOUTUBE_204:
+   	  return WEB_YOUTUBE;
 
-     case HTTP_VIDEO_CONTENT:
-     case HTTP_VIMEO:
-     case HTTP_VOD:
-     case HTTP_FLASHVIDEO:
-       return WEB_VIDEO;
+   	case HTTP_VIDEO_CONTENT:
+   	case HTTP_VIMEO:
+   	case HTTP_VOD:
+   	case HTTP_FLASHVIDEO:
+   	  return WEB_VIDEO;
 
-     case HTTP_RAPIDSHARE:
-     case HTTP_MEGAUPLOAD:
-     case HTTP_MEDIAFIRE:
-     case HTTP_HOTFILE:
-     case HTTP_STORAGE:
-       return WEB_STORAGE;
+   	case HTTP_RAPIDSHARE:
+   	case HTTP_MEGAUPLOAD:
+   	case HTTP_MEDIAFIRE:
+   	case HTTP_HOTFILE:
+   	case HTTP_STORAGE:
+   	  return WEB_STORAGE;
 
-     case HTTP_WIKI:
-     case HTTP_ADV:
-     case HTTP_FLICKR:
-     case HTTP_GMAPS:
-     case HTTP_YOUTUBE_SITE:
-     case HTTP_YOUTUBE_SITE_DIRECT:
-     case HTTP_YOUTUBE_SITE_EMBED:
-     case HTTP_DROPBOX:
-       return WEB_OTHER;
+   	case HTTP_WIKI:
+   	case HTTP_ADV:
+   	case HTTP_FLICKR:
+   	case HTTP_GMAPS:
+   	case HTTP_YOUTUBE_SITE:
+   	case HTTP_YOUTUBE_SITE_DIRECT:
+   	case HTTP_YOUTUBE_SITE_EMBED:
+   	case HTTP_DROPBOX:
+   	  return WEB_OTHER;
 
-     default:
-       return WEB_OTHER;   
+   	default:
+   	  return WEB_OTHER;
+      }
+   }
+  else
+   {
+     switch(http_type)
+      {
+   	case HTTP_MSN:
+   	case HTTP_RTMPT:
+   	case HTTP_FACEBOOK:
+   	case HTTP_SOCIAL:
+   	case HTTP_TWITTER:
+   	  return WEB_SOCIAL;
+
+   	case HTTP_YOUTUBE_VIDEO:
+   	case HTTP_YOUTUBE_VIDEO204:
+   	case HTTP_YOUTUBE_204:
+   	  return WEB_YOUTUBE;
+
+   	default:
+   	  return WEB_VIDEO;
+      }
    }
   
 }
