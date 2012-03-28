@@ -3,6 +3,7 @@
   * Defined new RRD/histos for RTT and overall throughtput of 'cloud' 
     connections
   * Changed resolution for RTT and overall throughput histos
+  * Added HLS (HTTP LiveStreaming) video classification
 
 17/10/11 - MMM
 - Main changes since 2.2:

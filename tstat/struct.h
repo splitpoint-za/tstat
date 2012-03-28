@@ -540,6 +540,7 @@ enum video_content
 	VIDEO_QUICKTIME,					/*  9 - QUICKTIME 		*/
 	VIDEO_ASF,							/*  10 - x-ms-asf		*/
 	VIDEO_UNKNOWN,						/*  11 - Unclassified VIDEO 		*/
+        VIDEO_HLS,                                             /* 12 - HLS Stream (SkyGo) */
 	VIDEO_LAST_TYPE
 };
 

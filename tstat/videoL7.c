@@ -554,6 +554,16 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
 	   {
      	     return VIDEO_WMV;
   	   } 
+          else if (memcmp(content_type + 12, "x-mpegURL",
+                                  (subType_len < 9 ? subType_len  : 9)) == 0)
+           {
+             return VIDEO_HLS;
+           }
+          else if (memcmp(content_type + 12, "vnd.apple.mpegurl",
+                                  (subType_len < 17 ? subType_len  : 17)) == 0)
+           {
+             return VIDEO_HLS;
+           }
 	  else if (memcmp(content_type + 12, "mp4",
   				  (subType_len < 3 ? subType_len  : 3)) == 0)
 	   {
@@ -638,9 +648,23 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
 	        {
   	          return VIDEO_MPEG;
   	        } 
+	       else if (memcmp(content_type + 6, "mp2t",
+	        		  (subType_len < 4 ? subType_len : 4))== 0)
+	        {
+	          return VIDEO_HLS;
+	        }
 	       else
   	         return VIDEO_UNKNOWN;
  	       break;
+             case 'M':
+               if (memcmp(content_type + 6, "MP2T",
+                                 (subType_len < 4 ? subType_len : 4))== 0)
+                {
+	          return VIDEO_HLS;
+                }
+               else
+                 return VIDEO_UNKNOWN;
+               break;
 	     case 'f':
 	       if (memcmp(content_type + 6, "flv",
   				  (subType_len < 3 ? subType_len : 3)) == 0)
