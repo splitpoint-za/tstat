@@ -90,6 +90,7 @@ VIDEO format - col. 77/78 (1)
 #     8 # OGG             # Ogg Vorbis Codec compressed Multimedia file						  #
 #     9 # QUICKTIME       # Video exported with QuickTime Apple Inc software [#]                                  #
 #    10 # ASF             # ASF control packets (ASF video are generally classified as WMV)                       #
+#    12 # HLS             # HTTP Live Streaming                                                                   #
 #    11 # UNKNOWN         # Other videos formats or Content-Type values like 'video/*'                            #
 ###################################################################################################################
 

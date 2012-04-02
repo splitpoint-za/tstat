@@ -4,6 +4,7 @@
     connections
   * Changed resolution for RTT and overall throughput histos
   * Added HLS (HTTP LiveStreaming) video classification
+  * Bugfix: problems in video payload classification
 
 17/10/11 - MMM
 - Main changes since 2.2:

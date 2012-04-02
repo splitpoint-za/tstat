@@ -381,12 +381,12 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
   char *base = (char *) (pdata + offset);
   int available_data = data_length - offset;
 
-  switch (*((u_int32_t *) pdata)) 
+  switch (*((u_int32_t *) base)) 
    {
      case FLV: /* parse header of an FLV video */
        if (available_data >= 27)
 	{
-	  parse_flv_metadata(meta, pdata, available_data);
+	  parse_flv_metadata(meta, base, available_data);
 	  if (meta->duration > 0 && meta->bytelength > 0
 			  && meta->videodatarate == 0)
 	    {
@@ -409,7 +409,7 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
      case AVI: /* parse header of an AVI container */
        if ((available_data >= 16) && memcmp(base + 8, "AVI LIST", 8) == 0)
         {
-	  parse_avi_metadata(meta, pdata, available_data);
+	  parse_avi_metadata(meta, base, available_data);
 	  if (debug > 0)
 	     fprintf(fp_stdout,"AVI - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
 		  meta->duration / 60, meta->width, meta->height,
@@ -457,7 +457,7 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
 	   }
           else
            {
-	     parse_mp4_metadata(meta, pdata, available_data);
+	     parse_mp4_metadata(meta, base, available_data);
 	     if (debug > 0)
                {
 		 fprintf(fp_stdout,"MP4 - Duration[min]: %.2f Res: %dx%d Bitrate: %.2f\n",
@@ -633,6 +633,11 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
   				  (subType_len < 8 ? subType_len : 8)) == 0)
 	        {
   	          return VIDEO_ASF;
+  	        }
+	       else if (memcmp(content_type + 6, "x-ms-wmv",
+  				  (subType_len < 8 ? subType_len : 8)) == 0)
+	        {
+  	          return VIDEO_WMV;
   	        }
 	       else
   	         return VIDEO_UNKNOWN;
