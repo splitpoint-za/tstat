@@ -5,6 +5,8 @@
   * Changed resolution for RTT and overall throughput histos
   * Added HLS (HTTP LiveStreaming) video classification
   * Bugfix: problems in video payload classification
+  * Updated YouTube classification, with changes to the mobile/nomobile logic
+  * Added sanity check to SSL client request subject
 
 17/10/11 - MMM
 - Main changes since 2.2:

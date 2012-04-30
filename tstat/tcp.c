@@ -3087,6 +3087,12 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
        }
 */
 
+#ifndef PACKET_STATS
+  /* Number of PSH-separated messages */
+
+  wfprintf(fp," %d %d",ptp_save->c2s.msg_count,ptp_save->s2c.msg_count);
+#endif
+
   wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
   wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
 

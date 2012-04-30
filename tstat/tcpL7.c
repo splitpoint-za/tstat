@@ -75,7 +75,7 @@ tcpL7_init ()
 #ifdef VIDEO_DETAILS
    init_web_patterns();
 #endif
-   regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,4}$",REG_EXTENDED);
+   regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,4}\\.?$",REG_EXTENDED);
 }
 
 void *
@@ -137,7 +137,12 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 	          cname[j]=base[idx+ii+j];
 	       }
 	      cname[j]='\0';
-	      ptp->ssl_client_subject = strdup(cname);
+
+	      if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
+	       {
+	         ptp->ssl_client_subject = strdup(cname);
+	       }
+
               ii = next;
 	      break;
 	    case 0x3374:

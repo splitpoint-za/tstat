@@ -27,7 +27,7 @@ extern enum http_content YTMAP(enum http_content );
 
 #ifdef VIDEO_DETAILS
 char *patterns[10];
-char match_buffer[450];
+char match_buffer[604];
 char yt_id[20];
 char yt_itag[5];
 int  yt_seek;
@@ -790,237 +790,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'g':
-       if ( (memcmp(base, "/generate_204?sparams=",
-                  ( available_data < 22 ? available_data : 22)) == 0) ||
-	      /* next one is the old YT rule, valid before 12/Jan/2011 */
-            (memcmp(base, "/generate_204?ip=",
-                  ( available_data < 17 ? available_data : 17)) == 0))
-         {
-#ifdef VIDEO_DETAILS
-           int st_redir_mode,rc_redir_mode;
-           int rc_redir_count;
-	   char url_param[4][80];
-	   int  url_found[4];
-	   int  idx;
-           int  yt_mobile2,mobile_set;
-
-           memcpy(match_buffer,base,(available_data<445?available_data:445));
-           match_buffer[(available_data<445?available_data:445)]='\0';
-
-           for (idx=0;idx<4;idx++)
-	    {
-	      url_found[idx]=0;
-	      url_param[idx][0]='\0';
-	    }
-
-           for (idx=0;idx<4;idx++)
-	    {
-	      /* Match from pattern[6] to pattern[9] */ 
-              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
-               {
-                int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
-                  (msize<79?msize:79));
-                  url_param[idx][msize<79?msize:79]='\0';
-		 url_found[idx]=1;
-               }
-	    }
-           
-	   /* Normally here we have the traditional nomobile connection 
-	      In any case we apply the complete rule, that is:
-	      If key==yt1 and app==youtube_mobile -> mobile
-	      else -> nomobile
-	      We keep also the rule for the device, that is:
-	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
-	      else if (client =~ /android/ || androidcid !empty) -> android
-	      else -> other
-	      
-           */
- 
-           yt_mobile2 = 0;
-           mobile_set = 0;
-
-           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
-	    {
-	      if ( url_found[PARAM_APP]!=0 && 
-	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
-		{ 
-		  yt_mobile2 = 1;
-                  mobile_set = 1;
-		}	 
-	      else if ( url_found[PARAM_APP]!=0 && 
-	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
-		{ 
-		  /* I had, at least, the data to decide that it might have been mobile */
-                  mobile_set = 1;
-		}	 
-	    }
-	   else
-	    {
-	      /* key==yta1 or ck1 */
-	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
-		{ 
-		  yt_mobile2 = 1;
-                  mobile_set = 1;
-		}	 
-	    } 
-	     
-	   yt_device = 0;
-
-	   if ( (url_found[PARAM_CLIENT]!=0) && 
-	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
-                   memcmp(url_param[1],"iPhone",6)==0 ) 
-	      )
-	    {
-	      yt_device = 1;
-	    }
-	   else if ( (url_found[PARAM_CLIENT]!=0) && 
-	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
-	           )
-	    { 
-	      yt_device = 2;
-	    }
-	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
-	    { 
-	      yt_device = 2;
-	    }
-	   else if ( (url_found[PARAM_CLIENT]!=0))
-	    { 
-	      yt_device = 3;
-	    }
-	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
-	    { 
-	      yt_device = 3;
-	    }
-	   
-	   if (available_data>110)
-	    {
-            memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
-            match_buffer[(available_data<210?available_data-110:100)]='\0';
-             if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
-              {
-               int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
-                 (msize<4?msize:4));
-                 yt_itag[msize<4?msize:4]='\0';
-              }
-	     }
-
-	   if (available_data>250)
-	    {
-            memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));
-            match_buffer[(available_data<450?available_data-250:200)]='\0';
-             if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
-              {
-               int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_id,match_buffer+re_res[1].rm_so,
-                 (msize<19?msize:19));
-                 yt_id[msize<19?msize:19]='\0';
-                if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-                   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
-                    (msize<9?msize:9));
-                    yt_seek_char[msize2<9?msize2:9]='\0';
-	            sscanf(yt_seek_char,"%d",&yt_seek);
-		 }
-		else
-		 {
-		   yt_seek = 0;
-		 }
-                st_redir_mode = 0;
-                rc_redir_mode = 0;
-		rc_redir_count = 0;
-                if (regexec(&re[3],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
-                       (msize2<6?msize2:6));
-                    yt_redir[msize2<6?msize2:6]='\0';
-
-		   if (memcmp(yt_redir,"lc",2)==0)
-		    { 
-		      st_redir_mode = 1;
-		    }
-		   else if (memcmp(yt_redir,"nx",2)==0)
-		    { 
-		      st_redir_mode = 2;
-		    }
-		   else
-		    { 
-		      st_redir_mode = 3;
-		    }
-		 }
-		if (regexec(&re[4],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
-                       (msize2<4?msize2:4));
-                    yt_redir[msize2<4?msize2:4]='\0';
-		   rc_redir_mode = 1;
-		   sscanf(yt_redir,"%d",&rc_redir_count);
-		 }
-
-		/*
-		  redir_mode redir_count
-		    0 0 (no redir)
-		    1 X ( redirect_counter=X, no st=)
-		    2 X+1 ( redirect_counter=X, st=tcts)
-		    3 X+1 ( redirect_counter=X, st=nx)
-		    4 1 ( no redirect_counter, st=lc)
-		    5 1 ( no redirect_couter, st=nx)
-		    6 X+1 (another combination)
-		*/
-		
-		yt_redir_mode = 0;
-		yt_redir_count = 0;
-
-		if (rc_redir_mode==0 && st_redir_mode==0)
-		 {
-		   yt_redir_mode = 0;
-		   yt_redir_count = 0;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==0)
-		 {
-		   yt_redir_mode = 1;
-		   yt_redir_count = rc_redir_count;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==3)
-		 {
-		   yt_redir_mode = 2;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==2)
-		 {
-		   yt_redir_mode = 3;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-                else if (rc_redir_mode==0 && st_redir_mode==1)
-		 {
-		   yt_redir_mode = 4;
-		   yt_redir_count = 1;
-		 }
-                else if (rc_redir_mode==0 && st_redir_mode==2)
-		 {
-		   yt_redir_mode = 5;
-		   yt_redir_count = 1;
-		 }
-		else
-		 {
-		   yt_redir_mode = 6;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-              }
-	     }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
-#endif
-          return HTTP_YOUTUBE_204;
-         }
-       else if (memcmp (base, "/generate_204?",
+       if (memcmp (base, "/generate_204?",
                   ( available_data < 14 ? available_data : 14)) == 0)
          {
-	   /* Generic YouTube connection, possibly from mobile clients or
-	     media centers */
+	   /* YouTube connection */
 #ifdef VIDEO_DETAILS
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
@@ -1029,8 +802,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  idx;
            int  yt_mobile2,mobile_set;
 
-           memcpy(match_buffer,base,(available_data<445?available_data:445));
-           match_buffer[(available_data<445?available_data:445)]='\0';
+           memcpy(match_buffer,base,(available_data<600?available_data:600));
+           match_buffer[(available_data<600?available_data:600)]='\0';
 
            for (idx=0;idx<4;idx++)
 	    {
@@ -1236,7 +1009,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 1 ;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
 #endif
           return HTTP_YOUTUBE_204;
          }
@@ -1712,238 +1485,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
        break;
 
      case 'v':
-       if ( (memcmp(base, "/videoplayback?sparams=",
-                  ( available_data < 23 ? available_data : 23)) == 0) ||
-	      /* next one is the old YT rule, valid before 12/Jan/2011 */
-            (memcmp(base, "/videoplayback?ip=",
-                  ( available_data < 18 ? available_data : 18)) == 0))
-         {
-#ifdef VIDEO_DETAILS
-           int st_redir_mode,rc_redir_mode;
-           int rc_redir_count;
-
-	   char url_param[4][80];
-	   int  url_found[4];
-	   int  idx;
-           int  yt_mobile2,mobile_set;
-
-           memcpy(match_buffer,base,(available_data<445?available_data:445));
-           match_buffer[(available_data<445?available_data:445)]='\0';
-
-           for (idx=0;idx<4;idx++)
-	    {
-	      url_found[idx]=0;
-	      url_param[idx][0]='\0';
-	    }
-
-           for (idx=0;idx<4;idx++)
-	    {
-	      /* Match from pattern[6] to pattern[9] */ 
-              if (regexec(&re[6+idx],match_buffer,(size_t) 2,re_res,0)==0)
-               {
-                int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                 memcpy(url_param[idx],match_buffer+re_res[1].rm_so,
-                  (msize<79?msize:79));
-                  url_param[idx][msize<79?msize:79]='\0';
-		 url_found[idx]=1;
-               }
-	    }
-           
-	   /* Normally here we have the traditional nomobile connection 
-	      In any case we apply the complete rule, that is:
-	      If key==yt1 and app==youtube_mobile -> mobile
-	      else -> nomobile
-	      We keep also the rule for the device, that is:
-	      if (client =~ /apple/ || client =~ /iPhone/) -> apple
-	      else if (client =~ /android/ || androidcid !empty) -> android
-	      else -> other
-	      
-           */
- 
-           yt_mobile2 = 0;
-           mobile_set = 0;
-
-           if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)==0)
-	    {
-	      if ( url_found[PARAM_APP]!=0 && 
-	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)==0)
-		{ 
-		  yt_mobile2 = 1;
-                  mobile_set = 1;
-		}	 
-	      else if ( url_found[PARAM_APP]!=0 && 
-	                 memcmp(url_param[PARAM_APP],"youtube_mobile",14)!=0)
-		{ 
-		  /* I had, at least, the data to decide that it might have been mobile */
-                  mobile_set = 1;
-		}	 
-	    }
-	   else
-	    {
-	      /* key==yta1 or ck1 */
-	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
-		{ 
-		  yt_mobile2 = 1;
-                  mobile_set = 1;
-		}	 
-	    } 
-	     
-	   yt_device = 0;
-
-	   if ( (url_found[PARAM_CLIENT]!=0) && 
-	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
-                   memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
-	      )
-	    {
-	      yt_device = 1;
-	    }
-	   else if ( (url_found[PARAM_CLIENT]!=0) && 
-	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
-	           )
-	    { 
-	      yt_device = 2;
-	    }
-	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
-	    { 
-	      yt_device = 2;
-	    }
-	   else if ( (url_found[PARAM_CLIENT]!=0))
-	    { 
-	      yt_device = 3;
-	    }
-	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
-	    { 
-	      yt_device = 3;
-	    }
-
-	   if (available_data>110)
-	    {
-            memcpy(match_buffer,base+110,(available_data<210?available_data-110:100));
-            match_buffer[(available_data<210?available_data-110:100)]='\0';
-             if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
-              {
-               int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_itag,match_buffer+re_res[1].rm_so,
-                 (msize<4?msize:4));
-                 yt_itag[msize<4?msize:4]='\0';
-              }
-	     }
-
-	   if (available_data>250)
-	    {
-            memcpy(match_buffer,base+250,(available_data<450?available_data-250:200));
-            match_buffer[(available_data<450?available_data-250:200)]='\0';
-             if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
-              {
-               int msize = re_res[1].rm_eo-re_res[1].rm_so;
-                memcpy(yt_id,match_buffer+re_res[1].rm_so,
-                 (msize<19?msize:19));
-                 yt_id[msize<19?msize:19]='\0';
-                if (regexec(&re[1],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-                   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_seek_char,match_buffer+re_res[1].rm_so,
-                    (msize<9?msize:9));
-                    yt_seek_char[msize2<9?msize2:9]='\0';
-	            sscanf(yt_seek_char,"%d",&yt_seek);
-		 }
-		else
-		 {
-		   yt_seek = 0;
-		 }
-                st_redir_mode = 0;
-                rc_redir_mode = 0;
-		rc_redir_count = 0;
-                if (regexec(&re[3],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
-                       (msize2<6?msize2:6));
-                    yt_redir[msize2<6?msize2:6]='\0';
-
-		   if (memcmp(yt_redir,"lc",2)==0)
-		    { 
-		      st_redir_mode = 1;
-		    }
-		   else if (memcmp(yt_redir,"nx",2)==0)
-		    { 
-		      st_redir_mode = 2;
-		    }
-		   else
-		    { 
-		      st_redir_mode = 3;
-		    }
-		 }
-		if (regexec(&re[4],match_buffer,(size_t) 2, re_res, 0)==0)
-		 {
-		   int msize2 = re_res[1].rm_eo-re_res[1].rm_so;
-                    memcpy(yt_redir,match_buffer+re_res[1].rm_so,
-                       (msize2<4?msize2:4));
-                    yt_redir[msize2<4?msize2:4]='\0';
-		   rc_redir_mode = 1;
-		   sscanf(yt_redir,"%d",&rc_redir_count);
-		 }
-		 
-		/*
-		  redir_mode redir_count
-		    0 0 (no redir)
-		    1 X ( redirect_counter=X, no st=)
-		    2 X+1 ( redirect_counter=X, st=tcts)
-		    3 X+1 ( redirect_counter=X, st=nx)
-		    4 1 ( no redirect_counter, st=lc)
-		    5 1 ( no redirect_couter, st=nx)
-		    6 X+1 (another combination)
-		*/
-		
-		yt_redir_mode = 0;
-		yt_redir_count = 0;
-
-		if (rc_redir_mode==0 && st_redir_mode==0)
-		 {
-		   yt_redir_mode = 0;
-		   yt_redir_count = 0;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==0)
-		 {
-		   yt_redir_mode = 1;
-		   yt_redir_count = rc_redir_count;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==3)
-		 {
-		   yt_redir_mode = 2;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-		else if (rc_redir_mode==1 && st_redir_mode==2)
-		 {
-		   yt_redir_mode = 3;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-                else if (rc_redir_mode==0 && st_redir_mode==1)
-		 {
-		   yt_redir_mode = 4;
-		   yt_redir_count = 1;
-		 }
-                else if (rc_redir_mode==0 && st_redir_mode==2)
-		 {
-		   yt_redir_mode = 5;
-		   yt_redir_count = 1;
-		 }
-		else
-		 {
-		   yt_redir_mode = 6;
-		   yt_redir_count = rc_redir_count+1;
-		 }
-              }
-            }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
-#endif
-          return HTTP_YOUTUBE_VIDEO;
-         }
-       else if (memcmp (base, "/videoplayback?",
+       if (memcmp (base, "/videoplayback?",
                   ( available_data < 15 ? available_data : 15)) == 0)
          {
-	   /* Generic YouTube connection, possibly from mobile clients or
-	     media centers */
+	   /* YouTube connection */
 #ifdef VIDEO_DETAILS
            int st_redir_mode,rc_redir_mode;
            int rc_redir_count;
@@ -1952,8 +1497,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  idx;
            int  yt_mobile2,mobile_set;
 
-           memcpy(match_buffer,base,(available_data<445?available_data:445));
-           match_buffer[(available_data<445?available_data:445)]='\0';
+           memcpy(match_buffer,base,(available_data<600?available_data:600));
+           match_buffer[(available_data<600?available_data:600)]='\0';
 
            for (idx=0;idx<4;idx++)
 	    {
@@ -2158,7 +1703,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 1 ;
+          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
 #endif
           return HTTP_YOUTUBE_VIDEO;
          }
