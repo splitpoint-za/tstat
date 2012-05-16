@@ -994,6 +994,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 #endif
 #ifdef VIDEO_DETAILS
               case FLV:         /* parse header of an FLV video */
+              case FLV2:         /* parse header of an FLV video */
                 if (ptp->http_data==HTTP_YOUTUBE_VIDEO||
                     ptp->http_data==HTTP_YOUTUBE_VIDEO204||
                     ptp->http_data==HTTP_YOUTUBE_204)

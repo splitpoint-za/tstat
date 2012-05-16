@@ -34,7 +34,8 @@
 #if(BYTE_ORDER == BIG_ENDIAN)
 
 /*Flash header*/
-#define FLV  		0x464C5601UL
+#define VL7_FLV  	0x464C5601UL
+#define VL7_FLV2  	0x1200034BUL
 
 /* AVI header */
 #define AVI  		0x53494646UL
@@ -56,7 +57,8 @@
 #else
 
 /*Flash header*/
-#define FLV  		0x01564C46UL
+#define VL7_FLV  	0x01564C46UL
+#define VL7_FLV2  	0x4B030012UL
 
 /* AVI header */
 #define AVI  		0x46464952UL

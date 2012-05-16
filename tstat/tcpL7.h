@@ -64,6 +64,7 @@
 
 /*Flash header*/
 #define FLV  0x464C5601UL
+#define FLV2 0x1200034BUL
 
 /* MP4 header */
 #define MP4  0x00000018UL
@@ -101,6 +102,7 @@
 
 /*Flash header*/
 #define FLV  0x01564C46UL
+#define FLV2 0x4B030012UL
 
 /* MP4 header */
 #define MP4  0x18000000UL

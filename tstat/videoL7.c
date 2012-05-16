@@ -383,7 +383,8 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
 
   switch (*((u_int32_t *) base)) 
    {
-     case FLV: /* parse header of an FLV video */
+     case VL7_FLV: /* parse header of an FLV video */
+     case VL7_FLV2: /* parse header of an FLV video */
        if (available_data >= 27)
 	{
 	  parse_flv_metadata(meta, base, available_data);

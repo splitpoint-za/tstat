@@ -17,6 +17,7 @@
 */
 
 #include "tstat.h"
+#include "tcpL7.h"
 #ifdef VIDEO_DETAILS
 #include <regex.h>
 #endif
@@ -88,17 +89,31 @@ double read_double(char *base)
 void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
 {
   struct flv_metadata *meta;
-  char *base = (char *)pdata+4;
+  char *base = (char *)pdata;
   int available_data = data_length - 4 ;
 
   meta = &(ptp->http_meta);
 
+  switch (*((u_int32_t *) base))
+    { 
+      case FLV:
+        /* Full FLV header */
+        base = base+44;
+	break;
+      case FLV2:
+        /* Reduced FLV header */
+        base = base+31;
+	break;
+      default:
+        return;
+    }
+
   /* Read the duration of the FLV - We need at least 58+4 bytes in the payload */
+  /* All minimum sizes are referred to the usage of the full FLV header */
 
   if (available_data < 58)
     return;
 
-  base = base+40;
   if (memcmp(base, "duration", 8) == 0)
    {
      meta->duration = read_double(base+9);
@@ -1761,6 +1776,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
     		return HTTP_YOUTUBE_SITE_EMBED;
                }
 	    }  
+	}
+       else if (available_data > 16 && 
+               /* (memcmp(base, "/v",2) == 0) && */ /* Implicit */ 
+		(memcmp(base + 8, "/flyers/",8) == 0))
+        {
+   	  return HTTP_FACEBOOK;
 	}
        else if (available_data > 15 && 
                /* (memcmp(base, "/v",2) == 0) && */ /* Implicit */ 
