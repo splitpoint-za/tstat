@@ -3476,7 +3476,7 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
        }
       else
        {
-         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0 0 0");
+         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0 0");
        }
 
       /* write to log file */
