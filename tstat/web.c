@@ -27,7 +27,7 @@ extern enum http_content YTMAP(enum http_content );
 
 
 #ifdef VIDEO_DETAILS
-char *patterns[10];
+char *patterns[11];
 char match_buffer[604];
 char yt_id[20];
 char yt_itag[5];
@@ -38,7 +38,7 @@ int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
 int  yt_device;
-regex_t re[10];
+regex_t re[11];
 regmatch_t re_res[2];
 
 /* Indexes for YouTube Mobile parameters */
@@ -61,8 +61,9 @@ void init_web_patterns()
   patterns[7] = "[?&]client=([^&]+)[& ]";
   patterns[8] = "[?&]key=([^& ]+)[& ]";
   patterns[9] = "[?&]androidcid=([^& ]+)[& ]";
+  patterns[10] = "/[0-9]{8,15}/picture[?/ ]"; /* graph.facebook.com */
 
-  for (i=0;i<10;i++)
+  for (i=0;i<11;i++)
    {
      regcomp(&re[i],patterns[i],REG_EXTENDED);
    }
@@ -351,7 +352,7 @@ enum http_content classify_vimeo(char *base, int available_data)
 
   status1=0;
   i = 3;
-  while (i<20)
+  while (i<23)
    {
      c = *(char *)(base + i );
      if (c!='/' && !isdigit(c)) 
@@ -363,10 +364,18 @@ enum http_content classify_vimeo(char *base, int available_data)
    }
   if (status1==1)
    {
-     if ((memcmp(base + i,".mp4?token=",
+     if ((memcmp(base + i,".mp4?ak",
+     	    ((available_data - i ) < 7 ? available_data - i : 7)) == 0)
+     	)
+      {
+        return HTTP_VIMEO;
+      }
+     else if ((memcmp(base + i,".mp4?token=",
      	    ((available_data - i ) < 11 ? available_data - i : 11)) == 0)
      	)
-     return HTTP_VIMEO;
+      {	
+        return HTTP_VIMEO;
+      }
    }
 
   return HTTP_GET;
@@ -407,6 +416,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/apps/application.php",
         	     ( available_data < 21 ? available_data : 21)) == 0)
+          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/ai.php?aed=",
+        	     ( available_data < 12 ? available_data : 12)) == 0)
           return HTTP_FACEBOOK;
        else if (memcmp(base, "/adj/",
         	     ( available_data < 5 ? available_data : 5)) == 0)
@@ -499,6 +511,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
            	  return HTTP_FACEBOOK;
            	else if (memcmp(base + 6, "notes_upload_ajax.php",
         		   ((available_data - 6) < 21 ? available_data - 6 : 21)) == 0)
+           	  return HTTP_FACEBOOK;
+           	else if (memcmp(base + 6, "notifications/",
+        		   ((available_data - 6) < 14 ? available_data - 6 : 14)) == 0)
            	  return HTTP_FACEBOOK;
 	        break;
 
@@ -603,6 +618,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/connect/xd_proxy.php",
                ( available_data < 21 ? available_data : 21)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/connect/xd_arbiter.php",
+               ( available_data < 23 ? available_data : 23)) == 0)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/cfs-ak-",
                ( available_data < 8 ? available_data : 8)) == 0)
@@ -1137,6 +1155,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/i/widget-logo.png",
                ( available_data < 18 ? available_data : 18)) == 0)
          return HTTP_TWITTER;
+       else if (memcmp(base, "/iframe/12?r=",
+               ( available_data < 13 ? available_data : 13)) == 0)
+         return HTTP_FACEBOOK;
        else if (memcmp(base, "/iframe/11?r=",
                ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
@@ -1261,6 +1282,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/pagelet/generic.php",
         	       ( available_data < 20 ? available_data : 20)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/ping?partition=",
+        	       ( available_data < 16 ? available_data : 16)) == 0)
+         return HTTP_FACEBOOK;
+       else if (memcmp(base, "/p?partition=",
+        	       ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
        else if ( available_data >29 && memcmp(base, "/plugins/",9)==0 )
          {
@@ -2067,7 +2094,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
           if (!isdigit(c))
 	    break;
 
-          if (classify_flickr(base,available_data)==HTTP_FLICKR)
+          memcpy(match_buffer,base,(available_data<30?available_data:30));
+          match_buffer[(available_data<30?available_data:30)]='\0';
+
+	  if (regexec(&re[10],match_buffer,(size_t) 0,NULL,0)==0)
+	    return HTTP_FACEBOOK;
+	  else if (classify_flickr(base,available_data)==HTTP_FLICKR)
 	    return HTTP_FLICKR;
 	  else if (classify_vimeo(base,available_data)==HTTP_VIMEO)
 	    return HTTP_VIMEO;
@@ -2085,6 +2117,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
             memcmp(base + 7, "-ak-",4) == 0 ||
             memcmp(base + 8, "-ak-",4) == 0 ||
 	    memcmp(base + 9, "-ak-",4) == 0))
+    return HTTP_FACEBOOK;
+  else if ( available_data > 14 && 
+           *(char *)(base + 3) == '_' &&
+           (memcmp(base + 6, "/all.js",7) == 0))
     return HTTP_FACEBOOK;
   else if ( available_data > 36 &&
            *(char *)(base + 12) == 'g' &&
@@ -2151,7 +2187,26 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	  }
        }
     }
-        
+  else if (available_data > 43 && 
+           *(char *)(base + 41) == ' ')
+    {
+      status1=0;
+      
+      for (i=1;i<41;i++)
+       {
+         c = *(char *)(base + i );
+	 if (!(isxdigit(c) && (islower(c)||isdigit(c))))
+	  {
+	    status1=1;
+	    break;
+	  }
+       }      
+     if (status1==0)
+      {
+     	return HTTP_MEGAUPLOAD;
+      }
+
+    }      
 
   return HTTP_GET;
 

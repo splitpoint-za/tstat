@@ -803,7 +803,7 @@ create_new_outfiles (char *filename)
     {
       mkdir (basenamedir, 0775);
     }
-  strftime (date, 49, "%H_%M_%d_%b_%Y", localtime (&current_time.tv_sec));
+  strftime (date, 49, "%Y_%m_%d_%H_%M", localtime (&current_time.tv_sec));
 
 
   sprintf (basename, "%s/%s.out", basenamedir, date);

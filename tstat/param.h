@@ -76,7 +76,7 @@ Used only if WIPE_TCP_SINGLETON is defined
 
 /* maximum number of concurrent TCP connection stored in the vector TTP 
 Increase this number on high speed network will help ...*/
-#define MAX_TCP_PAIRS 75023
+#define MAX_TCP_PAIRS 175023
 
 /* maximum number of concurrent UDP connection stored in the vector UTP 
 Increase this number on high speed network will help ...*/
