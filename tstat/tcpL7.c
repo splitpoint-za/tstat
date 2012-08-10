@@ -283,6 +283,7 @@ void rtmp_handshake_check(tcp_pair *ptp, void *pdata, int payload_len, int dir)
   c = *(char *)pdata; /* First byte in the payload: 
                          must be 0x03 (unencrypted), 0x06 (encrypted) 
                          or 0x08 (further encrypted)
+                         or 0x09 or 0x0a (Hulu encrypted)
 		      */ 
     
   if (dir == C2S && (ptp->c2s.seq-ptp->c2s.syn-payload_len)==1 && ptp->state_rtmp_c2s_seen==0)
@@ -295,7 +296,7 @@ void rtmp_handshake_check(tcp_pair *ptp, void *pdata, int payload_len, int dir)
   if (dir == S2C && (ptp->s2c.seq-ptp->s2c.syn-payload_len)==1 && ptp->state_rtmp_s2c_seen==0)
     { 
       ptp->state_rtmp_s2c_seen=1;
-      if ( c == 0x03 || c==0x06 || c==0x08 )
+      if ( c == 0x03 || c==0x06 || c==0x08 || c==0x09 || c==0x0a)
         ptp->state_rtmp_s2c_hand=1;
     }
     
