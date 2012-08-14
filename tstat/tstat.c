@@ -67,6 +67,9 @@ static Bool cloud_ip (struct in_addr adx);
 /*
 static Bool internal_ip_string (char *adx);
 */
+Bool internal_eth (uint8_t *eth_addr, eth_filter *filter);
+int LoadInternalEth (char *file);
+
 
 static int ip_header_stat (int phystype, struct ip *pip, u_long * fpnum,
 			   u_long * pcount, int file_count, char *filename,
@@ -101,7 +104,6 @@ Bool internal_dst = FALSE;
 struct in_addr internal_net_list[MAX_INTERNAL_HOSTS];
 struct in_addr internal_net_mask2[MAX_INTERNAL_HOSTS];
 int internal_net_mask[MAX_INTERNAL_HOSTS];
-char *internal_net_file;
 int tot_internal_nets;
 
 /* Variables for Cloud definition*/
@@ -111,13 +113,11 @@ Bool cloud_dst = FALSE;
 struct in_addr cloud_net_list[MAX_CLOUD_HOSTS];
 struct in_addr cloud_net_mask2[MAX_CLOUD_HOSTS];
 int cloud_net_mask[MAX_CLOUD_HOSTS];
-char *cloud_net_file;
 int tot_cloud_nets;
 
 
 #ifdef SUPPORT_IPV6
 struct in6_addr internal_net_listv6;
-char *internal_net_filev6;
 int tot_internal_netsv6;
 int contr_flag = 0;
 #endif
@@ -293,13 +293,20 @@ FILE *fp_streaming_logc = NULL;
 #endif
 
 /* discriminate Direction */
+/* used when checking by Ethernet MAC */
+eth_filter mac_filter;
+Bool internal_dhost;
+Bool internal_shost;
+/* used when having two separate files or interfaces */
 Bool coming_in;
 Bool internal_wired = FALSE;
+/* used when relying on IP addresses */
 Bool net_conf = FALSE;
 Bool cloud_conf = FALSE;
 Bool net6_conf = FALSE;
-long int tcp_packet_count;
+Bool eth_conf = FALSE;
 
+long int tcp_packet_count;
 extern long not_id_p;
 extern int search_count;
 extern long int tot_adx_hash_count[3], tot_adx_list_count[3], adx_search_hash_count[3],
@@ -345,6 +352,7 @@ Help (void)
     "\ttstat [-htuvwpgSL] [-d[-d]]\n"
     "\t      [-s dir]\n"
     "\t      [-N file]\n"
+    "\t      [-M file]\n"
     "\t      [-C file]\n"
     "\t      [-B bayes.conf]\n"
     "\t      [-T runtime.conf]\n"
@@ -395,6 +403,14 @@ Help (void)
     "\t             255.255.0.0\n"
     "\t         If the option is not specified all networks are\n"
     "\t         considered internal\n"
+    "\n"
+    "\t-M file: specify the file name which contains the\n"
+    "\t         description of the MAC addesses that are to be considered internal.\n"
+    "\t         MAC addreses must be in the 6 digit - hex notation.\n"
+    "\t         Example:\n"
+    "\t                11:22:33:44:55:66 \n"
+    "\t                66:55:44:33:22:11 \n"
+    "\t         If this option is specified, the -N param is ignored.\n"
     "\n"
     "\t-C file: specify the file name which contains the\n"
     "\t         description of the cloud networks.\n"
@@ -1061,11 +1077,11 @@ void ip_histo_stat(struct ip *pip)
 
    if (adx_engine)
     {
-      /* If -N is not used, all addresses are internal, 
+      /* If neither -N or -M are used, all addresses are internal, 
         and the ADX histo would be empty */
-      if (!internal_src || !net_conf)
+      if (!internal_src || !(net_conf || eth_conf) )
         add_adx (EXTERNAL_ADX_HISTO, &(pip->ip_src), SRC_ADX, ntohs(pip->ip_len));
-      if (!internal_dst || !net_conf)
+      if (!internal_dst || !(net_conf || eth_conf) )
         add_adx (EXTERNAL_ADX_HISTO, &(pip->ip_dst), DST_ADX, ntohs(pip->ip_len));
 
       if (adx2_engine)
@@ -1131,11 +1147,21 @@ ip_header_stat (int phystype,
       /* decide wheater this is internal or external */
       if (internal_wired)
 	{
+          /* use thedirections as hardwired by the files of nics */
 	  internal_src = coming_in;
 	  internal_dst = !coming_in;
 	}
       else
+      {
+        if(mac_filter.tot_internal_eth >0 )
+        {
+        /* going to use the Ethernet MAC here */
+	  internal_src = internal_shost;
+	  internal_dst = internal_dhost;
+        }
+        else
 	{
+         /* stick with ip networks - or trust what you have been told */
 	 switch(ip_direction)
 	  {
            case SRC_IN_DST_IN:
@@ -1161,6 +1187,7 @@ ip_header_stat (int phystype,
 	    break;
 	  }
 	}
+      }
 
       cloud_src = cloud_ip (pip->ip_src);
       cloud_dst = cloud_ip (pip->ip_dst);
@@ -2353,7 +2380,7 @@ CheckArguments (int *pargc, char *argv[])
         BadArg (NULL, "must specify at least one file name\n");
     }
     */
-    if (net_conf == FALSE) {
+    if (net_conf == FALSE && eth_conf == FALSE) {
 	    internal_net_mask[0] = 0;
         inet_aton ("0.0.0.0", &(internal_net_list[0]));
 	    inet_aton ("0.0.0.0", &(internal_net_mask2[0]));
@@ -2436,6 +2463,7 @@ ParseArgs (int *pargc, char *argv[])
   sprintf (bayes_dir, "skype");
   histo_set_conf (NULL);
   struct stat finfo;
+  char *tmpstring;
 
 #ifdef GROK_ERF_LIVE
   int num_dev;
@@ -2459,7 +2487,7 @@ ParseArgs (int *pargc, char *argv[])
     c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
     if (c == -1)
         break;
     if (c == 'z') {
@@ -2483,7 +2511,7 @@ ParseArgs (int *pargc, char *argv[])
       c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
 
       if (c == -1) {
 	    break;
@@ -2494,26 +2522,50 @@ ParseArgs (int *pargc, char *argv[])
 
       switch (c)
 	{
-	case 'N':
-	  /* -N file */
-	  internal_net_file = strdup (optarg);
-	  if (!LoadInternalNets (internal_net_file))
+	case 'M':
+	  /* -M file */
+	  tmpstring = strdup (optarg);
+	  if (!LoadInternalEth (tmpstring))
 	    {
 	      fprintf (fp_stderr, 
-            "Error while loading configuration\n"
-	        "Wrong or missing %s\n", internal_net_file);
+            "Error while loading MAC addresses configuration\n"
+	        "Wrong or missing %s\n", tmpstring);
+	      exit (1);
+	    }
+	  eth_conf = TRUE;
+	  if (eth_conf && net_conf)
+	   {
+         fprintf(fp_stdout, 
+            "Warning: Both -M and -N options specified.\n"
+            "         Ethernet filter is used and -N addresses are ineffective\n");
+	   }
+	  break;
+	case 'N':
+	  /* -N file */
+	  tmpstring = strdup (optarg);
+	  if (!LoadInternalNets (tmpstring))
+	    {
+	      fprintf (fp_stderr, 
+            "Error while loading NET addresses configuration\n"
+	        "Wrong or missing %s\n", tmpstring);
 	      exit (1);
 	    }
 	  net_conf = TRUE;
+	  if (eth_conf && net_conf)
+	   {
+         fprintf(fp_stdout, 
+            "Warning: Both -M and -N options specified.\n"
+            "         Ethernet filter is used and -N addresses are ineffective\n");
+	   }
 	  break;
 	case 'C':
 	  /* -C file */
-	  cloud_net_file = strdup (optarg);
-	  if (!LoadCloudNets (cloud_net_file))
+	  tmpstring = strdup (optarg);
+	  if (!LoadCloudNets (tmpstring))
 	    {
 	      fprintf (fp_stderr, 
             "Error while loading configuration\n"
-	        "Wrong or missing %s\n", cloud_net_file);
+	        "Wrong or missing %s\n", tmpstring);
 	      exit (1);
 	    }
 	  cloud_conf = TRUE;
@@ -2521,15 +2573,15 @@ ParseArgs (int *pargc, char *argv[])
 #ifdef SUPPORT_IPV6
 	case '6':
 	  /* -6file */
-	  internal_net_filev6 = strdup (optarg);
+	  tmpstring = strdup (optarg);
 
 	  if (!LoadInternalNetsv6
-	      (internal_net_filev6, &internal_net_listv6,
+	      (tmpstring, &internal_net_listv6,
 	       &tot_internal_netsv6))
 	    {
 	      fprintf (fp_stdout,
 		       "Error while loading IPv6 configuration file\n");
-	      fprintf (fp_stdout, "Could not open %s\n", internal_net_filev6);
+	      fprintf (fp_stdout, "Could not open %s\n", tmpstring);
 	      exit (1);
 	    }
 	  net6_conf = TRUE;
@@ -2569,11 +2621,10 @@ ParseArgs (int *pargc, char *argv[])
 #ifdef GROK_DPMI
 	case 'D':
 	  {
-	    char *dpmi_conf = strdup (optarg);
-	    if (!dpmi_parse_config (dpmi_conf))
+	    tmpstring = strdup (optarg);
+	    if (!dpmi_parse_config (tmpstring))
 	      {
 		fprintf (fp_stderr, "Error while loading DPMI configuration\n");
-		fprintf (fp_stderr, "Could not open %s\n", internal_net_file);
 		exit (1);
 	      }
 	  }
@@ -3055,6 +3106,56 @@ LoadCloudNets (char *file) {
     return 1;
 }
 
+int 
+LoadInternalEth (char *file) {
+    FILE *fp;
+    char *line;
+    struct ether_addr *mac_addr;
+    int i, len;
+
+    fp = fopen(file, "r");
+    if (!fp) {
+        fprintf(fp_stderr, "Unable to open file '%s' when parsing the Ethernet filters\n", file);
+        return 0;
+    }
+
+    i = 0;
+    while (1) {
+        line = readline(fp, 1, 1);
+        if (!line)
+            break;
+
+        len = strlen(line);
+        if ( line[len - 1] == '\n' )
+            line[len - 1] = '\0';
+
+		if ( i == MAX_INTERNAL_ETHERS )	{
+            fprintf (fp_stderr, "Maximum number of internal Ethernet (%d) exceeded\n", MAX_INTERNAL_ETHERS);
+            return 0;
+        }
+
+        mac_addr = ether_aton(line);
+        if (mac_addr!=NULL)
+         {
+	        memcpy(mac_filter.addr[i], mac_addr, 6);
+	     }
+	    else
+	     {
+            fprintf(fp_stderr, "Wrong address format in Ethernet filter n.%d\n", (i+1));
+            return 0;
+	     }
+        
+        if (debug>1)
+        {
+            fprintf (fp_stdout, "Adding: %s as internal net ",
+                    ether_ntoa ((const struct ether_addr *)mac_filter.addr[i]));
+        }
+        i++;
+    }
+    mac_filter.tot_internal_eth = i;    
+    return 1;
+}
+
 /* the memcpy() function that gcc likes to stuff into the program has alignment
    problems, so here's MY version.  It's only used for small stuff, so the
    copy should be "cheap", but we can't be too fancy due to alignment boo boos */
@@ -3178,6 +3279,28 @@ cloud_ip (struct in_addr adx)
   return 0;
 }
 
+Bool
+internal_eth (uint8_t *eth_addr, eth_filter *filter)
+{
+  int i;
+
+  if (debug>1) 
+    fprintf(fp_stdout, "Checking %s \n", ether_ntoa((const struct ether_addr *)eth_addr));
+  for (i = 0; i < filter->tot_internal_eth; i++)
+    {
+      if (debug>1) 
+        fprintf(fp_stdout, " Against: %s \n",ether_ntoa((const struct ether_addr *)filter->addr[i]));
+      if (memcmp(eth_addr, filter->addr[i], 6) == 0)
+       {
+	     if (debug>1) 
+	       fprintf(fp_stdout, "\t\tInternal: %s\n",ether_ntoa((const struct ether_addr *)eth_addr));
+	     return 1;
+       }
+    }
+  if (debug>1) 
+    fprintf(fp_stdout, "\t\tExternal: %s\n",ether_ntoa((const struct ether_addr *)eth_addr));
+  return 0;
+}
 
 /* 
  * Check if the IP adx is included in the internal nets

@@ -40,6 +40,9 @@
 #include <netinet/in_systm.h>
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
+#ifdef linux
+#include <netinet/ether.h>
+#endif
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>

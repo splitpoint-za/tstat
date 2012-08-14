@@ -24,6 +24,9 @@
 #define ADDR_MASK 0x00ffffff	/* mask to count IP addresses - inet order */
 #define ADDR2_MASK 0x00ffffff	/* mask to count internal IP addresses bitrate - inet order */
 
+/* max number of ethernet MACs to check if the frame is incoming or outgoing */
+#define MAX_INTERNAL_ETHERS  20
+
 /* max number of nets to check if ip is internal or external */
 #define MAX_INTERNAL_HOSTS  100
 #define MAX_CLOUD_HOSTS  100

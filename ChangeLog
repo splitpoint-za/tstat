@@ -11,6 +11,7 @@
   * Changed the name format for log directories to a sortable one (at last!)
   * Updated Facebook and Vimeo classification
   * Updated RTMP to include Hulu traffic
+  * Added -M option to distinguish internal/external traffic by the MAC address
 
 17/10/11 - MMM
 - Main changes since 2.2:

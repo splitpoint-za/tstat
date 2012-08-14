@@ -91,6 +91,12 @@ extern u_long tcp_trace_count_incoming;
 extern u_long tcp_trace_count_local;
 extern u_long udp_trace_count;
 
+/* incoming/outgoing based on Ethernet MAC addresses */
+typedef struct eth_filter
+{
+  int tot_internal_eth;
+  uint8_t addr[MAX_INTERNAL_ETHERS][6];
+} eth_filter;
 
 /* Skype */
 /* may be carried over TCP/UDP */

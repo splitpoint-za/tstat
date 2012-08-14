@@ -30,6 +30,9 @@ extern Bool filter_specified;
 extern Bool live_flag;
 extern char *filter_filename;
 extern char *dev;
+extern eth_filter mac_filter; 
+extern Bool internal_dhost;
+extern Bool internal_shost;
 
 char *read_infile (char *fname);
 void tcpdump_install_filter (pcap_t * pcap, bpf_u_int32 net);
@@ -244,8 +247,18 @@ callback (char *user, struct pcap_pkthdr *phdr, unsigned char *buf)
             memcpy (&eth_header, buf, EH_SIZE);	/* save ether header */
 #else
 	    ptr_eth_header = (struct ether_header *)buf;
+	    eth_header.ether_dhost = ptr_eth_header->ether_dhost; /* save ether destination MAC */
+	    eth_header.ether_shost = ptr_eth_header->ether_shost; /* save ether souce MAC */
 	    eth_header.ether_type = ptr_eth_header->ether_type; /* save ether type */
 #endif
+            /* check if this frame is coming in */
+            internal_shost = internal_dhost = FALSE;
+            if(internal_eth (eth_header.ether_shost, &mac_filter))
+               internal_shost = TRUE;
+            if(internal_eth (eth_header.ether_dhost, &mac_filter))
+               internal_dhost = TRUE;
+
+	    /* now get rid of ethernet headers */
             switch (offset)
             {
                 case -1:		/* Not an IP packet */

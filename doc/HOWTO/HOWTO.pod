@@ -272,6 +272,14 @@ the command is the following:
                  If the option is not specified all networks are
                  considered internal
 
+    	-M file: specify the file name which contains the
+	         description of the MAC addesses that are to be considered internal.
+	         MAC addresses must be in the 6 digit - hex notation.
+	         Example:
+	                11:22:33:44:55:66 
+	                66:55:44:33:22:11 
+	         If this option is specified, the -N param is ignored.
+
         -C file: specify the file name which contains the
                  description of the cloud networks.
                  This file must contain the subnets that will be
