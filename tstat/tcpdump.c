@@ -33,6 +33,7 @@ extern char *dev;
 extern eth_filter mac_filter; 
 extern Bool internal_dhost;
 extern Bool internal_shost;
+extern Bool internal_eth (uint8_t *eth_addr, eth_filter *filter);
 
 char *read_infile (char *fname);
 void tcpdump_install_filter (pcap_t * pcap, bpf_u_int32 net);

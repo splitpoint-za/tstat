@@ -98,7 +98,6 @@ void ini_read(char *fname) {
     int i, len;
     struct ini_section *curr_section;
 
-
     fp = fopen(fname, "r");
     if (fp == NULL) {
         fprintf (fp_stderr, "inireader: '%s' - No such file\n", fname);
@@ -136,8 +135,10 @@ void ini_read(char *fname) {
                     exit(1);
                 }
                 curr_section = &ini_sections[i];
-                if (curr_section->handler_start)
+                if (curr_section->handler_start) {
                     curr_section->handler_start();
+                    continue;
+                }
             }
             //parse section parameter and call handler
             else if (word[0] != '=') {
@@ -145,13 +146,26 @@ void ini_read(char *fname) {
                     param_name = word;
                 else if (param_value == INI_PARAM_VALUE_DEFAULT) {
                     len = strlen(word);
-                    for (i = 0; i < len && isdigit(word[i]); i++)
+                    if (len>2 && word[0]=='0' && tolower(word[1])=='x')
+                     {
+                       for (i = 2; i < len && isxdigit(word[i]); i++)
                         ;
-                    if (i != len) {
+                       if (i != len) {
+                         fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
+                         exit(1);
+                        }
+                       sscanf(word,"%x",&param_value);
+                     }
+                    else
+                     {
+                      for (i = 0; i < len && isdigit(word[i]); i++)
+                        ;
+                      if (i != len) {
                         fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
                         exit(1);
-                    }
-                    param_value = atoi(word);
+                       }
+                      param_value = atoi(word);
+                     }
                 }
                 else {
                     fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);

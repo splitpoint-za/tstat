@@ -715,6 +715,9 @@ struct stcp_pair
   char *ssl_server_subject;
   Bool ssl_client_spdy;
   Bool ssl_server_spdy;
+  
+  /* Exclude packets from this flow when generating the tcp_complete.pcap */
+   Bool stop_dumping_tcp;
 };
 typedef struct stcp_pair tcp_pair;
 

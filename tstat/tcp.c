@@ -382,6 +382,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->p2p_state = UNKNOWN_TYPE;
   ptp->ignore_dpi = FALSE;
 
+  /* Assume all packets must be dumped */
+  ptp->stop_dumping_tcp = FALSE;
+
 #ifdef VIDEO_DETAILS
   memset(&ptp->http_meta,0,sizeof(struct flv_metadata));
 #endif

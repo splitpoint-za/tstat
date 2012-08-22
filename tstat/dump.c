@@ -84,6 +84,7 @@ static long udp_maxbytes = 0;
 static long tcp_maxbytes = 0;
 static long udp_maxpackets = 0;
 static long tcp_maxpackets = 0;
+static u_int32_t stop_dumping_mask = 0;
 
 // monitor for writing access to dump files
 static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;                            
@@ -258,6 +259,11 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
             udp_maxbytes = param_value;
         }
     }
+    else if (strcmp(param_name, "stop_dumping_mask") == 0) {
+        if (param_value > 0) {
+            stop_dumping_mask = param_value;
+        }
+    }
     else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
         exit(1);
@@ -274,6 +280,7 @@ void dump_init(void) {
     udp_maxpackets = 0;
     tcp_maxbytes = 0;
     udp_maxbytes = 0;
+    stop_dumping_mask = 0;
     /* UDP dump protocols 
      * for semplicity we use a vector with as long as the number of classes
      * identified by the DPI. Among these there are some useless classes
@@ -452,28 +459,49 @@ void dump_flow_stat (struct ip *pip,
         pthread_mutex_lock(&dump_mutex);
 
     /***** TCP packets *****/
-    if (tproto == PROTOCOL_TCP) {
-        if (proto2dump[DUMP_TCP_COMPLETE].enabled) {
-            /* dump all the packets of all the flows */
-            if (tcp_maxbytes == 0 && tcp_maxpackets == 0) {
-                dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
-	        }
-	        /* dump acks and data packets up to reach 
-             * - tcp_maxbytes 
-             * - tcp_maxpackets 
-             */
-            else
-            {
-                struct tcphdr *ptcp = pproto;
-                /* check if the underlying flow struct tcb has not yet been released */
-                if (((tcb*)pdir)->ptp != NULL)
+    if (tproto == PROTOCOL_TCP)
+    /* It's TCP, there is still a flow associated to this, and we are not already discarding it */
+     {
+       struct stcp_pair *p = ((tcb *)pdir)->ptp;
+
+       if (proto2dump[DUMP_TCP_COMPLETE].enabled && (p != NULL) && !(p->stop_dumping_tcp) ) 
+         {
+            /* are we still interested in this flow packets? */
+            if ( ( p->con_type != UNKNOWN_PROTOCOL )  /* we always log unknowns */
+                  &&
+                 ( (p->con_type & stop_dumping_mask) != 0 ) /* after masking, we are not interested into it */
+               )
+             {
+               p->stop_dumping_tcp = TRUE;
+               if (debug>0)
                 {
-                    int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
+                  fprintf(fp_stderr, "Stopping dumping this flow - con_type = %d\n",p->con_type);
+                }
+             }
+                
+            if (!(p->stop_dumping_tcp))
+             { 
+               /* do we have to dump all the packets of all the flows */
+               if (tcp_maxbytes == 0 && tcp_maxpackets == 0)
+                {
+                  dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+	            }
+	            /* or we have to stop dumping acks and data packets up to reach 
+                 * - tcp_maxbytes 
+                 * - tcp_maxpackets 
+                 */
+               else
+                {
+                  struct tcphdr *ptcp = pproto;
+                  /* check if the underlying flow struct tcb has not yet been released */
+                  if ( p != NULL)
+                   {
+                     int tcp_data_length = getpayloadlength (pip, plast) - (4 * ptcp->th_off);
 
-                    tcb *thisdir = (tcb*)pdir;
-                    tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
+                     tcb *thisdir = (tcb*)pdir;
+                     tcb *otherdir = (dir == C2S) ? &(thisdir->ptp->s2c) : &(thisdir->ptp->c2s);
 
-                    if ((
+                     if ((
                         /* packets with payload */
                         tcp_data_length > 0 && 
                             /* check the thresholds */
@@ -496,28 +524,33 @@ void dump_flow_stat (struct ip *pip,
                             dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
                         }
                        
-                }
-                else {
-                    if (RESET_SET(ptcp)) {
-                        dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
                     }
-                }
-            }
-        }
+                   else
+                    {
+                      if (RESET_SET(ptcp))
+                       {
+                         dump_to_file(&proto2dump[DUMP_TCP_COMPLETE], pip, plast);
+                       }
+                    }
+                 }
+            } /* end !stop_dumping_tcp */
+        } /* end DUMP_TCP_COMPLETE */
 
 #ifdef STREAMING_CLASSIFIER
         if (proto2dump[DUMP_TCP_VIDEOSTREAMING].enabled && ((tcb*)pdir)->ptp != NULL)
-        {
-            struct stcp_pair * p = ((tcb *)pdir)->ptp;
-            if (p->streaming.video_content_type || p->streaming.video_payload_type) {
-                    dump_to_file(&proto2dump[DUMP_TCP_VIDEOSTREAMING], pip, plast);
-            }
-        }
+         {
+            struct stcp_pair *p = ((tcb *)pdir)->ptp;
+            if (p->streaming.video_content_type || p->streaming.video_payload_type)
+             {
+               dump_to_file(&proto2dump[DUMP_TCP_VIDEOSTREAMING], pip, plast);
+             }
+         }
 #endif
-    }
+     }
     
     /***** UDP packets *****/
-    else {
+    else 
+     {
         //specific controls to find kad obfuscated...
         ucb_type = UDP_p2p_to_logtype(pdir);
 
