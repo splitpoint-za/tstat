@@ -588,6 +588,7 @@ skype_conn_stats_UDP (void *thisdir)
   	  case P2P_OKAD:
 	  case P2P_PPSTREAM:
           case TEREDO:
+      case UDP_SIP:
   	      break;
 
   	  case SKYPE_E2E:

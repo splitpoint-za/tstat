@@ -52,4 +52,5 @@ UDP type - col. 8, 16 (see struct.h)
 # 22    # UDP_VOD       # MPEG2 PES Streaming over UDP                  #
 # 23    # P2P_PPSTREAM  # PPStream IP-TV protocol                       #
 # 24    # TEREDO        # Teredo IPv6 tunneling over UDP (mostly BitTorrent) #
+# 25    # UDP_SIP       # SIP over UDP messages                         #
 #########################################################################

@@ -307,6 +307,9 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    case IPP2P_TEREDO:
 	      udir->type = TEREDO;
 	      break;  
+	    case IPP2P_SIP:
+	      udir->type = UDP_SIP;
+	      break;  
 	   }
 
 #ifdef P2P_DETAILS
@@ -869,6 +872,9 @@ int UDP_p2p_to_L7type (ucb *thisflow)
       
     case TEREDO:
       return L7_FLOW_TEREDO;
+
+    case UDP_SIP:
+      return L7_FLOW_SIP;
 
     case UDP_UNKNOWN:
     case FIRST_RTP:

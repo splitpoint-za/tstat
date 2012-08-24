@@ -20,30 +20,31 @@ struct ipt_p2p_info {
 //#define SHORT_HAND_DATA               4 /* --ipp2p-data switch*/
 #define SHORT_HAND_NONE		5	/* no short hand */
 
-#define IPP2P_EDK           (1 << 1)
-#define IPP2P_DATA_KAZAA    (1 << 2)
-#define IPP2P_DATA_EDK      (1 << 3)
-#define IPP2P_DATA_DC       (1 << 4)
-#define IPP2P_DC            (1 << 5)
-#define IPP2P_DATA_GNU      (1 << 6)
-#define IPP2P_GNU           (1 << 7)
-#define IPP2P_KAZAA         (1 << 8)
-#define IPP2P_BIT           (1 << 9)
-#define IPP2P_APPLE         (1 << 10)
-#define IPP2P_SOUL          (1 << 11)
-#define IPP2P_WINMX         (1 << 12)
-#define IPP2P_ARES          (1 << 13)
-#define IPP2P_MUTE          (1 << 14)
-#define IPP2P_WASTE         (1 << 15)
-#define IPP2P_XDCC          (1 << 16)
-#define IPP2P_KAD           (1 << 17)
-#define IPP2P_KADU          (1 << 18)
-#define IPP2P_PPLIVE		(1 << 19)
-#define IPP2P_SOPCAST		(1 << 20)
-#define IPP2P_TVANTS		(1 << 21)
-#define IPP2P_DNS		(1 << 22)
-#define IPP2P_PPSTREAM          (1 << 23)
-#define IPP2P_TEREDO		(1 << 24)
+#define IPP2P_EDK           1
+#define IPP2P_DATA_KAZAA    2
+#define IPP2P_DATA_EDK      3
+#define IPP2P_DATA_DC       4
+#define IPP2P_DC            5
+#define IPP2P_DATA_GNU      6
+#define IPP2P_GNU           7
+#define IPP2P_KAZAA         8
+#define IPP2P_BIT           9
+#define IPP2P_APPLE         10
+#define IPP2P_SOUL          11
+#define IPP2P_WINMX         12
+#define IPP2P_ARES          13
+#define IPP2P_MUTE          14
+#define IPP2P_WASTE         15
+#define IPP2P_XDCC          16
+#define IPP2P_KAD           17
+#define IPP2P_KADU          18
+#define IPP2P_PPLIVE		19
+#define IPP2P_SOPCAST		20
+#define IPP2P_TVANTS		21
+#define IPP2P_DNS		    22
+#define IPP2P_PPSTREAM      23
+#define IPP2P_TEREDO		24
+#define IPP2P_SIP		    25
 
 int search_all_edk (const unsigned char *, const int, int);
 int search_kazaa (const unsigned char *, const int, int);
@@ -73,6 +74,7 @@ int udp_search_tvants (unsigned char *, const int, int);
 int udp_search_dns (unsigned char *, const int, int);
 int udp_search_ppstream (unsigned char *, const int, int);
 int udp_search_teredo (unsigned char *, const int, int);
+int udp_search_sip (unsigned char *, const int, int);
 
 struct udpmatch
 {

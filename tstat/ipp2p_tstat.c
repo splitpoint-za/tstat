@@ -431,8 +431,70 @@ udp_search_directconnect (unsigned char *haystack, const int packet_len,
 int
 udp_search_bit (unsigned char *haystack, const int packet_len, int payload_len)
 {
- // if (payload_len <= 40)
- //   return 0;			/* match only complete packets */
+  /* 
+   * The default Mainstream BitTorrent DHT commands, starting with
+   * "d1:" [a|r] "d2:id20:"
+   */
+
+  if (payload_len > 30 && get_u8 (haystack, 8) == 'd'
+      && get_u8 (haystack, 9) == '1' && get_u8 (haystack, 10) == ':')
+    {
+      if (get_u8 (haystack, 11) == 'a' || get_u8 (haystack, 11) == 'r')
+	{
+	  if (memcmp (haystack + 12, "d2:id20:", 8) == 0)
+          {
+	    return (IPP2P_BIT * 100 + 57);
+          }
+	}
+    }
+
+  /* 
+   * Less used, but common, Azureus/Vuze DHT commands
+   * http://wiki.vuze.com/w/Distributed_hash_table
+   */
+
+  if (payload_len >= 20 && 
+         ( haystack[16]==0x00 && haystack[17]==0x00 && haystack[18]==0x04 && ( haystack[8] & 0x80 )) )
+   {
+     switch (haystack[19])
+      {
+        case 0x00: /* Action 1024: REQUEST PING */
+        case 0x02: /* Action 1026: REQUEST STORE */
+        case 0x04: /* Action 1028: REQUEST FIND NODE */
+        case 0x06: /* Action 1030: REQUEST FIND VALUE */
+        case 0x0A: /* Action 1034: REQUEST STATS */
+        case 0x0B: /* Action 1035: DATA */
+        case 0x0C: /* Action 1036: REQUEST KEY BLOCK */
+	      return (IPP2P_BIT * 100 + 98);
+        default:
+          break;
+      }
+
+   }
+  else if (payload_len >= 20 && 
+            ( haystack[8]==0x00 && haystack[9]==0x00 && haystack[10]==0x04 && ( haystack[16] & 0x80 )) )
+   {
+     switch (haystack[11])
+      {
+        case 0x01: /* Action 1025: REPLY PING */
+        case 0x03: /* Action 1027: REPLY STORE */
+        case 0x05: /* Action 1029: REPLY FIND NODE */
+        case 0x07: /* Action 1031: REPLY FIND VALUE */
+        case 0x08: /* Action 1032: REPLY ERROR */
+        case 0x09: /* Action 1033: REPLY STATS */
+        case 0x0D: /* Action 1037: REPLY KEY BLOCK */
+          return (IPP2P_BIT * 100 + 99);
+        default:
+          break;
+     }
+   }
+
+  /*
+   * Original IPP2P rules, possibly from the xbt-tracker DHT
+   * Apparenlty only the matching for 0x41727101980 works, the
+   * others are too strict on the packet lenght.
+   * Kept mostly for historical reasons. 
+   */
 
   switch (packet_len)
     {
@@ -440,71 +502,58 @@ udp_search_bit (unsigned char *haystack, const int packet_len, int payload_len)
       /* ^ 00 00 04 17 27 10 19 80 */
       if ( payload_len>=16 &&
           (ntohl (get_u32 (haystack, 8)) == 0x00000417)
-	  && (ntohl (get_u32 (haystack, 12)) == 0x27101980))
-	return (IPP2P_BIT * 100 + 50);
+	      && (ntohl (get_u32 (haystack, 12)) == 0x27101980))
+	    return (IPP2P_BIT * 100 + 50);
       break;
     case 44:
       if ( payload_len>=40 &&
           get_u32 (haystack, 16) == htonl (0x00000400)
-	  && get_u32 (haystack, 36) == htonl (0x00000104))
-	return (IPP2P_BIT * 100 + 51);
+          && get_u32 (haystack, 36) == htonl (0x00000104))
+        return (IPP2P_BIT * 100 + 51);
        if ( payload_len>=20 &&
           get_u32 (haystack, 16) == htonl (0x00000400))
-	return (IPP2P_BIT * 100 + 61);
+        return (IPP2P_BIT * 100 + 61);
       break;
     case 65:
       if ( payload_len>=40 &&
           get_u32 (haystack, 16) == htonl (0x00000404)
-	  && get_u32 (haystack, 36) == htonl (0x00000104))
-	return (IPP2P_BIT * 100 + 52);
+          && get_u32 (haystack, 36) == htonl (0x00000104))
+        return (IPP2P_BIT * 100 + 52);
       if ( payload_len>=20 &&
           get_u32 (haystack, 16) == htonl (0x00000404))
-	return (IPP2P_BIT * 100 + 62);
+        return (IPP2P_BIT * 100 + 62);
       break;
     case 67:
       if ( payload_len>=40 &&
           get_u32 (haystack, 16) == htonl (0x00000406)
-	  && get_u32 (haystack, 36) == htonl (0x00000104))
-	return (IPP2P_BIT * 100 + 53);
+          && get_u32 (haystack, 36) == htonl (0x00000104))
+        return (IPP2P_BIT * 100 + 53);
       if ( payload_len>=20 &&
           get_u32 (haystack, 16) == htonl (0x00000406))
-	return (IPP2P_BIT * 100 + 63);
+        return (IPP2P_BIT * 100 + 63);
       break;
     case 211:
       if ( payload_len>=12 &&
           get_u32 (haystack, 8) == htonl (0x00000405))
-	return (IPP2P_BIT * 100 + 54);
+        return (IPP2P_BIT * 100 + 54);
       break;
     case 29:
       if ( payload_len>=12 &&
           (get_u32 (haystack, 8) == htonl (0x00000401)))
-	return (IPP2P_BIT * 100 + 55);
+        return (IPP2P_BIT * 100 + 55);
       break;
     case 52:
       if ( payload_len>=16 &&
           get_u32 (haystack, 8) == htonl (0x00000827) &&
-	  get_u32 (haystack, 12) == htonl (0x37502950))
-	return (IPP2P_BIT * 100 + 80);
+          get_u32 (haystack, 12) == htonl (0x37502950))
+        return (IPP2P_BIT * 100 + 80);
       break;
     default:
       /* this packet does not have a constant size */
       if (packet_len >= 40 && get_u32 (haystack, 16) == htonl (0x00000402)
-	  && get_u32 (haystack, 36) == htonl (0x00000104))
-	return (IPP2P_BIT * 100 + 56);
+          && get_u32 (haystack, 36) == htonl (0x00000104))
+        return (IPP2P_BIT * 100 + 56);
       break;
-    }
-
-  /* some extra-bitcomet rules:
-   * "d1:" [a|r] "d2:id20:"
-   */
-  if (packet_len > 30 && get_u8 (haystack, 8) == 'd'
-      && get_u8 (haystack, 9) == '1' && get_u8 (haystack, 10) == ':')
-    {
-      if (get_u8 (haystack, 11) == 'a' || get_u8 (haystack, 11) == 'r')
-	{
-	  if (memcmp (haystack + 12, "d2:id20:", 8) == 0)
-	    return (IPP2P_BIT * 100 + 57);
-	}
     }
 
 #if 0
@@ -531,24 +580,6 @@ udp_search_bit (unsigned char *haystack, const int packet_len, int payload_len)
 
   return 0;
 }				/*udp_search_bit */
-
-/*
-int
-udp_search_joost (unsigned char *haystack, const int packet_len,
-		  int payload_len)
-{
-
-  // if (payload_len <= 100)
-  //   return 0;                 // match only video streaming packets 
-
-  if (get_u8 (haystack, 10) == 0x02)
-    // add bayes engine 
-    return (IPP2P_JOOST * 100 + 0);
-    
-  return 0;
-}
-*/
-
 
 int
 udp_search_pplive (unsigned char *haystack, const int packet_len,
@@ -839,6 +870,65 @@ udp_search_teredo (unsigned char *haystack, const int packet_len,
   else
    return 0;
 }
+
+int
+udp_search_sip (unsigned char *haystack, const int packet_len,
+		   int payload_len)
+{
+  unsigned char *t = haystack;
+  t += 8;
+
+/*
+INVITE 	Indicates a client is being invited to participate in a call session. 	RFC 3261
+ACK 	Confirms that the client has received a final response to an INVITE request. 	RFC 3261
+BYE 	Terminates a call and can be sent by either the caller or the callee. 	RFC 3261
+CANCEL 	Cancels any pending request. 	RFC 3261
+OPTIONS 	Queries the capabilities of servers. 	RFC 3261
+REGISTER 	Registers the address listed in the To header field with a SIP server. 	RFC 3261
+PRACK 	Provisional acknowledgement. 	RFC 3262
+SUBSCRIBE 	Subscribes for an Event of Notification from the Notifier. 	RFC 3265
+NOTIFY 	Notify the subscriber of a new Event. 	RFC 3265
+PUBLISH 	Publishes an event to the Server. 	RFC 3903
+INFO 	Sends mid-session information that does not modify the session state. 	RFC 6086
+REFER 	Asks recipient to issue SIP request (call transfer.) 	RFC 3515
+MESSAGE 	Transports instant messages using SIP. 	RFC 3428
+UPDATE 	Modifies the state of a session without changing the state of the dialog. 	RFC 3311
+*/
+
+  if (memcmp (t, "SIP/2.0", 7) == 0)
+    return ((IPP2P_SIP * 100) + 1);
+  else if (memcmp (t, "REGISTER sip:", 13) == 0)
+    return ((IPP2P_SIP * 100) + 2);
+  else if (memcmp (t, "ACK sip:", 8) == 0)
+    return ((IPP2P_SIP * 100) + 3);
+  else if (memcmp (t, "INVITE sip:", 11) == 0)
+    return ((IPP2P_SIP * 100) + 4);
+  else if (memcmp (t, "PRACK sip:", 10) == 0)
+    return ((IPP2P_SIP * 100) + 5);
+  else if (memcmp (t, "BYE sip:", 8) == 0)
+    return ((IPP2P_SIP * 100) + 6);
+  else if (memcmp (t, "OPTIONS sip:", 12) == 0)
+    return ((IPP2P_SIP * 100) + 7);
+  else if (memcmp (t, "CANCEL sip:", 11) == 0)
+    return ((IPP2P_SIP * 100) + 8);
+  else if (memcmp (t, "UPDATE sip:", 11) == 0)
+    return ((IPP2P_SIP * 100) + 9);
+  else if (memcmp (t, "SUBSCRIBE sip:", 14) == 0)
+    return ((IPP2P_SIP * 100) + 10);
+  else if (memcmp (t, "NOTIFY sip:", 11) == 0)
+    return ((IPP2P_SIP * 100) + 11);
+  else if (memcmp (t, "PUBLISH sip:", 12) == 0)
+    return ((IPP2P_SIP * 100) + 12);
+  else if (memcmp (t, "INFO sip:", 9) == 0)
+    return ((IPP2P_SIP * 100) + 13);
+  else if (memcmp (t, "REFER sip:", 10) == 0)
+    return ((IPP2P_SIP * 100) + 14);
+  else if (memcmp (t, "MESSAGE sip:", 12) == 0)
+    return ((IPP2P_SIP * 100) + 15);
+  else
+   return 0;
+}
+
 
 /*Search for Ares commands*/
 //#define IPP2P_DEBUG_ARES
@@ -1619,6 +1709,7 @@ struct udpmatch udp_list[] = {
   {IPP2P_BIT, SHORT_HAND_IPP2P, 23, &udp_search_bit},
   {IPP2P_GNU, SHORT_HAND_IPP2P, 11, &udp_search_gnu},
   {IPP2P_EDK, SHORT_HAND_IPP2P, 9, &udp_search_edk},
+  {IPP2P_SIP, SHORT_HAND_IPP2P, 22, &udp_search_sip},
   {IPP2P_DC, SHORT_HAND_IPP2P, 12, &udp_search_directconnect},
   {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
   {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
