@@ -71,6 +71,18 @@ proto_init ()
         NULL);
   }
 
+/* 
+   The following plugin is a wrapper module to call the behavioral 
+   classification procedures after the regular plugins but before the
+   the dump module. It should be registered before everything else (but after the dump
+   plugin if activated). behavioral_flow_wrap() is defined in udp.c
+*/
+  proto_register (PROTOCOL_BOTH, "BEHAVIORAL", "Behavioral Classification",
+		  (void *) getdummy,
+		  (void *) behavioral_flow_wrap,
+		  (void *) dummy_init,
+		  NULL);
+
 #ifdef STREAMING_CLASSIFIER
   proto_register (PROTOCOL_TCP, "STREAMING", "HTTP Video Streaming",
 		  (void *) getvideoL7,

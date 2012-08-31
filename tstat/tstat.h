@@ -673,6 +673,9 @@ void make_udp_conn_stats (udp_pair * pup_save, Bool flusso_nc);
 void trace_done (void);
 void tcpdump_cleanup (FILE * wheref);
 
+void behavioral_flow_wrap (struct ip *pip, void *pproto, int tproto, void *pdir,
+                    int dir, void *hdr, void *plast);
+
 #ifdef HAVE_ZLIB
 extern int wfprintf(FILE *stream, const char* format, ... );
 #else

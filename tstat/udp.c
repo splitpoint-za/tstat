@@ -868,21 +868,73 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
     //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
 
-    if (pup_save->packets<MAX_UDP_UTP)
-       check_uTP(pip, pudp,plast,thisdir,otherdir);
-
-    if (pup_save->packets<MAX_UDP_VOD)
-       check_udp_vod(pip, pudp,plast,thisdir,otherdir);
-
-    if (pup_save->packets<MAX_UDP_OBFUSCATE)
-       check_udp_obfuscate(thisdir,otherdir,uh_ulen);
-    
     //if (thisdir != NULL && thisdir->pup != NULL)
     make_udpL7_rate_stats(thisdir, ntohs(pip->ip_len));
 
   return (FLOW_STAT_OK);
 }
 
+void
+behavioral_flow_wrap (struct ip *pip, void *pproto, int tproto, void *pdir,
+	       int dir, void *hdr, void *plast)
+{
+  if (tproto == PROTOCOL_UDP)
+    {
+		ucb *thisdir;
+		ucb *otherdir;
+		udphdr *pudp = (udphdr *)hdr;
+		udp_pair *pup_save = ((ucb *)pdir)->pup;
+		u_short uh_ulen = ntohs (pudp->uh_ulen);		/* data length */
+		
+		/* figure out which direction this packet is going */
+		if (dir == C2S)
+		 {
+		   thisdir = &pup_save->c2s;
+		   otherdir = &pup_save->s2c;
+		 }
+		else
+		 {
+		   thisdir = &pup_save->s2c;
+		   otherdir = &pup_save->c2s;
+		 }
+		
+		if (pup_save->packets<MAX_UDP_UTP)
+		  check_uTP(pip, pudp,plast,thisdir,otherdir);
+		
+		if (pup_save->packets<MAX_UDP_VOD)
+		  check_udp_vod(pip, pudp,plast,thisdir,otherdir);
+		
+		if (pup_save->packets<MAX_UDP_OBFUSCATE)
+		  check_udp_obfuscate(thisdir,otherdir,uh_ulen);
+    }
+  else
+    {
+		tcb *thisdir;
+		tcphdr *ptcp = (tcphdr *) hdr;
+		tcp_pair *ptp_save = ((tcb *) pdir)->ptp;
+		
+		if (ptp_save == NULL)
+		  return;
+		
+		/* figure out which direction this packet is going */
+		if (dir == C2S)
+ 		 {
+		   thisdir = &ptp_save->c2s;
+		 }
+		else
+		 {
+		   thisdir = &ptp_save->s2c;
+		 }
+		
+		/* Message size evaluation used for MSE detection might be incomplete 
+		 if the last FIN segment is not considered */
+		if (FIN_SET(ptcp) && thisdir != NULL && thisdir->ptp != NULL && 
+		    thisdir->ptp->con_type == UNKNOWN_PROTOCOL)
+		   mse_protocol_check(thisdir->ptp);
+		
+	 }
+
+}
 
 
 void

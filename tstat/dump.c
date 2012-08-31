@@ -305,6 +305,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_SOPCAST, "udp_sopcast");
     dump_reset_dump_file(proto2dump, P2P_TVANTS, "udp_tvants");
     dump_reset_dump_file(proto2dump, DNS, "udp_dns");
+    dump_reset_dump_file(proto2dump, P2P_UTP, "udp_utp");
     dump_reset_dump_file(proto2dump, UDP_VOD, "udp_vod");
     dump_reset_dump_file(proto2dump, P2P_PPSTREAM, "udp_ppstream");
     dump_reset_dump_file(proto2dump, TEREDO, "udp_teredo");
@@ -552,13 +553,31 @@ void dump_flow_stat (struct ip *pip,
     /***** UDP packets *****/
     else 
      {
+        ucb *mydir = (ucb*)pdir;
+
         //specific controls to find kad obfuscated...
-        ucb_type = UDP_p2p_to_logtype(pdir);
+        ucb_type = UDP_p2p_to_logtype(mydir);
 
         /* dump to a specific DPI file */
-        if (proto2dump[ucb_type].enabled) {
+        if (proto2dump[P2P_UTP].enabled)
+         {
+            /* 
+               Since uTP classification is behavioral, we dump both already classified datagrams,
+               and datagrams which are not classified, but that are already in a valid state of 
+               the identification state machine.
+            */
+            if ( ucb_type == P2P_UTP || 
+                 ucb_type == P2P_UTPBT ||
+                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP || ucb_type==P2P_BT) &&
+                   (mydir->uTP_state > UTP_UNKNOWN )
+                 )
+               )
+             dump_to_file(&proto2dump[P2P_UTP], pip, plast);
+         }
+    	else if (proto2dump[ucb_type].enabled) 
+    	 {
             dump_to_file(&proto2dump[ucb_type], pip, plast);
-        }
+         }
         // dump to unknown
         // else if (proto2dump[UDP_UNKNOWN].enabled) {
         //    dump_to_file(&proto2dump[UDP_UNKNOWN], pip, plast);

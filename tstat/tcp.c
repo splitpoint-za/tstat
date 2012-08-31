@@ -1393,12 +1393,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   proto_analyzer (pip, ptcp, PROTOCOL_TCP, thisdir, *dir, plast);
 
-  /* Message size evaluation used for MSE detection might be incomplete 
-     if the last FIN segment is not considered */
-  if (FIN_SET(ptcp) && thisdir != NULL && thisdir->ptp != NULL
-      && thisdir->ptp->con_type == UNKNOWN_PROTOCOL)
-    mse_protocol_check(thisdir->ptp);
-
   if (thisdir != NULL && thisdir->ptp != NULL)
    {
      make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
