@@ -135,8 +135,10 @@ void ini_read(char *fname) {
                     exit(1);
                 }
                 curr_section = &ini_sections[i];
-                if (curr_section->handler_start)
+                if (curr_section->handler_start) {
                     curr_section->handler_start();
+                    break;
+                }
             }
             //parse section parameter and call handler
             else if (word[0] != '=') {
