@@ -93,8 +93,8 @@ Here it follows a brief description of the columns.
 ############################################################################
 # 110       # PSH-separated C2S      # -     # number of push separated messages C2S
 # 111       # PSH-separated S2C      # -     # number of push separated messages S2C
-# 110       # SSL Client Hello       # -     # For SSL flows, the server name indicated by the client in the Hello message extensions
-# 111       # SSL Server Hello       # -     # For SSL flows, the subject CN name indicated by the server in its certificate 
+# 112       # SSL Client Hello       # -     # For SSL flows, the server name indicated by the client in the Hello message extensions
+# 113       # SSL Server Hello       # -     # For SSL flows, the subject CN name indicated by the server in its certificate 
 ############################################################################
 
 Connection type - col. 101 (see protocol.h)
