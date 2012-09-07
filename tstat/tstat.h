@@ -18,9 +18,14 @@
 */
 
 /* add autoconf header file */
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif
+
 
 #include <pthread.h>
 #include <stdio.h>
