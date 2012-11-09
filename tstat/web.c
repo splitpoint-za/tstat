@@ -411,6 +411,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/ads2/flyers/",
         	      ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/ads-ak-snc",
+        	      ( available_data < 11 ? available_data : 11)) == 0)
+         return HTTP_FACEBOOK;
        else if (memcmp(base, "/album.php?",
         	      ( available_data < 11 ? available_data : 11)) == 0)
          return HTTP_FACEBOOK;
@@ -1449,6 +1452,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/stage.static/rsrc.php/",
                ( available_data < 23 ? available_data : 23)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/static-ak/rsrc.php/",
+               ( available_data < 20 ? available_data : 20)) == 0)
+         return HTTP_FACEBOOK;
        else if (memcmp(base, "/search/pages/",
         	    ( available_data < 14 ? available_data : 14)) == 0)
          return HTTP_SOCIAL;
@@ -1765,6 +1771,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
         {
 	  if (memcmp(base + 16, "default.jpg",11) == 0 ||
               memcmp(base + 16, "hqdefault.jpg",13) == 0 ||
+              memcmp(base + 16, "mqdefault.jpg",13) == 0 ||
+              memcmp(base + 16, "sddefault.jpg",13) == 0 ||
               memcmp(base + 16, "0.jpg",5) == 0 ||
               memcmp(base + 16, "1.jpg",5) == 0 ||
               memcmp(base + 16, "2.jpg",5) == 0 ||

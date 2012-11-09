@@ -135,7 +135,7 @@ Increase this number on high speed network will help ...*/
 /* value is hardcoded here. Make large enough to keep all options.   */
 /* Advanced features, like YouTube and BitTorrent characterization,  */
 /* require a large snaplen, e.g. 550 bytes */
-#define DEFAULT_SNAPLEN 160
+#define DEFAULT_SNAPLEN 550
 
 /* RTP parameters */
 #define RTP_WIN 16		/* sliding window size used to track RTP
