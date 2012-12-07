@@ -342,7 +342,6 @@ typedef struct tcb
   u_int win_tot;
   u_int win_curr;
   u_int win_zero_ct;
-  u_int min_seq;
   u_int max_seq;
   u_long packets;
   u_char syn_count;

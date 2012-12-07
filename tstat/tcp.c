@@ -774,6 +774,10 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   }
 #endif
 
+  /* calculate data length */
+  tcp_length = getpayloadlength (pip, plast);
+  tcp_data_length = tcp_length - (4 * ptcp->th_off);
+
   /* meta connection stats */
   if (SYN_SET (ptcp))
     ++thisdir->syn_count;
@@ -782,7 +786,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   if (FIN_SET (ptcp))
     {
       ++thisdir->fin_count;
-      thisdir->fin_seqno = th_seq;
+      thisdir->fin_seqno = th_seq + tcp_data_length;
     }
   /* sanity check - stop tracking this flow if we got a SYN */
   /* from the client, no SYN+ACK from the server */
@@ -885,11 +889,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       delta_t = (double) itime;
     }
   thisdir->last_time = current_time;
-
-
-  /* calculate data length */
-  tcp_length = getpayloadlength (pip, plast);
-  tcp_data_length = tcp_length - (4 * ptcp->th_off);
 
   /* congestion window 
    * This is a new data segment which enable the cwnd evaluation
@@ -1118,12 +1117,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     ++ptp_save->packets;
   ++thisdir->packets;
 
-  /* set minimum seq */
-  if ((thisdir->min_seq == 0) && (start != 0))
-    {
-      thisdir->min_seq = start;
-    }
-  thisdir->max_seq = end;
+  if(end > thisdir->max_seq)
+    thisdir->max_seq = end;
 
 
   /* Kevin Lahey's ECN code */
@@ -1166,7 +1161,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	  /* don't count the FIN as data */
 	  --len;
 	  /* if the FIN was rexmitted, then don't count it */
-	  if (thisdir->fin_count > 1)
+	  if (thisdir->fin_count > 1  && retrans > 0)
 	    --retrans;
 	}
       if (retrans < len)
@@ -1379,7 +1374,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
            thisdir->msg_last_seq < thisdir->seq) 
       {
         u_int curr_msg_size = thisdir->msg_last_seq==0 ? 
-	                           thisdir->seq - thisdir->min_seq - 1 :
+	                           thisdir->seq - thisdir->syn - 1 :
 	                           thisdir->seq - thisdir->msg_last_seq;
 	if (thisdir->msg_count<MAX_COUNT_MESSAGES)
           thisdir->msg_size[thisdir->msg_count]= curr_msg_size;
@@ -3057,32 +3052,34 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 //      wfprintf (fp, " %d", ptp_save->cloud_src);
 //      wfprintf (fp, " %d", ptp_save->cloud_dst);
 
-/* 
-// Code for sequence_number checking - still not precise  
-      if (pab->max_seq!=pab->min_seq)
+
+#ifdef LOST_PACKET_STAT
+/* Code for sequence_number checking to detect missing packets */ 
+      if (pab->max_seq!=pab->syn)
        {
          if ( (pab->fin_count > 0) &&  pab->max_seq > pab->fin_seqno ) 
-            wfprintf (fp, " %u",pab->max_seq - pab->min_seq - 2);
+            wfprintf (fp, " %u",pab->max_seq - pab->syn - 2);
 	 else 
-            wfprintf (fp, " %u",pab->max_seq - pab->min_seq - 1);
+            wfprintf (fp, " %u",pab->max_seq - pab->syn - 1);
        }
       else
        {
          wfprintf (fp, " 0");
        }
       
-      if (pba->max_seq!=pba->min_seq)
+      if (pba->max_seq!=pba->syn)
        {
          if ( (pba->fin_count > 0) &&  pba->max_seq > pba->fin_seqno ) 
-            wfprintf (fp, " %u",pba->max_seq - pba->min_seq - 2);
+            wfprintf (fp, " %u",pba->max_seq - pba->syn - 2);
 	 else 
-            wfprintf (fp, " %u",pba->max_seq - pba->min_seq - 1);
+            wfprintf (fp, " %u",pba->max_seq - pba->syn - 1);
        }
       else
        {
          wfprintf (fp, " 0");
        }
-*/
+#endif
+
 
 #ifndef PACKET_STATS
   /* Number of PSH-separated messages */
