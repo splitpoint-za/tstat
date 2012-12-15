@@ -1024,6 +1024,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      default:
 #ifdef RTSP_CLASSIFIER
 	      /* convert the snap in a null-terminated string to use strstr */
+  /*  -MMM- 15/12/12 
+  **  Code disabled since it was altering the packet payload.
+  **  Besides the obvious correction (plast+1), I'd like to investigate 
+  **  the usefulness of looking for the string in the complete packet
+           
 	        *((char *) plast) = '\0';
 	        if (strstr ((char *) pdata, "RTSP"))
 	         {
@@ -1033,6 +1038,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	           ptp->con_type &= ~OBF_PROTOCOL;
 	           ptp->con_type &= ~MSE_PROTOCOL;
 	         }
+  */
 #endif
 	        break;
 	    }
