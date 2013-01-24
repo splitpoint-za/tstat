@@ -2364,6 +2364,11 @@ create_all_histo (void)
     AVE_init(&missed_flows_win_TCP, "missed flows TCP", current_time);
     AVE_init(&missed_flows_win_UDP, "missed flows UDP", current_time);
 
+    profile_tcpdata =
+        create_histo("profile_tcpdata", "tcp data volume", 0, PROFILE_TCPDATA_TOT, 1);
+    tcpdata_received_total = 0.0;
+    tcpdata_missed_total = 0.0;
+
     profile_trash =
         create_histo("profile_trash", "trash TCP packets", 0, 1, 1);
 
@@ -2464,4 +2469,13 @@ update_fake_histos ()
       //  profile_cpu -> current_data[PROFILE_CPU_SYS],
       //  profile_cpu -> current_data[PROFILE_CPU_MAX]);
   }
+
+  if (profile_tcpdata->flag == HISTO_ON) {
+      // printf("%f %f\n",tcpdata_received_total, tcpdata_missed_total);
+      set_histo(profile_tcpdata, PROFILE_TCPDATA_RECEIVED, tcpdata_received_total);
+      set_histo(profile_tcpdata, PROFILE_TCPDATA_MISSED, tcpdata_missed_total);
+      tcpdata_received_total = 0.0;
+      tcpdata_missed_total = 0.0;
+  }
+
 }

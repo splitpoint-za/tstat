@@ -613,6 +613,7 @@ struct double_histo_list *video_rate_nc_in;
 #define PROFILE_CPU_TOT 4
 struct double_histo_list *profile_cpu;
 struct double_histo_list *profile_flows;
+struct double_histo_list *profile_tcpdata;
 win_stat ave_win_usr_cpu;
 win_stat ave_win_sys_cpu;
 double max_cpu;
@@ -625,6 +626,11 @@ win_stat active_flows_win_TCP;
 win_stat active_flows_win_UDP;
 win_stat missed_flows_win_TCP;
 win_stat missed_flows_win_UDP;
+#define PROFILE_TCPDATA_RECEIVED 1
+#define PROFILE_TCPDATA_MISSED 2
+#define PROFILE_TCPDATA_TOT 3
+double tcpdata_received_total;
+double tcpdata_missed_total;
 
 struct double_histo_list *profile_trash;
 

@@ -17,7 +17,8 @@
   * Updated classification of UDP BitTorrent DHT flows
   * Added feature to dump UDP BitTorrent uTP flows
   * Fixed code to detect missing packets using the sequence numbers
-  * Bugfix: dumped packets were wrongly terminated by a NULL \0 character 
+  * Bugfix: dumped packets were wrongly terminated by a NULL \0 character
+  * Added RRD to profile missed TCP traffic (from sequence numbers) 
 
 17/10/11 - MMM
 - Main changes since 2.2:

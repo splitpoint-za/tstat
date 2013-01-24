@@ -1736,7 +1736,7 @@ TCP packet %lu: reserved bits are not all zero.  \n\
     {
       plen = popt + 1;
       /* check for truncation error */
-      if ((unsigned long) popt >= (unsigned long) plast)
+      if ((unsigned long) popt > (unsigned long) plast)
 	{
 	  if (warn_printtrunc)
 	    fprintf (fp_stderr, "\
@@ -2154,6 +2154,7 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   double etime;
   FILE *fp;
   tcb *pab, *pba;
+  u_long pab_expected, pba_expected;
 
   /* Statistichs about CHAT flows */
 #ifdef MSN_CLASSIFIER
@@ -2331,7 +2332,30 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     }
 
 
-
+/* Code for sequence_number checking to detect missing packets */ 
+   if (pab->max_seq!=pab->syn)
+    {
+      if ( (pab->fin_count > 0) &&  pab->max_seq > pab->fin_seqno ) 
+         pab_expected = pab->max_seq - pab->syn - 2;
+      else 
+	 pab_expected = pab->max_seq - pab->syn - 1;
+    }
+   else
+    {
+      pab_expected = 0;
+    }
+   
+   if (pba->max_seq!=pba->syn)
+    {
+      if ( (pba->fin_count > 0) &&  pba->max_seq > pba->fin_seqno ) 
+	 pba_expected = pba->max_seq - pba->syn - 2;
+      else 
+	 pba_expected = pba->max_seq - pba->syn - 1;
+    }
+   else
+    {
+      pba_expected = 0;
+    }
 
   if (complete)
     {
@@ -2720,6 +2744,53 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
        }
     }
 
+  if (complete)
+   {
+     u_long missing_bytes = 0;
+
+    /*
+      Counting the amount of bytes missing in the measured TCP flow, due to packets 
+      not seen by the probe and/or tstat.
+
+      pab_expected is the expected size of the TCP flow, computed above using
+      the sequence numbers in the SYN and FIN packets.
+      Due to multiple impredictable issues (packet reordering, flow reuse, buggy TCP 
+      implementation), its value might be HUGELY off, so we need a heuristic to 
+      exclude those situations from our measure.
+
+      We suppose that the computed expected bytes are 'meaningful' if:
+       - either no data packets (only SYN, FIN and ACK) are seen but the missing volume is
+         small (1 MB);
+       - or some data packets were seen, and the missing volume is smaller than 10 times 
+         the maximum volume representable by the seen data packets (i.e. I miss less than
+	 the 90% of the data)
+    */ 
+
+    if (pab_expected > pab->unique_bytes)
+      {
+      // printf("C -> S: %d %lu %lu %lu %lu\n",pab->bad_behavior,pab_expected-pab->unique_bytes,pab_expected,pab->unique_bytes,pab->data_pkts);
+        if (!((pab->data_pkts == 0 && pab_expected > 1e6) ||
+              (pab->data_pkts > 0 && pab_expected > 1500*10*pab->data_pkts))
+    	   )
+    	 missing_bytes += pab_expected - pab->unique_bytes;
+      }
+    if (pba_expected > pba->unique_bytes)
+      {
+     //  printf("S -> C: %d %lu %lu %lu %lu\n",pba->bad_behavior,pba_expected-pba->unique_bytes,pba_expected,pba->unique_bytes,pba->data_pkts);
+        if (!((pba->data_pkts == 0 && pba_expected > 1e6) ||
+              (pba->data_pkts > 0 && pba_expected > 1500*10*pba->data_pkts))
+    	   )
+    	 missing_bytes += pba_expected - pba->unique_bytes;
+      }
+
+    tcpdata_received_total += ((double)pab->unique_bytes+(double)pba->unique_bytes)/1e6;
+    tcpdata_missed_total += (double)missing_bytes/1e6;	
+     
+   //     printf("%lu %lu %lu - %lu %lu %lu\n",pab->unique_bytes,pab_expected,pab_expected - pab->unique_bytes,
+   //                                pba->unique_bytes,pba_expected,pba_expected - pba->unique_bytes);
+     
+   }
+   
   /* check if this flow has been abruptly interrupted by the user       */
   /* according to the heuristic defined in                              */
   /* D. Rossi, C. Casetti, M. Mellia                                    */
@@ -3054,30 +3125,8 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
 
 #ifdef LOST_PACKET_STAT
-/* Code for sequence_number checking to detect missing packets */ 
-      if (pab->max_seq!=pab->syn)
-       {
-         if ( (pab->fin_count > 0) &&  pab->max_seq > pab->fin_seqno ) 
-            wfprintf (fp, " %u",pab->max_seq - pab->syn - 2);
-	 else 
-            wfprintf (fp, " %u",pab->max_seq - pab->syn - 1);
-       }
-      else
-       {
-         wfprintf (fp, " 0");
-       }
-      
-      if (pba->max_seq!=pba->syn)
-       {
-         if ( (pba->fin_count > 0) &&  pba->max_seq > pba->fin_seqno ) 
-            wfprintf (fp, " %u",pba->max_seq - pba->syn - 2);
-	 else 
-            wfprintf (fp, " %u",pba->max_seq - pba->syn - 1);
-       }
-      else
-       {
-         wfprintf (fp, " 0");
-       }
+/* Expected unique bytes (from sequence numbers) used to detect missing packets */
+      wfprintf (fp, " %u %u", pab_expected, pba_expected);
 #endif
 
 
