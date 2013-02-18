@@ -237,6 +237,7 @@ the command is the following:
               [-B bayes.conf]
               [-T runtime.conf]
               [-z file]
+              [-A mask]
               [-H ?|file ]
               [-Z] [-P]
               [-r RRD_out_dir] [-R rrd_conf]

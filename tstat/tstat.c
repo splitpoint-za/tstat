@@ -358,6 +358,7 @@ Help (void)
     "\t      [-B bayes.conf]\n"
     "\t      [-T runtime.conf]\n"
     "\t      [-z file]\n"
+    "\t      [-A mask]\n"
     "\t      [-H ?|file ]\n"
 #ifdef SUPPORT_IPV6
     "\t      [-y] [-6 file]\n"
