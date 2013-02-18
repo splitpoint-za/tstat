@@ -115,6 +115,7 @@ struct in_addr cloud_net_mask2[MAX_CLOUD_HOSTS];
 int cloud_net_mask[MAX_CLOUD_HOSTS];
 int tot_cloud_nets;
 
+unsigned int ip_obfuscate_mask = 0x00000000;
 
 #ifdef SUPPORT_IPV6
 struct in6_addr internal_net_listv6;
@@ -445,6 +446,8 @@ Help (void)
     "\t-T runtime.conf: configuration file to enable/disable dumping\n"
     "\t                 of traces and logs at runtime\n" 
     "\t-z file: redirect all the stdout/stderr messages to the file specified\n"
+    "\t-A mask: enable XOR-based anonymization for internal IPv4 addresses.\n"
+    "\t         'mask' is a decimal, octal, or hexadecimal value.\n"
 #ifdef SUPPORT_IPV6
     "\t-6 file: specify the file name which contains the\n"
     "\t         description of the internal IPv6 network.\n"
@@ -1199,7 +1202,13 @@ ip_header_stat (int phystype,
       */
       
       /* ip_histo_stat(pip); */
-      
+
+      /* Now it is safe to apply internal IP addresses obfuscation */
+      if (internal_src)
+          pip->ip_src.s_addr ^= ip_obfuscate_mask;
+      if (internal_dst)
+          pip->ip_dst.s_addr ^= ip_obfuscate_mask;          
+
 #ifdef SUPPORT_IPV6
     }
 #endif
@@ -2487,7 +2496,7 @@ ParseArgs (int *pargc, char *argv[])
     c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
     if (c == -1)
         break;
     if (c == 'z') {
@@ -2511,7 +2520,7 @@ ParseArgs (int *pargc, char *argv[])
       c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
 
       if (c == -1) {
 	    break;
@@ -2569,6 +2578,25 @@ ParseArgs (int *pargc, char *argv[])
 	      exit (1);
 	    }
 	  cloud_conf = TRUE;
+	  break;
+	case 'A':		/* Enable anonymization with the mask indicated */
+	   {
+	     char *endptr;
+	     errno = 0;
+	     tmpstring = strdup (optarg);
+	     long long obf_mask = strtoll(tmpstring,&endptr,0);
+	     if (*endptr=='\0' && errno==0)
+	      {
+	        ip_obfuscate_mask = (unsigned int)(obf_mask & 0x00000000ffffffff);
+ 	        // if (debug > 0)
+	          fprintf (fp_stdout, "Anonymization mask set to 0x%08x\n", ip_obfuscate_mask);
+	      }
+	     else
+	      { 
+	        fprintf (fp_stdout, "Invalid value %s(0x%08x) for the anonymization mask - Using default value 0x%08x\n",
+		         tmpstring,obf_mask,ip_obfuscate_mask);
+	      }
+	    }
 	  break;
 #ifdef SUPPORT_IPV6
 	case '6':

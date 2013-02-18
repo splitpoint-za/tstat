@@ -313,6 +313,8 @@ the command is the following:
         -T runtime.conf: configuration file to enable/disable dumping
                          of traces and logs at runtime
         -z file: redirect all the stdout/stderr messages to the file specified
+        -A mask: enable XOR-based anonymization for internal IPv4 addresses.
+                 'mask' is a decimal, octal, or hexadecimal value.
         -Z: Create gzip compressed (.gz) log files.
         -P: Create gzip compressed (.gz) pcap dump files.
         -R conf: specify the configuration file for integration with
