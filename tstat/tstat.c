@@ -115,7 +115,7 @@ struct in_addr cloud_net_mask2[MAX_CLOUD_HOSTS];
 int cloud_net_mask[MAX_CLOUD_HOSTS];
 int tot_cloud_nets;
 
-unsigned int ip_obfuscate_mask = 0x00000000;
+unsigned int ip_obfuscate_mask = 0x00000000; /* This is already in network order */
 
 #ifdef SUPPORT_IPV6
 struct in6_addr internal_net_listv6;
@@ -2588,14 +2588,15 @@ ParseArgs (int *pargc, char *argv[])
 	     long long obf_mask = strtoll(tmpstring,&endptr,0);
 	     if (*endptr=='\0' && errno==0)
 	      {
-	        ip_obfuscate_mask = (unsigned int)(obf_mask & 0x00000000ffffffff);
+		/* Mask must be converted to network order */
+	         ip_obfuscate_mask = htonl((unsigned int)(obf_mask & 0x00000000ffffffff));
  	        // if (debug > 0)
-	          fprintf (fp_stdout, "Anonymization mask set to 0x%08x\n", ip_obfuscate_mask);
+	         fprintf (fp_stdout, "Anonymization mask set to 0x%08x\n", ntohl(ip_obfuscate_mask));
 	      }
 	     else
 	      { 
 	        fprintf (fp_stdout, "Invalid value %s(0x%08x) for the anonymization mask - Using default value 0x%08x\n",
-		         tmpstring,obf_mask,ip_obfuscate_mask);
+		         tmpstring,(unsigned int)obf_mask,ntohl(ip_obfuscate_mask));
 	      }
 	    }
 	  break;
