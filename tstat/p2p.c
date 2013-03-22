@@ -22,7 +22,6 @@
 #define P2P_DEBUG_LEVEL 1
 #define P2P_DEBUG (debug>=P2P_DEBUG_LEVEL)
 extern int debug;
-extern Bool log_engine;
 extern FILE *fp_udp_logc;
 extern int ED2K_type;
 extern int ED2K_subtype;
@@ -636,7 +635,7 @@ make_p2p_conn_stats (void * flow, int tproto)
 #if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
   return;
 #else
-  if (!log_engine || fp_udp_logc == NULL)
+  if (!LOG_IS_ENABLED(LOG_UDP_COMPLETE) || fp_udp_logc == NULL)
     return;
 #endif
 

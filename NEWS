@@ -1,3 +1,17 @@
+News in 2.4
+-------------
+* New features
+  - log files are created with a header at the beginning specifing their format
+  - logs can be enabled/disable individually using runtime.conf
+  - improved the reactivity of enabling/disabling logs using runtime.conf (no need to wait the creation o the new directory before to see a new file)
+  - dump TCP traffic based on Conn_Type 
+* Added the option to distiguish internal/external traffic based on the MAC
+  addresses
+* Updated DPI classification
+  - Added HLS video classification
+  - Updated Facebook, Vimeo, FLV, RTMP, and YouTube classification
+* General improvements and bugfixes
+  
 News in 2.3
 -------------
 * New additional DPI engine for classification of video streams,

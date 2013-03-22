@@ -25,6 +25,9 @@
 
 #include <regex.h>
 
+/* log(2) used in the entropy computation */
+#define LOG2 0.6931471805599453
+
 int map_flow_type(tcp_pair *thisflow);
 
 extern struct L4_bitrates L4_bitrate;
@@ -484,7 +487,6 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
   int i;
   char c;
   char c1,c2;
-  double log2=log(2);
   double probi;
 
   tcphdr *ptcp;
@@ -510,7 +512,7 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
   if (data_length <= 0 || payload_len == 0)
     return;
 
-  for (i=0;i<data_length;i++)
+  for (i=0;i<min(data_length,ENTROPY_SAMPLE);i++)
    {
      c = *(char *)(pdata+i);
 
@@ -531,8 +533,9 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
       {
         if (ptp->nibbles_h[i]==0) continue;
         probi = ptp->nibbles_h[i]*1.0/ptp->nibble_h_count;
-        ptp->entropy_h += (-1.0)*probi*log(probi)/log2;
+        ptp->entropy_h += (-1.0)*probi*log(probi);
       }
+      ptp->entropy_h /= LOG2;
     }
 
    ptp->entropy_l = 0.0;
@@ -542,8 +545,9 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
       {
         if (ptp->nibbles_l[i]==0) continue;
         probi = ptp->nibbles_l[i]*1.0/ptp->nibble_l_count;
-        ptp->entropy_l += (-1.0)*probi*log(probi)/log2;
+        ptp->entropy_l += (-1.0)*probi*log(probi);
       }
+      ptp->entropy_l /= LOG2;
     }
 
   return;
@@ -570,11 +574,6 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
   ptp = ((tcb *) pdir)->ptp;
 
-  if (ptp!=NULL)
-   {
-     compute_nibbles(pip,pproto,tproto,pdir,dir,hdr,plast);
-   }
-
   if (ptp == NULL || ptp->state == IGNORE_FURTHER_PACKETS)
     return;
 
@@ -587,12 +586,15 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
   if (data_length <= 0 || payload_len == 0)
     return;
 
+  compute_nibbles(pip,pproto,tproto,pdir,dir,hdr,plast);
+
   if (ACK_SET(ptcp) && PUSH_SET(ptcp))
     ed2k_obfuscate_check(ptp,payload_len);
 
   rtmp_handshake_check(ptp,pdata,payload_len,dir);
 
-  mse_protocol_check(ptp);
+  if (ptp->con_type==UNKNOWN_PROTOCOL)
+     mse_protocol_check(ptp);
   
   if (dir == C2S)
     tcp_stats = &(ptp->c2s);

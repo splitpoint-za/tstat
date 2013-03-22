@@ -204,7 +204,6 @@ Bool adx_engine = FALSE;	    /* to allow disabling via -H */
 Bool adx2_engine = FALSE;	    /* secondary engine, enabled by histo.conf */
 Bool global_histo = FALSE;	    /* -g */
 
-Bool log_engine = TRUE;		    /* -L */
 Bool bayes_engine = FALSE;	    /* -B */
 Bool runtime_engine = FALSE;    /* -T */
 Bool rrd_engine = FALSE;
@@ -281,6 +280,10 @@ FILE *fp_l3bitrate = NULL;
 #endif
 
 /* LM */
+/* AF: THIS IS USELESS!!! 
+  1) It's creation is not integrated in the workflow 
+  2) in some points the code refer to a fp_dup_ooo which is never defined
+*/
 #ifdef LOG_OOO
 FILE *fp_dup_ooo_log;
 #endif
@@ -292,6 +295,8 @@ FILE *fp_video_logc = NULL;
 #ifdef STREAMING_CLASSIFIER
 FILE *fp_streaming_logc = NULL;
 #endif
+
+long log_bitmask = LOG_ALL;
 
 /* discriminate Direction */
 /* used when checking by Ethernet MAC */
@@ -441,7 +446,7 @@ Help (void)
     "\t-g: Enable global histo engine\n"
     "\t-S: No histo engine: do not create histograms files \n"
     "\t-L: No log engine: do not create log_* files \n"
-    "\t-1: Use old (v1) log_mm format\n"
+    //"\t-1: Use old (v1) log_mm format\n"
 	"\t-B Bayes_Dir: enable Bayesian traffic classification\n"
     "\t              configuration files from Bayes_Dir\n"
     "\t-T runtime.conf: configuration file to enable/disable dumping\n"
@@ -765,9 +770,7 @@ main (int argc, char *argv[]) {
 #endif //TSTAT_RUNASLIB
 }
 
-void reopen_logfile(FILE **fp_ref,
-                    const char *basename, 
-		    const char *filename)
+void reopen_logfile(FILE **fp_ref, const char *basename, const char *filename)
 {
   static char logfile[FILENAME_SIZE+50];
 
@@ -777,7 +780,7 @@ void reopen_logfile(FILE **fp_ref,
     snprintf (logfile,FILENAME_SIZE,"%s/%s.gz", basename, filename);
     if (*fp_ref != NULL)
       gzclose (*fp_ref);
-    *fp_ref = gzopen (logfile, "w");
+    *fp_ref = gzopen (logfile, "a");
    }
   else
 #endif
@@ -785,7 +788,7 @@ void reopen_logfile(FILE **fp_ref,
     snprintf (logfile,FILENAME_SIZE,"%s/%s", basename, filename);
     if (*fp_ref != NULL)
       fclose (*fp_ref);
-    *fp_ref = fopen (logfile, "w");
+    *fp_ref = fopen (logfile, "a");
    }
   
   if (*fp_ref == NULL)
@@ -794,121 +797,709 @@ void reopen_logfile(FILE **fp_ref,
     }
 }
 
+void write_log_header(FILE *fp, int log_type) {
+    int i, col;
+
+
+    /*****************************************************
+     * LOG_TCP_COMPLETE + LOG_TCP_NOCOMPLETE
+     *****************************************************/
+    if (log_type == LOG_TCP_COMPLETE || log_type == LOG_TCP_NOCOMPLETE) {
+        wfprintf (fp, 
+            /*******************************
+             * client stats
+             *******************************/
+            "#c_ip:1"            // 1: ip address
+            " c_port:2"         // 2: port 
+            " c_pkts_all:3"     // 3: total number of segments uploaded
+            " c_rst_cnt:4"      // 4: number of RST pkts sent
+            " c_ack_cnt:5"      // 5: number of pkts with ACK flag set
+            " c_ack_cnt_p:6"    // 6: number of pure ACK pkts (i.e. ACK set but no payload)
+            " c_bytes_uniq:7"   // 7: number of unique bytes uploaded
+            " c_pkts_data:8"    // 8: number of segments with payload
+            " c_bytes_all:9"    // 9: total number of bytes = unique + retransmitted
+            " c_pkts_retx:10"    // 10: number of segments retransmitted
+            " c_bytes_retx:11"   // 11: number of bytes retransmitted
+            " c_pkts_ooo:12"     // 12: number of packets out of order
+            " c_syn_cnt:13"      // 13: number of segments with SYN set
+            " c_fin_cnt:14"      // 14: number of segments with FIN set
+            " c_f1323_opt:15"    // 15: window scale option (0/1)
+            " c_tm_opt:16"       // 16: timestamp option (0/1)
+            " c_win_scl:17"      // 17: window scale option
+            " c_sack_opt:18"     // 18: SACK option (0/1)
+            " c_sack_cnt:19"     // 19: number of SACK sent
+            " c_mss:20"          // 20: maximum segment size declared
+            " c_mss_max:21"      // 21: maximum segment size observed
+            " c_mss_min:22"      // 22: minimum segment size observed
+            " c_win_max:23"      // 23: maximum receiver window announced
+            " c_win_min:24"      // 24: minimum receiver window announced
+            " c_win_0:25"        // 25: number of segments with receiver window = 0
+            " c_cwin_max:26"     // 26: congestion window max
+            " c_cwin_min:27"     // 27: congestion window min
+            " c_cwin_ini:28"     // 28: congestion window initial
+            " c_rtt_avg:29"      // 29: RTT average
+            " c_rtt_min:30"      // 30: RTT minimum
+            " c_rtt_max:31"      // 31: RTT maximum
+            " c_rtt_std:32"      // 32: RTT standard deviation
+            " c_rtt_cnt:33"      // 33: number of RTT valid samples
+            " c_ttl_min:34"      // 34: TTL minimum
+            " c_ttl_max:35"      // 35: TTL maximum
+            " c_pkts_rto:36"     // 36: number of segments retransmitted due to timeout
+            " c_pkts_fs:37"      // 37: number of segments retransmitted due to fast retransmitt
+            " c_pkts_reor:38"    // 38: number of segments reordering
+            " c_pkts_dup:39"     // 39: number of segments duplicated
+            " c_pkts_unk:40"     // 40: number of segments not in sequence or duplicate which are not classified as specific events
+            " c_pkts_fc:41"      // 41: number of segments retransmitted to probe receiver window
+            " c_pkts_unrto:42"   // 42: number of un-necessary transmission following a timeout
+            " c_pkts_unfs:43"    // 43: number of un-necessary transmission following fast retransmit
+            " c_syn_retx:44"     // 44: retransmitted SYN with different initial seqno (0/1)
+            /*******************************
+             * server stats
+             *******************************/
+            " s_ip:45"           // 45: ip address
+            " s_port:46"         // 46: port 
+            " s_pkts_all:47"     // 47: total number of segments uploaded
+            " s_rst_cnt:48"      // 48: number of RST pkts sent
+            " s_ack_cnt:49"      // 49: number of pkts with ACK flag set
+            " s_ack_cnt_p:50"    // 50: number of pure ACK pkts (i.e. ACK set but no payload)
+            " s_bytes_uniq:51"   // 51: number of unique bytes
+            " s_pkts_data:52"    // 52: number of segments with payload
+            " s_bytes_all:53"    // 53: total number of bytes = unique + retransmitted
+            " s_pkts_retx:54"    // 54: number of segments retransmitted
+            " s_bytes_retx:55"   // 55: number of bytes retransmitted
+            " s_pkts_ooo:56"     // 56: number of packets out of order
+            " s_syn_cnt:57"      // 57: number of segments with SYN set
+            " s_fin_cnt:58"      // 58: number of segments with FIN set
+            " s_f1323_opt:59"    // 59: window scale option (0/1)
+            " s_tm_opt:60"       // 60: timestamp option (0/1)
+            " s_win_scl:61"      // 61: window scale option
+            " s_sack_opt:62"     // 62: SACK option (0/1)
+            " s_sack_cnt:63"     // 63: number of SACK sent
+            " s_mss:64"          // 64: maximum segment size declared
+            " s_mss_max:65"      // 65: maximum segment size observed
+            " s_mss_min:66"      // 66: minimum segment size observed
+            " s_win_max:67"      // 67: maximum receiver window announced
+            " s_win_min:68"      // 68: minimum receiver window announced
+            " s_win_0:69"        // 69: number of segments with receiver window = 0
+            " s_cwin_max:70"     // 70: congestion window max
+            " s_cwin_min:71"     // 71: congestion window min
+            " s_cwin_ini:72"     // 72: congestion window initial
+            " s_rtt_avg:73"      // 73: RTT average
+            " s_rtt_min:74"      // 74: RTT minimum
+            " s_rtt_max:75"      // 75: RTT maximum
+            " s_rtt_std:76"      // 76: RTT standard deviation
+            " s_rtt_cnt:77"      // 77: number of RTT valid samples
+            " s_ttl_min:78"      // 78: TTL minimum
+            " s_ttl_max:79"      // 79: TTL maximum
+            " s_pkts_rto:80"     // 80: number of segments retransmitted due to timeout
+            " s_pkts_fs:81"      // 81: number of segments retransmitted due to fast retransmitt
+            " s_pkts_reor:82"    // 82: number of segments reordering
+            " s_pkts_dup:83"     // 83: number of segments duplicated
+            " s_pkts_unk:84"     // 84: number of segments not in sequence or duplicate which are not classified as specific events
+            " s_pkts_fc:85"      // 85: number of segments retransmitted to probe receiver window
+            " s_pkts_unrto:86"   // 86: number of un-necessary transmission following a timeout
+            " s_pkts_unfs:87"    // 87: number of un-necessary transmission following fast retransmit
+            " s_syn_retx:88"     // 88: retransmitted SYN with different initial seqno (0/1)
+            /********************************
+             * timestamps 
+             ********************************/
+            " durat:89"        // 89: completion time
+            " first:90"        // 90: first packet since first segment ever
+            " last:91"         // 91: last packet since first segment ever
+            " c_first:92"      // 92: first client packet since first segment ever
+            " s_first:93"      // 93: first server packet since first segment ever
+            " c_last:94"       // 94: last client packet since first segment ever
+            " s_last:95"       // 95: last server packet since first segment ever
+            " c_first_ack:96"  // 96: first client ack since first segment ever
+            " s_first_ack:97"  // 97: first server ack since first segment ever
+            " first_abs:98"    // 98: first packet absolute
+            " c_isint:99"      // 99: internal client ip
+            " s_isint:100"      // 100: internal server ip
+            /********************************
+             * classification
+             ********************************/
+            " con_t:101"        // 101: connection type
+            " p2p_t:102"        // 102: p2p type
+            " p2p_st:103"       // 103: p2p subtype
+            " ed2k_data:104"    // 104: number of ed2k data messages
+            " ed2k_sig:105"     // 105: number of ed2k signalin messages
+            " ed2k_c2s:106"     // 106: number of ed2k client 2 server messages
+            " ed2k_c2c:107"     // 107: number of ed2k client 2 client messages
+            " ed2k_chat:108"    // 108: number of ed2k chat messages
+            " http_t:109"        // 109: http type
+            );
+        // columns now can be variable
+        col = 110;
+#ifdef LOST_PACKET_STAT
+        wfprintf(fp, " c_pkts_drop:%d", col++); // number of drop client packets counted from seqno
+        wfprintf(fp, " s_pkts_drop:%d", col++); // number of dopt server packets counted from seqno
+#endif
+#ifndef PACKET_STATS
+        wfprintf(fp, " c_pkts_push:%d", col++);  // number of client push separated messages
+        wfprintf(fp, " s_pkts_push:%d", col++);  // number of server push separated messages
+#endif
+        wfprintf(fp, " c_ssl:%d", col++); // server name of SSL client hello message
+        wfprintf(fp, " s_ssl:%d", col++); // subject name in SSL server certificate
+#ifdef SNOOP_DROPBOX
+        wfprintf(fp, " dropbox_id", col++);    // dropbox device id
+#endif
+
+#ifdef PACKET_STATS
+        /*******************************
+         * PSH-delimited Message sizes 
+         *******************************/
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf(fp, " c_msgsize:%d", col++); 
+        for (i=0;i<MAX_COUNT_MESSAGES;i++) 
+            wfprintf(fp, " c_msgsize%d:%d", i+1, col++);
+
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf(fp, " s_msgsize:%d", col++);     // number of valid samples (out of MAX_COUNT_MESSAGES)
+        for (i=0;i<MAX_COUNT_MESSAGES;i++) 
+            wfprintf(fp, " s_msgsize%d:%d", i+1, col++);
+
+        /*******************************
+         * segment sizes 
+         *******************************/
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf(fp, " c_pktsize:%d", col++);   // number of valid samples (out of MAX_COUNT_SEGMENTS)
+        for (i=0;i<MAX_COUNT_SEGMENTS;i++) 
+          wfprintf (fp, " c_pktsize%d:%d", i+1, col++);
+
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf(fp, " s_pktsize:%d", col++);     // number of valid samples (out of MAX_COUNT_SEGMENTS)
+        for (i=0;i<MAX_COUNT_SEGMENTS;i++) 
+          wfprintf (fp, " s_pktsize%d:%d", i+1, col++);
+       
+
+        /*******************************
+         * segment intertimes
+         *******************************/
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        for (i=0; i < MAX_COUNT_SEGMENTS-1; i++)
+            wfprintf (fp, " c_sit%d:%d", i+1, col++);
+
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
+            wfprintf (fp, " s_sit%d:%d", i+1, col++);
+
+
+        /*******************************
+         * averages
+         *******************************/
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf (fp, " c_pkts_data:%d", col++);
+        wfprintf (fp, " c_pkts_data_avg:%d", col++);
+        wfprintf (fp, " c_pkts_data_std:%d", col++);
+        wfprintf (fp, " s_pkts_data:%d", col++);
+        wfprintf (fp, " s_pkts_data_avg:%d", col++);
+        wfprintf (fp, " s_pkts_data_std:%d", col++);
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf (fp, " c_seg_cnt:%d", col++);
+        wfprintf (fp, " c_sit_avg:%d", col++);
+        wfprintf (fp, " c_sit_std:%d", col++);
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf (fp, " s_seg_cnt:%d", col++);
+        wfprintf (fp, " s_sit_avg:%d", col++);
+        wfprintf (fp, " s_sit_std:%d", col++);
+
+        /******************************
+         * PSH
+         ******************************/
+//        wfprintf(fp, " -:%d", col++);  // '-' is used as delimiter
+        wfprintf(fp, " c_pkts_push:%d", col++);
+        wfprintf(fp, " s_pkts_push:%d", col++);
+#endif
+#ifdef DNS_CACHE_PROCESSOR
+        wfprintf (fp, " fqdn:%d", col++);       // full qualified domain name
+        wfprintf (fp, " dns_rslv:%d", col++);   // dns server ip address
+        wfprintf (fp, " req_tm:%d", col++);     // absolute dns request time
+        wfprintf (fp, " res_tm:%d", col++);     // absolute dns response time
+#endif
+        wfprintf (fp, "\n");
+    }
+
+    /**************************************************
+     * LOG_UDP_COMPLETE
+     **************************************************/
+    else if (log_type == LOG_UDP_COMPLETE) {
+        col = 0;
+        wfprintf(fp, "#c_ip:%d", col++);            // client ip
+        wfprintf(fp, " c_port:%d", col++);          // client port
+        wfprintf(fp, " c_first_abs:%d", col++);     // first time absolute
+        wfprintf(fp, " c_durat:%d", col++);         // connection duration
+        wfprintf(fp, " c_bytes_all:%d", col++);     // bytes uploaded
+        wfprintf(fp, " c_pkts_all:%d", col++);      // packets uploaded
+        wfprintf(fp, " c_isint:%d", col++);         // client ip is internal
+        wfprintf(fp, " c_type:%d", col++);          // flow type
+#ifdef P2P_DETAILS
+        wfprintf(fp, " c_p2p_pkts:%d", col++);      // number of p2p packets
+        wfprintf(fp, " c_p2p_pkts_edk:%d", col++);  // number of Emule-EDK packets
+        wfprintf(fp, " c_p2p_pkts_kad:%d", col++);  // number of Emule-KAD packets
+        wfprintf(fp, " c_p2p_pkts_kadu:%d", col++); // number of Emule-KADU packets
+        wfprintf(fp, " c_p2p_pkts_gnu:%d", col++);  // number of Gnutella packets
+        wfprintf(fp, " c_p2p_pkts_bit:%d", col++);  // number of Bittorrent packets
+        wfprintf(fp, " c_p2p_pkts_dc:%d", col++);   // number of DirectConnect packets
+        wfprintf(fp, " c_p2p_pkts_kaz:%d", col++);  // number of Kazaa packets
+        wfprintf(fp, " c_p2p_pkts_ppl:%d", col++);  // number of PPLive packets
+        wfprintf(fp, " c_p2p_pkts_sop:%d", col++);  // number of SopCast packets
+        wfprintf(fp, " c_p2p_pkts_tva:%d", col++);  // number of TVAnts packets
+#endif
+        wfprintf(fp, " s_ip:%d", col++);            // server ip
+        wfprintf(fp, " s_port:%d", col++);          // server port
+        wfprintf(fp, " s_first_abs:%d", col++);     // first time absolute
+        wfprintf(fp, " s_durat:%d", col++);         // connection duration
+        wfprintf(fp, " s_bytes_all:%d", col++);     // bytes downloaded
+        wfprintf(fp, " s_pkts_all:%d", col++);      // packets downloaded
+        wfprintf(fp, " s_isint:%d", col++);         // server ip is internal
+        wfprintf(fp, " s_type:%d", col++);          // flow type
+#ifdef P2P_DETAILS
+        wfprintf(fp, " s_p2p_pkts:%d", col++);      // number of p2p packets
+        wfprintf(fp, " s_p2p_pkts_edk:%d", col++);  // number of Emule-EDK packets
+        wfprintf(fp, " s_p2p_pkts_kad:%d", col++);  // number of Emule-KAD packets
+        wfprintf(fp, " s_p2p_pkts_kadu:%d", col++); // number of Emule-KADU packets
+        wfprintf(fp, " s_p2p_pkts_gnu:%d", col++);  // number of Gnutella packets
+        wfprintf(fp, " s_p2p_pkts_bit:%d", col++);  // number of Bittorrent packets
+        wfprintf(fp, " s_p2p_pkts_dc:%d", col++);   // number of DirectConnect packets
+        wfprintf(fp, " s_p2p_pkts_kaz:%d", col++);  // number of Kazaa packets
+        wfprintf(fp, " s_p2p_pkts_ppl:%d", col++);  // number of PPLive packets
+        wfprintf(fp, " s_p2p_pkts_sop:%d", col++);  // number of SopCast packets
+        wfprintf(fp, " s_p2p_pkts_tva:%d", col++);  // number of TVAnts packets
+#endif
+#ifdef DNS_CACHE_PROCESSOR
+        wfprintf (fp, " fqdn:%d", col++);
+#endif
+        wfprintf (fp, "\n");
+    }
+
+    /**************************************************
+     * LOG_VIDEO_COMPLETE
+     **************************************************/
+    else if (log_type == LOG_VIDEO_COMPLETE) {
+        wfprintf (fp,
+            /************************
+             * client side
+             ************************/
+            "#c_ip:1"              // 1: client ip
+            " c_port:2"            // 2: client port
+            " c_pkts_all:3"        // 3: total number of segments uploaded
+            " c_rst_cnt:4"         // 4: number of RST pkts sent 
+            " c_bytes_uniq:5"      // 5: number of unique bytes uploaded
+            " c_pkts_data:6"       // 6: number of segments with payload
+            " c_bytes_all:7"       // 7: total number of bytes = unique + retransmitted
+            " c_pkts_retx:8"       // 8: number of segments retransmitted
+            " c_bytes_retx:9"      // 9: number of bytes retransmitted
+            " c_pkts_ooo:10"       // 10: number of packets out of order
+            " c_fin_cnt:11"        // 11: number of segments with FIN set
+            " c_mss_max:12"        // 12: maximum segment size observed
+            " c_win_max:13"        // 13: maximum receiver window announced
+            " c_win_min:14"        // 14: minimum receiver window announced
+            " c_rtt_avg:15"        // 15: RTT average
+            " c_rtt_min:16"        // 16: RTT minimum
+            " c_rtt_max:17"        // 17: RTT maximum
+            " c_rtt_std:18"        // 18: RTT standard deviation
+            " c_rtt_cnt:19"        // 19: number of RTT valid samples
+            " c_ttl_min:20"        // 20: TTL minimum
+            " c_ttl_max:21"        // 21: TTL maximum
+            " c_rate_smpl:22"      // 22: number of rate samples
+            " c_rate_zero:23"      // 23: number of empty rate samples 
+            " c_rate_streak:24"    // 24: maximum number of consecutive empty rate samples
+            " c_rate_avg:25"       // 25: average upload rate 
+            " c_rate_std:26"       // 26: standard deviation of upload rate
+            " c_rate_min:27"       // 27: minimum upload rate
+            " c_rate_max:28"       // 28: maximum upload rate
+            " c_isint:29"          // 29: internal client ip
+            /************************
+             * server side
+             ************************/
+            " s_ip:30"             // 30: client ip
+            " s_port:31"           // 31: client port
+            " s_pkts_all:32"       // 32: total number of segments uploaded
+            " s_rst_cnt:33"        // 33: number of RST pkts sent 
+            " s_bytes_uniq:34"     // 34: number of unique bytes uploaded
+            " s_pkts_data:35"      // 35: number of segments with payload
+            " s_bytes_all:36"      // 36: total number of bytes = unique + retransmitted
+            " s_pkts_retx:37"      // 37: number of segments retransmitted
+            " s_bytes_retx:38"     // 38: number of bytes retransmitted
+            " s_pkts_ooo:39"       // 39: number of packets out of order
+            " s_fin_cnt:40"        // 40: number of segments with FIN set
+            " s_mss_max:41"        // 41: maximum segment size observed
+            " s_win_max:42"        // 42: maximum receiver window announced
+            " s_win_min:43"        // 43: minimum receiver window announced
+            " s_rtt_avg:44"        // 44: RTT average
+            " s_rtt_min:45"        // 45: RTT minimum
+            " s_rtt_max:46"        // 46: RTT maximum
+            " s_rtt_std:47"        // 47: RTT standard deviation
+            " s_rtt_cnt:48"        // 48: number of RTT valid samples
+            " s_ttl_min:49"        // 49: TTL minimum
+            " s_ttl_max:50"        // 50: TTL maximum
+            " s_rate_smpl:51"      // 51: number of rate samples
+            " s_rate_zero:52"      // 52: number of empty rate samples 
+            " s_rate_streak:53"    // 53: maximum number of consecutive empty rate samples
+            " s_rate_avg:54"       // 54: average upload rate 
+            " s_rate_std:55"       // 55: standard deviation of upload rate
+            " s_rate_min:56"       // 56: minimum upload rate
+            " s_rate_max:57"       // 57: maximum upload rate
+            " s_isint:58"          // 58: internal client ip
+            /********************************
+             * timestamps 
+             ********************************/
+            " durat:59"            // 59: completion time
+            " first:60"            // 60: first packet since first segment ever
+            " last:61"             // 61: last packet since first segment ever
+            " c_first:62"          // 62: first client packet since first segment ever
+            " s_first:63"          // 63: first server packet since first segment ever
+            " c_last:64"           // 64: last client packet since first segment ever
+            " s_last:65"           // 65: last server packet since first segment ever
+            " c_first_ack:66"      // 66: first client ack since first segment ever
+            " s_first_ack:67"      // 67: first server ack since first segment ever
+            " first_abs:68"        // 68: first packet absolute
+            /********************************
+             * classification
+             ********************************/
+            " con_t:69"           // 69: connection type
+            " p2p_t:70"           // 70: p2p type
+            " http_t:71"          // 71: http type
+            " http_res:72"        // 72: http response code
+            " yt_id16:73"         // 73: youtube, id11
+            " yt_id11:74"         // 74: youtube, id16
+            " yt_itag:75"         // 75: youtube, itag value (format type)
+            " yt_seek:76"         // 76: youtube, seek value (begin offset)
+            " flv_dur_tot:77"     // 77: flash video, total duration
+            " flv_start:78"       // 78: flash video, start position
+            " flv_dur:79"         // 79: flash video, remaining time to download
+            " flv_width:80"       // 80: flash video, pixel width
+            " flv_height:81"      // 81: flash video, pixel height
+            " flv_rate_vd:82"     // 82: flash video, data rate
+            " flv_rate_au:83"     // 83: flash video, audio rate
+            " flv_rate_tot:84"    // 84: flash video, total rate
+            " flv_rate_fr:85"     // 85: flash video, frame rate
+            " flv_bytes:86"       // 86: flash video, remaining video bytes to download
+            " yt_red_mode:87"     // 87: youtube redirection mode
+            " yt_red_cnt:88"      // 88: youtube redirection count
+            " yt_ismob:89"        // 89: youtube, is mobile
+            " yt_mob_t:90"        // 90: youtube, type of mobile device
+        );
+
+        col = 90;
+        for (i=0;i<10;i++) 
+            wfprintf (fp, " c_rate%d:%d", i+1, col++); 
+
+        for (i=0;i<10;i++)
+            wfprintf (fp, " s_rate%d:%d", i+1, col++); 
+
+        wfprintf (fp, " s_msg:%d", col++);
+        for (i=0;i<MAX_COUNT_MESSAGES;i++) 
+            wfprintf (fp, " s_msgsize%d:%d", i+1, col++);
+       
+
+#ifdef DNS_CACHE_PROCESSOR
+        wfprintf (fp, " fqdn:%d", col++);         // full qualified domain nam
+        wfprintf (fp, " dns_rslv:%d", col++);     // dns server ip address
+        wfprintf (fp, " req_tm:%d", col++);       // absolute dns request time
+        wfprintf (fp, " res_tm:%d", col++);       // absolute dns response time
+#endif
+      wfprintf (fp_video_logc, "\n");
+    }
+
+    /**************************************************
+     * LOG_STREAMING_COMPLETE
+     **************************************************/
+    else if (log_type == LOG_STREAMING_COMPLETE) {
+        wfprintf (fp,
+            /************************
+             * client side
+             ************************/
+            "#c_ip:1"             // 1: client ip
+            " c_port:2"           // 2: client port
+            " c_pkts_all:3"       // 3: total number of segments uploaded
+            " c_rst_cnt:4"        // 4: number of RST pkts sent 
+            " c_bytes_uniq:5"     // 5: number of unique bytes uploaded
+            " c_pkts_data:6"      // 6: number of segments with payload
+            " c_bytes_all:7"      // 7: total number of bytes = unique + retransmitted
+            " c_pkts_retx:8"      // 8: number of segments retransmitted
+            " c_bytes_retx:9"     // 9: number of bytes retransmitted
+            " c_pkts_ooo:10"       // 10: number of packets out of order
+            " c_fin_cnt:11"        // 11: number of segments with FIN set
+            " c_mss_max:12"        // 12: maximum segment size observed
+            " c_win_max:13"        // 13: maximum receiver window announced
+            " c_win_min:14"        // 14: minimum receiver window announced
+            " c_rtt_avg:15"        // 15: RTT average
+            " c_rtt_min:16"        // 16: RTT minimum
+            " c_rtt_max:17"        // 17: RTT maximum
+            " c_rtt_std:18"        // 18: RTT standard deviation
+            " c_rtt_cnt:19"        // 19: number of RTT valid samples
+            " c_ttl_min:20"        // 20: TTL minimum
+            " c_ttl_max:21"        // 21: TTL maximum
+            " c_rate_smpl:22"      // 22: number of rate samples
+            " c_rate_zero:23"      // 23: number of empty rate samples 
+            " c_rate_streak:24"    // 24: maximum number of consecutive empty rate samples
+            " c_rate_avg:25"       // 25: average upload rate 
+            " c_rate_std:26"       // 26: standard deviation of upload rate
+            " c_rate_min:27"       // 27: minimum upload rate
+            " c_rate_max:28"       // 28: maximum upload rate
+            " c_isint:29"          // 29: internal client ip
+            /************************
+             * server side
+             ************************/
+            " s_ip:30"             // 30: client ip
+            " s_port:31"           // 31: client port
+            " s_pkts_all:32"       // 32: total number of segments uploaded
+            " s_rst_cnt:33"        // 33: number of RST pkts sent 
+            " s_bytes_uniq:34"     // 34: number of unique bytes uploaded
+            " s_pkts_data:35"      // 35: number of segments with payload
+            " s_bytes_all:36"      // 36: total number of bytes = unique + retransmitted
+            " s_pkts_retx:37"      // 37: number of segments retransmitted
+            " s_bytes_retx:38"     // 38: number of bytes retransmitted
+            " s_pkts_ooo:39"       // 39: number of packets out of order
+            " s_fin_cnt:40"        // 40: number of segments with FIN set
+            " s_mss_max:41"        // 41: maximum segment size observed
+            " s_win_max:42"        // 42: maximum receiver window announced
+            " s_win_min:43"        // 43: minimum receiver window announced
+            " s_rtt_avg:44"        // 44: RTT average
+            " s_rtt_min:45"        // 45: RTT minimum
+            " s_rtt_max:46"        // 46: RTT maximum
+            " s_rtt_std:47"        // 47: RTT standard deviation
+            " s_rtt_cnt:48"        // 48: number of RTT valid samples
+            " s_ttl_min:49"        // 49: TTL minimum
+            " s_ttl_max:50"        // 50: TTL maximum
+            " s_rate_smpl:51"      // 51: number of rate samples
+            " s_rate_zero:52"      // 52: number of empty rate samples 
+            " s_rate_streak:53"    // 53: maximum number of consecutive empty rate samples
+            " s_rate_avg:54"       // 54: average upload rate 
+            " s_rate_std:55"       // 55: standard deviation of upload rate
+            " s_rate_min:56"       // 56: minimum upload rate
+            " s_rate_max:57"       // 57: maximum upload rate
+            " s_isint:58"          // 58: internal client ip
+            /********************************
+             * timestamps 
+             ********************************/
+            " durat:59"            // 59: completion time
+            " first:60"            // 60: first packet since first segment ever
+            " last:61"             // 61: last packet since first segment ever
+            " c_first:62"          // 62: first client packet since first segment ever
+            " s_first:63"          // 63: first server packet since first segment ever
+            " c_last:64"           // 64: last client packet since first segment ever
+            " s_last:65"           // 65: last server packet since first segment ever
+            " c_first_ack:66"      // 66: first client ack since first segment ever
+            " s_first_ack:67"      // 67: first server ack since first segment ever
+            " first_abs:68"        // 68: first packet absolute
+            /********************************
+             * classification
+             ********************************/
+            " con_t:69"            // 69: connection type
+            " p2p_t:70"            // 70: p2p type
+            " http_t:71"           // 71: http type
+            " http_res:72"         // 72: http response code
+            " yt_id16:73"          // 73: youtube, id11
+            " yt_id11:74"          // 74: youtube, id16
+            " yt_itag:75"          // 75: youtube, itag value (format type)
+            " yt_seek:76"          // 76: youtube, seek value (begin offset)
+            " vd_type_cont:77"     // 77: video type classification from HTTP content-type
+            " vd_type_pay:78"      // 78: video type classification from payload
+            " vd_dur:79"           // 79: video duration
+            " vd_rate_tot:80"      // 80: video rate total
+            " vd_width:81"         // 81: video width pixel
+            " vd_height:82"        // 82: video height pixel
+        );
+        col = 83;
+#ifdef DNS_CACHE_PROCESSOR
+        wfprintf(fp, " fqdn:%d", col++);       // 83: full qualified domain nam
+        wfprintf(fp, " dns_rslv:%d", col++);   // 84: dns server ip address
+        wfprintf(fp, " req_tm:%d", col++);     // 85: absolute dns request time
+        wfprintf(fp, " res_tm:%d", col++);    // 86: absolute dns response time
+#endif
+        wfprintf(fp, "\n");
+    }
+
+    /**************************************************
+     * LOG_CHAT_MESSAGES
+     **************************************************/
+    else if (log_type == LOG_CHAT_MESSAGES) {
+	    wfprintf (fp,
+		   "#idflow:1"        // 1: TCP id flow
+           " type:2"          // 2: message type
+           " dir:3"           // 3: direction
+           " paylen:4"        // 4: payload length
+           " first_tm:5"      // 5: first time (as string)
+           " durat:6"         // 6: duration 
+           " con_t:7"         // 7: connection type
+           "\n"
+        );
+    }
+
+    /**************************************************
+     * LOG_CHAT_COMPLETE
+     **************************************************/
+    else if (log_type == LOG_CHAT_COMPLETE) {
+        wfprintf(fp,
+            /*****************
+             * client
+             *****************/
+            "#c_ip:1"           // 1: client ip
+            " c_port:2"         // 2: client port
+            " c_bytes_uniq:3"   // 3: number of unique bytes uploaded
+            " c_pkts_all:4"     // 4: total number of segments uploaded
+            " c_msn:5"          // 5: total number of MSN messages
+            " c_msn_a:6"        // 6: number of MSN messages type A
+            " c_msn_d:7"        // 7: number of MSN messages type D
+            " c_msn_n:8"        // 8: number of MSN messages type N
+            " c_msn_u:9"        // 9: number of MSN messages type U
+            " c_msn_y:10"       // 10: number of MSN messages type Y
+            /*****************
+             * server
+             *****************/
+            " s_ip:11"          // 11: server ip                           
+            " s_port:12"        // 12: server port
+            " s_bytes_uniq:13"  // 13: number of unique bytes uploaded
+            " s_pkts_all:14"    // 14: total number of segments uploaded
+            " s_msn:15"         // 15: total number of MSN messages
+            " s_msn_a:16"       // 16: number of MSN messages type A
+            " s_msn_d:17"       // 17: number of MSN messages type D
+            " s_msn_n:18"       // 18: number of MSN messages type N
+            " s_msn_u:19"       // 19: number of MSN messages type U
+            " s_msn_y:20"       // 20: number of MSN messages type Y
+            /***********/
+            " first_tm:21"      // 21: absolute start time
+            " durat:22"         // 22: duration
+            " type:23"          // 23: chat flow type
+            " ver:24"           // 24: chat version
+            " c_isint:25"       // 25: client is internal
+            " flowid:26"        // 26: TCP flow id
+            " T:27"             // 27: T = TCP
+            " con_t:28"         // 28: TCP connect type
+        );
+        wfprintf (fp, "\n");
+    }
+}
+
+
 // MGM
 /* Create subdirs into which out files will be put */
 void
-create_new_outfiles (char *filename)
+create_new_outfiles (char *filename, Bool reuse_dir)
 {
   char tmpstr[FILENAME_SIZE+20];
   struct stat fbuf;
   char date[50];
 
-  if (!histo_engine && !log_engine && !global_histo && !runtime_engine)
+
+  if (!histo_engine && !log_bitmask && !global_histo && !runtime_engine)
     return;
 
-  if (!basedirspecified)
-    {
-      /* get the basename from the tracefile */
-      if (is_stdin ||
-          strcmp(filename, "TSTAT_RUNASLIB") == 0)
-	{
-	  basenamedir = strdup ("stdin");
-	}
-      else
-	{
-	  basenamedir = get_basename (filename);
-	}
-    }
-  if (stat (basenamedir, &fbuf) != 0)
-    {
-      mkdir (basenamedir, 0775);
-    }
-  strftime (date, 49, "%Y_%m_%d_%H_%M", localtime (&current_time.tv_sec));
+  if (reuse_dir == FALSE) {
+      if (!basedirspecified) {
+          /* get the basename from the tracefile */
+          if (is_stdin || strcmp(filename, "TSTAT_RUNASLIB") == 0) {
+              basenamedir = strdup ("stdin");
+          } else {
+              basenamedir = get_basename (filename);
+          }
+      }
+      if (stat (basenamedir, &fbuf) != 0) {
+          mkdir (basenamedir, 0775);
+      }
+      strftime (date, 49, "%Y_%m_%d_%H_%M", localtime (&current_time.tv_sec));
+      sprintf (basename, "%s/%s.out", basenamedir, date);
+      if (stat (basename, &fbuf) != -1) {
+          /* remove the previous directory */
+          sprintf (tmpstr, "rm -rf %s", basename);
+          system (tmpstr);
+      }
+      if (mkdir (basename, 0775) == -1) {
+          fprintf(fp_stderr, "Cannot create directory %s\n", basename);
+      }
+      fprintf(fp_stdout, "[%s] created new outdir %s\n", Timestamp(), basename);
 
+      if (global_histo)
+        sprintf (global_data_dir, "%s/GLOBAL", basename);
+  }
 
-  sprintf (basename, "%s/%s.out", basenamedir, date);
-
-  if (stat (basename, &fbuf) != -1)
-    {
-      /* remove the previous directory */
-      sprintf (tmpstr, "rm -rf %s", basename);
-      system (tmpstr);
-    }
-  mkdir (basename, 0775);
-
-  if (global_histo)
-    sprintf (global_data_dir, "%s/GLOBAL", basename);
-
-  if (!histo_engine && !log_engine && !runtime_engine)
+  if (!histo_engine && !log_bitmask && !runtime_engine)
     return;
 
-  if (log_engine)
-    {
-      /* Open the files for complete and uncomplete connection logging */
-      
+  if (LOG_IS_ENABLED(LOG_TCP_COMPLETE)) {
       reopen_logfile(&fp_logc,basename,"log_tcp_complete");
+      write_log_header(fp_logc, LOG_TCP_COMPLETE);
+  }
 
+
+  if (LOG_IS_ENABLED(LOG_TCP_NOCOMPLETE)) {
       reopen_logfile(&fp_lognc,basename,"log_tcp_nocomplete");
+      write_log_header(fp_lognc, LOG_TCP_NOCOMPLETE);
+  }
 
 #ifdef RTP_CLASSIFIER
-      /* RTP log */
-
-      reopen_logfile(&fp_rtp_logc,basename,"log_mm_complete");
+  if (LOG_IS_ENABLED(LOG_MM_COMPLETE)) {
+      //TOFIX: missing header in this log file
+      reopen_logfile(&fp_rtp_logc, basename, "log_mm_complete");
+  }
 
 #endif
 
 #ifdef SKYPE_CLASSIFIER
-      /* skype log */
-      if (bayes_engine)
-       {
-         reopen_logfile(&fp_skype_logc,basename,"log_skype_complete");
-       }
+  if (bayes_engine && LOG_IS_ENABLED(LOG_SKYPE_COMPLETE)) {
+      //TOFIX: missing header in this log file
+     reopen_logfile(&fp_skype_logc, basename, "log_skype_complete");
+  }
 #endif
 
 #ifdef P2P_CLASSIFIER
-
-      /* UDP log */
-
+  if (LOG_IS_ENABLED(LOG_UDP_COMPLETE)) {
       reopen_logfile(&fp_udp_logc,basename,"log_udp_complete");
+      write_log_header(fp_udp_logc, LOG_UDP_COMPLETE);
+  }
 
 #endif 
 
       /* MSN+Yahoo+Jabber log */
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
+  if (LOG_IS_ENABLED(LOG_CHAT_COMPLETE)) {
       reopen_logfile(&fp_chat_logc,basename,"log_chat_complete");
+      write_log_header(fp_chat_logc, LOG_CHAT_COMPLETE);
+  }
+
+  if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES)) {
       reopen_logfile(&fp_chat_log_msg,basename,"log_chat_messages");
+      write_log_header(fp_chat_log_msg, LOG_CHAT_MESSAGES);
+  }
 #ifdef MSN_OTHER_COMMANDS
+  if (LOG_IS_ENABLED(LOG_CHAT_MSNOTHER)) {
+          //TOFIX: add the header
       reopen_logfile(&fp_msn_log_othercomm,basename,"log_msn_OtherCommands");
+  }
 #endif
 #endif
 
 #ifdef L3_BITRATE
-      if (l3_engine_log)
-        {
-          reopen_logfile(&fp_l3bitrate,basename,"log_l3_bitrate");
-        }
+  if (LOG_IS_ENABLED(LOG_L3_BITRATE)) {
+      //TOFIX: add the header
+      reopen_logfile(&fp_l3bitrate,basename,"log_l3_bitrate");
+  }
 #endif
 
 #ifdef VIDEO_DETAILS
-      /* Video log */
+  if (LOG_IS_ENABLED(LOG_VIDEO_COMPLETE)) {
       reopen_logfile(&fp_video_logc,basename,"log_video_complete");
+      write_log_header(fp_video_logc, LOG_VIDEO_COMPLETE);
+  }
 #endif
 
 #ifdef STREAMING_CLASSIFIER
-      /* Video log */
+  if (LOG_IS_ENABLED(LOG_STREAMING_COMPLETE)) {
       reopen_logfile(&fp_streaming_logc,basename,"log_streaming_complete");
+      write_log_header(fp_streaming_logc,LOG_STREAMING_COMPLETE);
+  }
 #endif
 
-
-
+//AF: this is legacy code
 #ifdef LOG_OOO
+  if (LOG_IS_ENABLED(LOG_DUP_OOO)) {
       /* MGM start */
       /* Open the files for dup and ooo logging */
-
       reopen_logfile(&fp_dup_ooo,basename,"dup_ooo");
-      /* MGM stop */
+  }
 #endif
-    }
 
     if (runtime_engine)
         dump_create_outdir(basename);
@@ -1345,7 +1936,7 @@ ip_header_stat (int phystype,
   if (elapsed (L3_last_time, current_time) > L3_BITRATE_DELTA)
    {
      double L3_delta = elapsed (L3_last_time, current_time);
-     if (log_engine && l3_engine_log && fp_l3bitrate!=NULL)
+     if (LOG_IS_ENABLED(LOG_L3_BITRATE) && fp_l3bitrate!=NULL)
         wfprintf(fp_l3bitrate,"%.6f %.2f %.2f %.2f %.2f %.2f %.2f\n",
             (double)current_time.tv_sec + (double) current_time.tv_usec / 1000000.0,
              L3_bitrate_in*8.0/L3_delta*1000.,
@@ -1391,8 +1982,9 @@ ip_header_stat (int phystype,
 }
 
 void InitAfterFirstPacketReaded(char *filename, int file_count) {
-  if ((con_cat == FALSE) || (file_count == 1))
-    create_new_outfiles (filename);
+  if ((con_cat == FALSE) || (file_count == 1)) {
+    create_new_outfiles (filename, FALSE);
+  }
 
   if (con_cat == FALSE)
     {
@@ -1594,7 +2186,7 @@ static int ProcessPacket(struct timeval *pckt_time,
                     if (debug)
                         fprintf(fp_stdout, "Reload runtime configuration...\n");
                     ini_read(runtime_conf_fname);
-                    dump_create_outdir(basename);
+                    //dump_create_outdir(basename);
                 }
             }
         }
@@ -1710,7 +2302,7 @@ void ProcessFileCompleted(Bool last) {
             /* dump engine */
             if (runtime_engine)
                 dump_flush(TRUE);
-            if (log_engine)
+            if (log_bitmask)
                 close_all_logfiles();
         }
     }
@@ -2073,7 +2665,7 @@ QuitSig (int signum)
 
   if (runtime_engine)
       dump_flush(TRUE);
-  if (log_engine)
+  if (log_bitmask)
       close_all_logfiles();
   exit (EXIT_FAILURE);
 }
@@ -2497,7 +3089,7 @@ ParseArgs (int *pargc, char *argv[])
     c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw32", long_options, &option_index);
     if (c == -1)
         break;
     if (c == 'z') {
@@ -2521,7 +3113,7 @@ ParseArgs (int *pargc, char *argv[])
       c = getopt_long (*pargc, argv,
 		     GROK_TCPDUMP_OPT GROK_LIVE_TCPDUMP_OPT GROK_DPMI_OPT
 		     HAVE_RRDTOOL_OPT SUPPORT_IPV6_OPT HAVE_ZLIB_OPT
-		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw321", long_options, &option_index);
+		     "A:B:N:M:C:H:s:T:z:gpdhtucSLvw32", long_options, &option_index);
 
       if (c == -1) {
 	    break;
@@ -2786,14 +3378,14 @@ ParseArgs (int *pargc, char *argv[])
 	  histo_engine = FALSE;
 	  break;
 	case 'L':
-	  log_engine = FALSE;
+	  log_bitmask = 0;
 	  break;
-        case '1':
-          log_version = 1;
+//        case '1':
+//          log_version = 1;
 	  break;
 #ifdef L3_BITRATE
         case '3':
-          l3_engine_log = TRUE;
+          log_bitmask |= LOG_L3_BITRATE;
 	  break;
 #endif
 	case 'v':
@@ -2866,7 +3458,10 @@ ParseArgs (int *pargc, char *argv[])
         break;
 	default:
       Help();
-      fprintf (fp_stderr, "Unvalid option -%c or missing option argument\n", optopt);
+      fprintf (fp_stderr, "option -%c not valid or missing option argument\n", c);
+      if (c == '3') {
+          fprintf (fp_stderr, "check if L3_BITMASK is enabled in Makefile.conf\n");
+      }
 	  exit (EXIT_FAILURE);
 	}
     }
@@ -3390,7 +3985,7 @@ stats_dumping ()
          DIRS steps */
       if (step >= DIRS && is_stdin)
 	{
-	  create_new_outfiles (NULL);
+	  create_new_outfiles (NULL, FALSE);
 	  step = 0;
 	}
       pthread_mutex_lock (&stat_dump_mutex);
@@ -3431,9 +4026,46 @@ stat_dumping_old_style ()
   if (step >= DIRS && is_stdin)
   //if (step >= DIRS)
     {
-      create_new_outfiles (NULL);
+      create_new_outfiles (NULL, FALSE);
       step = 0;
     }
+}
+
+/****************************************************
+ * AF: these functions are for parsing runtime.conf
+ ****************************************************/
+
+/* this function is to apply the same logic to different log files
+ * Note: 'log_type' is one of the LOG_XXX values in tstat.h
+ */
+static long old_log_bitmask;
+void log_parse_ini_arg_log_bitmask(FILE *fp, int log_type, char * log_name, int enabled) {
+    if (enabled && !LOG_IS_ENABLED(log_type)) {
+        fprintf(fp_stdout, "[%s] Enabling %s\n", Timestamp(), log_name);
+        log_bitmask |= log_type;
+    }
+    else if (!enabled && LOG_IS_ENABLED(log_type)) {
+        fprintf(fp_stdout, "[%s] Disabling %s\n", Timestamp(), log_name);
+        log_bitmask &= ~log_type;
+        // since we are stopping the collection of stats, we force a flush 
+        if (fp != NULL) {
+            fflush(fp);
+        }
+    }
+}
+
+void log_parse_start_section(void) {
+    old_log_bitmask = log_bitmask;
+}
+
+void log_parse_end_section(void) {
+    if (old_log_bitmask && !log_bitmask) {
+        fprintf(fp_stdout, "[%s] All logs disabled\n", Timestamp());
+    }
+    if (old_log_bitmask != log_bitmask && first_packet_readed) {
+        create_new_outfiles(NULL, TRUE);
+    }
+    old_log_bitmask = log_bitmask;
 }
 
 void log_parse_ini_arg(char *param_name, int enabled) {
@@ -3445,15 +4077,15 @@ void log_parse_ini_arg(char *param_name, int enabled) {
     //histogram engine
     if (strcmp(param_name, "histo_engine") == 0) {
         //need to flush histo engine
-        if (((histo_engine && !enabled) || (!histo_engine && enabled)) &&
-            first_packet_readed) {
-            flush_histo_engine();
-        }
+//        if (((histo_engine && !enabled) || (!histo_engine && enabled)) &&
+//            first_packet_readed) {
+//            flush_histo_engine();
+//        }
         //stdout messages
         if (!histo_engine_log && enabled)
-            fprintf(fp_stdout, "(%s) Enabling histo engine logs\n", Timestamp());
+            fprintf(fp_stdout, "[%s] Enabling histo engine logs\n", Timestamp());
         else if (histo_engine_log && !enabled)
-            fprintf(fp_stdout, "(%s) Disabling histo engine logs\n", Timestamp());
+            fprintf(fp_stdout, "[%s] Disabling histo engine logs\n", Timestamp());
         histo_engine_log = enabled;
     }
     
@@ -3461,22 +4093,39 @@ void log_parse_ini_arg(char *param_name, int enabled) {
     else if (strcmp(param_name, "rrd_engine") == 0) {
         //stdout messages
         if (!rrd_engine && enabled)
-            fprintf(fp_stdout, "(%s) Enabling rrd engine logs\n", Timestamp());
+            fprintf(fp_stdout, "[%s] Enabling rrd engine logs\n", Timestamp());
         else if (rrd_engine && !enabled)
-            fprintf(fp_stdout, "(%s) Disabling rrd engine logs\n", Timestamp());
+            fprintf(fp_stdout, "[%s] Disabling rrd engine logs\n", Timestamp());
         rrd_engine = enabled;
     }
 
-    //general log
-    else if (strcmp(param_name, "log_engine") == 0) {
-        //stdout messages
-        if (!log_engine && enabled)
-            fprintf(fp_stdout, "(%s) Enabling logs\n", Timestamp());
-        else if (log_engine && !enabled)
-            fprintf(fp_stdout, "(%s) Disabling logs\n", Timestamp());
-        log_engine = enabled;
+    else if (strcmp(param_name, "log_tcp_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_logc, LOG_TCP_COMPLETE, "log_tcp_complete", enabled);
     }
-
+    else if (strcmp(param_name, "log_tcp_nocomplete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_lognc, LOG_TCP_NOCOMPLETE, "log_tcp_nocomplete", enabled);
+    }
+    else if (strcmp(param_name, "log_udp_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_udp_logc, LOG_UDP_COMPLETE, "log_udp_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_mm_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_rtp_logc, LOG_MM_COMPLETE, "log_mm_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_skype_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_skype_logc, LOG_SKYPE_COMPLETE, "log_skype_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_chat_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_chat_logc, LOG_CHAT_COMPLETE, "log_chat_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_chat_messages") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_chat_log_msg, LOG_CHAT_MESSAGES, "log_chat_messages", enabled);
+    }
+    else if (strcmp(param_name, "log_video_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_video_logc, LOG_VIDEO_COMPLETE, "log_video_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_streaming_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_streaming_logc, LOG_STREAMING_COMPLETE, "log_streaming_complete", enabled);
+    }
     else {
         fprintf(fp_stderr, "ini reader: '%s' - unknown keyword\n", param_name);
         exit(1);

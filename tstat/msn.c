@@ -9,7 +9,6 @@
 extern FILE *fp_chat_logc;
 extern FILE *fp_chat_log_msg;
 extern FILE *fp_msn_log_othercomm;
-extern Bool log_engine;
 
 char find_MSG_type (void *MSG_type, tcb * tcp_stats);
 
@@ -152,7 +151,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
       else
         msg_len = -1;
 
-      if (log_engine && fp_chat_log_msg != NULL)
+      if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL) 
 	{
 
 	  wfprintf (fp_chat_log_msg,
@@ -173,7 +172,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
     case UUM:			/* MSG in case of chat with a Yahoo! Messenger user - C2S - */
       tcp_stats->msn.MSN_MSG_count++;
       tcp_stats->msn.MSN_MSG_Y_count++;
-      if (log_engine && fp_chat_log_msg != NULL)
+      if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL) 
 	{
 
 	  wfprintf (fp_chat_log_msg,
@@ -191,7 +190,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
     case UBM:			/* MSG in case of chat with a Yahoo! Messenger user - S2C - */
       tcp_stats->msn.MSN_MSG_count++;
       tcp_stats->msn.MSN_MSG_Y_count++;
-      if (log_engine && fp_chat_log_msg != NULL)
+      if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL)
 	{
 	  wfprintf (fp_chat_log_msg,
 		   "%ld MSG_Y %d ? %d '%s' %.3f %d\n",
@@ -246,7 +245,7 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  && isupper (*((char *) pdata + 2)))
 	{
 	  sscanf ((char *) (pdata), "%3s", new_comm);
-	  if (log_engine && fp_msn_log_othercomm != NULL)
+	  if (LOG_IS_ENABLED(LOG_CHAT_MSNOTHER) && fp_msn_log_othercomm != NULL)
 	    {
 	      wfprintf (fp_msn_log_othercomm,
 		       "%ld %s %d %d '%s' %.3f\n",
@@ -393,7 +392,7 @@ print_msn_conn_stats (tcp_pair *ptp)
   else if (pmsn->MFT == MFT_UNKNOWN)
     return;
 
-  if (!log_engine || fp_chat_logc == NULL)
+  if (!LOG_IS_ENABLED(LOG_CHAT_COMPLETE) || fp_chat_logc == NULL)
     return;
 
   //     #   Field Meaning

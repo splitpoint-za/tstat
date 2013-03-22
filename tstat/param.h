@@ -72,10 +72,12 @@ Used only if WIPE_TCP_SINGLETON is defined
 */
 #define UDP_SINGLETON_TIME 10000000   /* 10 s */
 
-//5min = 5 * 60 sec
-#define RUNTIME_CONFIG_IDLE 60    /* 1 min */
-//#define RUNTIME_CONFIG_IDLE 1
-#define RUNTIME_MTIME_COUNTER 3
+// RUNTIME_CONFIG_IDLE * RUNTIME_MTIME_COUNTER = amount of time to wait before re-load 'runtime.conf'
+#define RUNTIME_CONFIG_IDLE   60      /* amount of time between to check of 'runtime.conf' */
+#define RUNTIME_MTIME_COUNTER 3       /* no. of consecutive times 'runtime.conf' is found unchanged before re-load the file */
+//#define RUNTIME_CONFIG_IDLE 1       
+//#define RUNTIME_MTIME_COUNTER 1
+
 
 /* maximum number of concurrent TCP connection stored in the vector TTP 
 Increase this number on high speed network will help ...*/
@@ -100,8 +102,9 @@ Increase this number on high speed network will help ...*/
    and HISTOGRAM are updated.
    
 */
-#define MAX_TIME_STEP 300000000.0
-//#define MAX_TIME_STEP 60000000.0
+#define MAX_TIME_STEP 300000000.0     // 5min
+//#define MAX_TIME_STEP 60000000.0      // 1min
+//#define MAX_TIME_STEP 30000000.0      // 30sec
 /* 300000000 = 5 min */
 /* 900000000 = 15 min */
 /* #define MAX_TIME_STEP 900000000.0 */
@@ -144,6 +147,8 @@ Increase this number on high speed network will help ...*/
 				   of sequence */
 
 /* Entropy threshold to detect encrypted flows */
+#define ENTROPY_SAMPLE    60    /* Number of bytes in each packet payload 
+                                   used to compute the nibble entropy */
 #define ENTROPY_THRESHOLD 3.7   /* Empirically tested that nibble entropy 
                                    over about 100 random samples is larger
 				   than 3.7 with 99% probability */

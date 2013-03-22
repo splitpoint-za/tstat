@@ -15,6 +15,11 @@
  * Shawn Ostermann for the development of TCPTRACE.
  *
 */
+
+/***************************************************************
+* NOTE: LEGACY DESCRIPTION, since is now enabled only v2
+****************************************************************/
+
 /* Log file format:
  * 2 formats are avaialable v1 and v2
  * v2 is default
@@ -321,7 +326,6 @@
 extern unsigned long int f_RTP_count;
 extern unsigned long int f_RTCP_count;
 extern FILE *fp_rtp_logc;
-extern Bool log_engine;
 extern int log_version;
 
 #define RTP_DEBUG_LEVEL 1
@@ -345,7 +349,7 @@ void update_rtp_conn_histo (ucb * thisdir, int dir);
 void update_rtp_conn_log_v1 (ucb * thisdir, int dir);
 void update_rtcp_conn_histo (ucb * thisdir, int dir);
 void update_rtcp_conn_log_v1 (ucb * thisdir, int dir);
-void update_conn_log_v1(udp_pair *flow);
+//void update_conn_log_v1(udp_pair *flow); LEGACY
 void update_conn_log_v2(udp_pair *flow);
 
 
@@ -1481,11 +1485,14 @@ make_rtp_conn_stats (void * thisflow, int tproto)
     {
       update_rtcp_conn_histo (&(flow->s2c), S2C);
     }
-  if (!log_engine || fp_rtp_logc == NULL)
+  if (!LOG_IS_ENABLED(LOG_MM_COMPLETE) || fp_rtp_logc == NULL)
     return;
-  if(log_version == 1)
+
+/* LEGACY
+if(log_version == 1)
     update_conn_log_v1(flow);
   else
+*/
     update_conn_log_v2(flow);
 }
 
@@ -1695,6 +1702,7 @@ update_conn_log_v2(udp_pair *flow)
   wfprintf (fp_rtp_logc, "\n");
 }
 
+/* LEGACY
 void
 update_conn_log_v1 (udp_pair *flow)
 {
@@ -1708,6 +1716,7 @@ update_conn_log_v1 (udp_pair *flow)
   if (flow->s2c.type == RTCP)
       update_rtcp_conn_log_v1 (&(flow->s2c), S2C);
 }
+*/
 
 void
 update_rtp_conn_histo (ucb * thisdir, int dir)

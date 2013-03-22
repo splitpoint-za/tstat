@@ -5,15 +5,15 @@
 
 # define variables for version numbers
 m4_define([_version_major], [2])
-m4_define([_version_minor], [3])
+m4_define([_version_minor], [4])
 m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Tue Feb 14 11:43:57 CET 2012"])
-m4_define([_version_flavor], ["Spezi"])
+m4_define([_version_date], ["Mon Mar 11 14:25:20 CET 2013"])
+m4_define([_version_flavor], ["Almdudler"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
         m4_esyscmd([echo _version_major._version_minor | tr -d '\n']),
-        [<mellia@mail.tlc.polito.it> <maurizio.munafo@polito.it>])
+        [mellia@polito.it, munafo@polito.it])
 
 AC_CONFIG_AUX_DIR(config)
 AM_INIT_AUTOMAKE

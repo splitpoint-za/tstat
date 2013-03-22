@@ -25,7 +25,6 @@
 FILE *fp_skype_mode;
 extern FILE *fp_skype_logc;
 extern FILE *fp_bayes_logc;
-extern Bool log_engine;
 extern Bool bayes_engine;
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
@@ -1078,8 +1077,7 @@ print_skype_conn_stats_UDP (void *thisdir, int olddir)
 
   /* log flow if at least one of two dir is SKYPE */
 
-  if ( ( C2S_is_Skype || S2C_is_Skype) && 
-       log_engine && fp_skype_logc != NULL  )
+  if ( ( C2S_is_Skype || S2C_is_Skype) && LOG_IS_ENABLED(LOG_SKYPE_COMPLETE) && fp_skype_logc != NULL  )
   {
     thisUdir = &(pup->c2s);
     pskype = thisUdir->skype;
@@ -1481,8 +1479,7 @@ print_skype_conn_stats_TCP (void *thisdir, int olddir)
 
   /* log flow if at least one of two dir is SKYPE */
 
-  if ((C2S_is_Skype || S2C_is_Skype) &&
-       log_engine && fp_skype_logc != NULL)
+  if ((C2S_is_Skype || S2C_is_Skype) && LOG_IS_ENABLED(LOG_SKYPE_COMPLETE) && fp_skype_logc != NULL)
    {
      thisTdir = &(ptp->c2s);
      pskype = thisTdir->skype;

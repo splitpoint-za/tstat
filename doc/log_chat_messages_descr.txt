@@ -13,4 +13,5 @@ Values are separated by spaces.
 #  5    # Payload size  # TCP Payload Size [Bytes]
 #  6    # Start Time    # Flow Start Time [in Unix Epoch Time]
 #  7    # Arrival Time  # Message Arrival Time [s]
+#  8    # Conn Type     # see TCP connection type
 ###########################################################################

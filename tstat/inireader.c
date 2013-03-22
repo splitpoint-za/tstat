@@ -31,7 +31,7 @@ struct ini_section {
 
 static struct ini_section ini_sections[] = {
     {"[dump]", dump_parse_ini_arg, dump_ini_start_section, dump_ini_end_section},
-    {"[log]", log_parse_ini_arg, NULL, NULL},
+    {"[log]", log_parse_ini_arg, log_parse_start_section, log_parse_end_section},
 };
 #define INI_SECTION_LEN (sizeof(ini_sections) / sizeof(struct ini_section))
 #define BUF_SIZE 80

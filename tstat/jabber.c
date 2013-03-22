@@ -8,7 +8,6 @@
 
 extern FILE *fp_chat_logc;
 extern FILE *fp_chat_log_msg;
-extern Bool log_engine;
 
 win_stat jabber_chat_number;
 win_stat jabber_presence_number;
@@ -52,7 +51,7 @@ FindConTypeJabber (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  || tcp_stats->jabber.JFT == JABBER_CHAT)
 	{
 	  tcp_stats->jabber.MESSAGE_count++;
-	  if (log_engine && fp_chat_log_msg != NULL)
+	  if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL)
 	    {
 	      wfprintf (fp_chat_log_msg,
 		       "%ld MESSAGE %d ? %d '%s' %.3f %d\n",
@@ -132,7 +131,7 @@ print_jabber_conn_stats (tcp_pair *ptp)
   else if (pjabber->JFT == JFT_UNKNOWN)
     return;
 
-  if (!log_engine || fp_chat_logc == NULL)
+  if (!LOG_IS_ENABLED(LOG_CHAT_COMPLETE) || fp_chat_logc == NULL)
     return;
 
 

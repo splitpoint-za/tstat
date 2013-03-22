@@ -658,7 +658,6 @@ extern char *outdir_basename;
 unsigned long tot_conn_TCP;
 unsigned long tot_conn_UDP;
 void trace_done_periodic ();
-void create_new_outfiles (char *filename);
 void freequad (quadrant ** ppquad);
 
 #define EXTERNAL_ADX_HISTO 0   /* Adx histogram for external networks, matched by adx_mask */
@@ -768,7 +767,10 @@ enum http_content classify_http_post(void *pdata,int data_length);
 enum web_category map_http_to_web(tcp_pair *);
 
 tstat_report * get_stats_report(tstat_report *report);
+
 void log_parse_ini_arg(char *param_name, int param_value);
+void log_parse_end_section(void);
+void log_parse_start_section(void);
 
 /* PROFILE VARIABLES */
 #include <sys/times.h>
@@ -780,3 +782,19 @@ extern double prof_cps;              // clock per seconds give by sysconf()
 
 #define PROFILE_IDLE 1
 
+extern  long log_bitmask;
+#define LOG_IS_ENABLED(VAL)     (((log_bitmask & VAL) > 0))
+#define LOG_TCP_COMPLETE        0x0001
+#define LOG_TCP_NOCOMPLETE      0x0002
+#define LOG_UDP_COMPLETE        0x0004
+#define LOG_MM_COMPLETE         0x0008
+#define LOG_SKYPE_COMPLETE      0x0010
+#define LOG_CHAT_COMPLETE       0x0020
+#define LOG_CHAT_MESSAGES       0x0040
+#define LOG_VIDEO_COMPLETE      0x0080
+#define LOG_STREAMING_COMPLETE  0x0100
+// other logs disabled by default
+#define LOG_CHAT_MSNOTHER       0x1000  
+#define LOG_L3_BITRATE          0x2000  // -3 command line option (disabled by default)
+// overall mask
+#define LOG_ALL                 (((1<<9)-1))

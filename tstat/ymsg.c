@@ -8,7 +8,6 @@
 
 extern FILE *fp_chat_logc;
 extern FILE *fp_chat_log_msg;
-extern Bool log_engine;
 
 win_stat ymsg_chat_number;
 win_stat ymsg_presence_number;
@@ -79,7 +78,7 @@ FindConTypeYmsg (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	case 0x06:		/* MESSAGE --> CHAT */
 	  tcp_stats->ymsg.YMSG_MESSAGE_count++;
 
-	  if (log_engine && fp_chat_log_msg != NULL)
+	  if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL)
 	    {
 #if(BYTE_ORDER == BIG_ENDIAN)
 	      wfprintf (fp_chat_log_msg,
@@ -201,7 +200,7 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   else if (pymsg->YFT == YFT_UNKNOWN)
     return;
 
-  if (!log_engine || fp_chat_logc == NULL)
+  if (!LOG_IS_ENABLED(LOG_CHAT_COMPLETE) || fp_chat_logc == NULL)
     return;
 
   //     #   Field Meaning

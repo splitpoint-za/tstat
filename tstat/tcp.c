@@ -36,7 +36,6 @@ extern unsigned long int f_TCP_count;
 extern unsigned long int f_RTP_tunneled_TCP_count;
 extern struct L4_bitrates L4_bitrate;
 /* end TOPIX */
-extern Bool log_engine;
 extern int log_version;
 
 /* thread mutex and conditional variables  */
@@ -2275,14 +2274,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   if (complete)
      make_proto_stat (ptp_save, PROTOCOL_TCP);
 
-  if (complete)
-    {
-      fp = fp_logc;
-    }
-  else
-    {
-      fp = fp_lognc;
-    }
 
   /* TOPIX: connection type statistics */
   if (ptp_save->con_type & RTP_PROTOCOL)
@@ -2955,12 +2946,15 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
   /*---------------------------------------------------------*/
   /* RRDtools                                                */
-  if(!log_engine)
-	  return;
+    if (complete) {
+        fp = LOG_IS_ENABLED(LOG_TCP_COMPLETE) ? fp_logc : NULL;
+    } else {
+        fp = LOG_IS_ENABLED(LOG_TCP_NOCOMPLETE) ? fp_lognc : NULL;
+    }
 #if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
-  if (fp_logc != NULL && is_video(ptp_save))
+  if (fp != NULL && is_video(ptp_save))
 #else
-  if (fp_logc != NULL)
+  if (fp != NULL)
 #endif
     {
       wfprintf (fp, 
@@ -3153,46 +3147,33 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     int i;
 
        /* PSH-delimited Message sizes */
-          wfprintf (fp, " -");
       wfprintf (fp, " %d",ptp_save->c2s.msg_count);
-      for (i=0;i<MAX_COUNT_MESSAGES;i++)
-       {
+      for (i=0;i<MAX_COUNT_MESSAGES;i++) {
           wfprintf (fp, " %d",ptp_save->c2s.msg_size[i]);
        }
 
-          wfprintf (fp, " -");
       wfprintf (fp, " %d",ptp_save->s2c.msg_count);
-      for (i=0;i<MAX_COUNT_MESSAGES;i++)
-       {
+      for (i=0;i<MAX_COUNT_MESSAGES;i++) {
           wfprintf (fp, " %d",ptp_save->s2c.msg_size[i]);
        }
 
-          wfprintf (fp, " -");
-
        /* Segment sizes */
       wfprintf (fp, " %d",ptp_save->c2s.seg_count);
-      for (i=0;i<MAX_COUNT_SEGMENTS;i++)
-       {
+      for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
           wfprintf (fp, " %d",ptp_save->c2s.seg_size[i]);
        }
 
-          wfprintf (fp, " -");
       wfprintf (fp, " %d",ptp_save->s2c.seg_count);
-      for (i=0;i<MAX_COUNT_SEGMENTS;i++)
-       {
+      for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
           wfprintf (fp, " %d",ptp_save->s2c.seg_size[i]);
        }
 
-          wfprintf (fp, " -");
        /* Segment intertimes */
-      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
-       {
+      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
           wfprintf (fp, " %f",ptp_save->c2s.seg_intertime[i]/1000.);
        }
 
-          wfprintf (fp, " -");
-      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
-       {
+      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
           wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
        }
 
@@ -3200,7 +3181,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 #define VAR(ME,SQ,ENNE) (((ENNE)>1)?((SQ)-(ENNE)*(ME)*(ME))/((ENNE)-1):0.0)
 
        /* Averages */
-          wfprintf (fp, " -");
         {
 	  double mval,varval;
 	  mval = MEAN(ptp_save->c2s.data_bytes,ptp_save->c2s.data_pkts);
@@ -3213,35 +3193,36 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
 	  mval = MEAN(ptp_save->c2s.seg_intertime_sum,ptp_save->c2s.seg_count-1);
 	  varval = VAR(mval,ptp_save->c2s.seg_intertime_sum2,ptp_save->c2s.seg_count-1);
-          wfprintf (fp, " - %d",(ptp_save->c2s.seg_count>1)?ptp_save->c2s.seg_count:0);
+          wfprintf (fp, " %d",(ptp_save->c2s.seg_count>1)?ptp_save->c2s.seg_count:0);
           wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
 
 	  mval = MEAN(ptp_save->s2c.seg_intertime_sum,ptp_save->s2c.seg_count-1);
 	  varval = VAR(mval,ptp_save->s2c.seg_intertime_sum2,ptp_save->s2c.seg_count-1);
-          wfprintf (fp, " - %d",(ptp_save->s2c.seg_count>1)?ptp_save->s2c.seg_count:0);
+          wfprintf (fp, " %d",(ptp_save->s2c.seg_count>1)?ptp_save->s2c.seg_count:0);
           wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
 
         }
 
        /* PSH */
-          wfprintf (fp, " - %d %d",ptp_save->c2s.data_pkts_push,
+          wfprintf (fp, " %d %d",ptp_save->c2s.data_pkts_push,
 	                           ptp_save->s2c.data_pkts_push);
          
   }
 #endif
+//      wfprintf (fp, " %6.3f %6.3f",ptp_save->entropy_h,ptp_save->entropy_l);
       wfprintf (fp, "\n");
 
    }
    
 #ifdef VIDEO_DETAILS
-   if (fp_video_logc && is_video(ptp_save) && complete )
+   if (fp_video_logc && LOG_IS_ENABLED(LOG_VIDEO_COMPLETE) && is_video(ptp_save) && complete )
     {
       update_video_log(ptp_save,pab,pba);
     }
 #endif
    
 #ifdef STREAMING_CLASSIFIER
-	if (fp_streaming_logc && is_streaming(ptp_save) && complete)
+	if (fp_streaming_logc && LOG_IS_ENABLED(LOG_STREAMING_COMPLETE) && is_streaming(ptp_save) && complete)
 		update_streaming_log(ptp_save, pab, pba);
 #endif
 
@@ -3292,8 +3273,6 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
   etime = elapsed (ptp_save->first_time, ptp_save->last_time);
   etime = etime / 1000;
 
-  if(!log_engine)
-	  return;
   if (fp_video_logc != NULL)
     {
       wfprintf (fp_video_logc, 
@@ -3567,8 +3546,6 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 	etime = elapsed(ptp_save->first_time, ptp_save->last_time);
 	etime = etime / 1000;
 
-	if (!log_engine)
-		return;
 	if (fp_streaming_logc != NULL) {
 		wfprintf(fp_streaming_logc,
 				"%s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu", HostName(

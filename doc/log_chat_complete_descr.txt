@@ -20,7 +20,7 @@ according to C2S - Client-to-Server and S2C - Server-to-Client traffic direction
 # 10  # 20  # MSG_Y                  # -     # No. of MSG_Y sent by client [for MSN only, 0 for the others]
 ###########################################################################################
 # 21  #     # Start Time             # s     # Flow Start Time
-# 22  #     # End Time               # s     # Flow End Time
+# 22  #     # Duration               # s     # Duration
 # 23  #     # Chat Flow Type         # -     # Chat Flow Type
 # 24  #     # Chat Version           # -     # Version of the protocol used by the Instant Messaging application
 # 25  #     # Internal               # 0/1   # 1 = internal IP address
