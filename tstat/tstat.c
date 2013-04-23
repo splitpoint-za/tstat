@@ -941,7 +941,7 @@ void write_log_header(FILE *fp, int log_type) {
         wfprintf(fp, " c_ssl:%d", col++); // server name of SSL client hello message
         wfprintf(fp, " s_ssl:%d", col++); // subject name in SSL server certificate
 #ifdef SNOOP_DROPBOX
-        wfprintf(fp, " dropbox_id", col++);    // dropbox device id
+        wfprintf(fp, " dropbox_id:%d", col++);    // dropbox device id
 #endif
 
 #ifdef PACKET_STATS
