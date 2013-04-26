@@ -40,7 +40,7 @@ extern struct WEB_bitrates WEB_bitrate;
 extern void init_web_patterns();
 extern void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length);
 
-extern char yt_id[20];
+extern char yt_id[50];
 extern char yt_itag[5];
 extern int yt_seek;
 extern int yt_redir_mode;
@@ -635,7 +635,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		      ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		      ptp->http_data==HTTP_YOUTUBE_204 )
                    {
-                     strncpy(ptp->http_ytid,yt_id,19);
+                     strncpy(ptp->http_ytid,yt_id,49);
                      strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek;
 			  ptp->http_ytredir_mode=yt_redir_mode;
@@ -647,7 +647,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 #ifdef SNOOP_DROPBOX
                   if (ptp->http_data==HTTP_DROPBOX )
                    {
-                     strncpy(ptp->http_ytid,yt_id,19);
+                     strncpy(ptp->http_ytid,yt_id,49);
                    }
 #endif
 	        }
@@ -1073,7 +1073,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	             {
 		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
 #ifdef VIDEO_DETAILS
-                       strncpy(ptp->http_ytid,yt_id,19);
+                       strncpy(ptp->http_ytid,yt_id,49);
                        strncpy(ptp->http_ytitag,yt_itag,4);
 		       ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
@@ -1093,7 +1093,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
  		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		           ptp->http_data==HTTP_YOUTUBE_204 )
                         {
-                          strncpy(ptp->http_ytid,yt_id,19);
+                          strncpy(ptp->http_ytid,yt_id,49);
                           strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
@@ -1105,7 +1105,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 #ifdef SNOOP_DROPBOX
                        if (ptp->http_data==HTTP_DROPBOX )
                         {
-                          strncpy(ptp->http_ytid,yt_id,19);
+                          strncpy(ptp->http_ytid,yt_id,49);
                         }
 #endif
 	             }
@@ -1128,7 +1128,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	             {
 		       ptp->http_data = HTTP_YOUTUBE_VIDEO204;
 #ifdef VIDEO_DETAILS
-                       strncpy(ptp->http_ytid,yt_id,19);
+                       strncpy(ptp->http_ytid,yt_id,49);
                        strncpy(ptp->http_ytitag,yt_itag,4);
 		       ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;
@@ -1148,7 +1148,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
  		           ptp->http_data==HTTP_YOUTUBE_VIDEO204 ||
 		           ptp->http_data==HTTP_YOUTUBE_204 )
                        {
-                         strncpy(ptp->http_ytid,yt_id,19); 
+                         strncpy(ptp->http_ytid,yt_id,49); 
                          strncpy(ptp->http_ytitag,yt_itag,4);
 			  ptp->http_ytseek=yt_seek; 
 			  ptp->http_ytredir_mode=yt_redir_mode;

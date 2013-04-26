@@ -668,7 +668,7 @@ struct stcp_pair
   Bool ignore_dpi;
   enum http_content http_data;
 #ifdef VIDEO_DETAILS
-  char http_ytid[20];
+  char http_ytid[50];
   char http_ytitag[4];
   int  http_ytseek;
   int  http_ytredir_mode;

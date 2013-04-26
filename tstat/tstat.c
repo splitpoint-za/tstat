@@ -1010,12 +1010,6 @@ void write_log_header(FILE *fp, int log_type) {
         wfprintf(fp, " c_pkts_push:%d", col++);
         wfprintf(fp, " s_pkts_push:%d", col++);
 #endif
-#ifdef DNS_CACHE_PROCESSOR
-        wfprintf (fp, " fqdn:%d", col++);       // full qualified domain name
-        wfprintf (fp, " dns_rslv:%d", col++);   // dns server ip address
-        wfprintf (fp, " req_tm:%d", col++);     // absolute dns request time
-        wfprintf (fp, " res_tm:%d", col++);     // absolute dns response time
-#endif
         wfprintf (fp, "\n");
     }
 
@@ -1065,9 +1059,6 @@ void write_log_header(FILE *fp, int log_type) {
         wfprintf(fp, " s_p2p_pkts_ppl:%d", col++);  // number of PPLive packets
         wfprintf(fp, " s_p2p_pkts_sop:%d", col++);  // number of SopCast packets
         wfprintf(fp, " s_p2p_pkts_tva:%d", col++);  // number of TVAnts packets
-#endif
-#ifdef DNS_CACHE_PROCESSOR
-        wfprintf (fp, " fqdn:%d", col++);
 #endif
         wfprintf (fp, "\n");
     }
@@ -1161,8 +1152,8 @@ void write_log_header(FILE *fp, int log_type) {
             " p2p_t:70"           // 70: p2p type
             " http_t:71"          // 71: http type
             " http_res:72"        // 72: http response code
-            " yt_id16:73"         // 73: youtube, id11
-            " yt_id11:74"         // 74: youtube, id16
+            " yt_id16_46:73"      // 73: youtube, id16/46
+            " yt_id11:74"         // 74: youtube, id11
             " yt_itag:75"         // 75: youtube, itag value (format type)
             " yt_seek:76"         // 76: youtube, seek value (begin offset)
             " flv_dur_tot:77"     // 77: flash video, total duration
@@ -1193,12 +1184,6 @@ void write_log_header(FILE *fp, int log_type) {
             wfprintf (fp, " s_msgsize%d:%d", i+1, col++);
        
 
-#ifdef DNS_CACHE_PROCESSOR
-        wfprintf (fp, " fqdn:%d", col++);         // full qualified domain nam
-        wfprintf (fp, " dns_rslv:%d", col++);     // dns server ip address
-        wfprintf (fp, " req_tm:%d", col++);       // absolute dns request time
-        wfprintf (fp, " res_tm:%d", col++);       // absolute dns response time
-#endif
       wfprintf (fp_video_logc, "\n");
     }
 
@@ -1291,8 +1276,8 @@ void write_log_header(FILE *fp, int log_type) {
             " p2p_t:70"            // 70: p2p type
             " http_t:71"           // 71: http type
             " http_res:72"         // 72: http response code
-            " yt_id16:73"          // 73: youtube, id11
-            " yt_id11:74"          // 74: youtube, id16
+            " yt_id16_46:73"       // 73: youtube, id16/46
+            " yt_id11:74"          // 74: youtube, id11
             " yt_itag:75"          // 75: youtube, itag value (format type)
             " yt_seek:76"          // 76: youtube, seek value (begin offset)
             " vd_type_cont:77"     // 77: video type classification from HTTP content-type
@@ -1303,12 +1288,6 @@ void write_log_header(FILE *fp, int log_type) {
             " vd_height:82"        // 82: video height pixel
         );
         col = 83;
-#ifdef DNS_CACHE_PROCESSOR
-        wfprintf(fp, " fqdn:%d", col++);       // 83: full qualified domain nam
-        wfprintf(fp, " dns_rslv:%d", col++);   // 84: dns server ip address
-        wfprintf(fp, " req_tm:%d", col++);     // 85: absolute dns request time
-        wfprintf(fp, " res_tm:%d", col++);    // 86: absolute dns response time
-#endif
         wfprintf(fp, "\n");
     }
 

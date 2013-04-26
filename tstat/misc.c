@@ -134,7 +134,8 @@ void id11to16(char *id16, char *id11)
 
   if (strlen(id11)!=11)
    {
-     strncpy(id16,id11,12);
+//     strncpy(id16,id11,12);
+     strncpy(id16,"--",12);
      return;
    }
 
@@ -174,7 +175,8 @@ void id16to11(char *id11, char *id16)
 
   if (strlen(id16)!=16)
    {
-     strncpy(id11,id16,12);
+//     strncpy(id11,id16,12);
+     strncpy(id11,"--",12);
      return;
    }
   

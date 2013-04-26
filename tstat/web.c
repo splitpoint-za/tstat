@@ -27,9 +27,9 @@ extern enum http_content YTMAP(enum http_content );
 
 
 #ifdef VIDEO_DETAILS
-char *patterns[11];
-char match_buffer[604];
-char yt_id[20];
+char *patterns[12];
+char match_buffer[904];
+char yt_id[50];
 char yt_itag[5];
 int  yt_seek;
 char yt_seek_char[10];
@@ -38,7 +38,7 @@ int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
 int  yt_device;
-regex_t re[11];
+regex_t re[12];
 regmatch_t re_res[2];
 
 /* Indexes for YouTube Mobile parameters */
@@ -62,8 +62,9 @@ void init_web_patterns()
   patterns[8] = "[?&]key=([^& ]+)[& ]";
   patterns[9] = "[?&]androidcid=([^& ]+)[& ]";
   patterns[10] = "/[0-9]{8,15}/picture[?/ ]"; /* graph.facebook.com */
+  patterns[11] = "[?&]id=(o-[A-Za-z0-9_-]{44})[& ]";
 
-  for (i=0;i<11;i++)
+  for (i=0;i<12;i++)
    {
      regcomp(&re[i],patterns[i],REG_EXTENDED);
    }
@@ -838,8 +839,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  idx;
            int  yt_mobile2,mobile_set;
 
-           memcpy(match_buffer,base,(available_data<600?available_data:600));
-           match_buffer[(available_data<600?available_data:600)]='\0';
+           memcpy(match_buffer,base,(available_data<900?available_data:900));
+           match_buffer[(available_data<900?available_data:900)]='\0';
 
            for (idx=0;idx<4;idx++)
 	    {
@@ -942,8 +943,16 @@ enum http_content classify_http_get(void *pdata,int data_length)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_id,match_buffer+re_res[1].rm_so,
-               (msize<19?msize:19));
-               yt_id[msize<19?msize:19]='\0';
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id46 */
+           else if (regexec(&re[11],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
 	    }
 	   
 	   /* begin = */ 
@@ -1061,8 +1070,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
               {
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
-                 (msize<19?msize:19));
-                 yt_id[msize<19?msize:19]='\0';
+                 (msize<49?msize:49));
+                 yt_id[msize<49?msize:49]='\0';
               }
 	    }
 #endif
@@ -1080,8 +1089,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
               {
                 int msize = re_res[1].rm_eo-re_res[1].rm_so;
                 memcpy(yt_id,match_buffer+re_res[1].rm_so,
-                 (msize<19?msize:19));
-                 yt_id[msize<19?msize:19]='\0';
+                 (msize<49?msize:49));
+                 yt_id[msize<49?msize:49]='\0';
               }
 	    }
 #endif
@@ -1545,8 +1554,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  idx;
            int  yt_mobile2,mobile_set;
 
-           memcpy(match_buffer,base,(available_data<600?available_data:600));
-           match_buffer[(available_data<600?available_data:600)]='\0';
+           memcpy(match_buffer,base,(available_data<900?available_data:900));
+           match_buffer[(available_data<900?available_data:900)]='\0';
 
            for (idx=0;idx<4;idx++)
 	    {
@@ -1648,8 +1657,16 @@ enum http_content classify_http_get(void *pdata,int data_length)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
               memcpy(yt_id,match_buffer+re_res[1].rm_so,
-               (msize<19?msize:19));
-               yt_id[msize<19?msize:19]='\0';
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id46 */
+           else if (regexec(&re[11],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
 	    }
 	   
 	   /* begin = */ 
