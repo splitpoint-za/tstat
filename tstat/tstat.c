@@ -1172,7 +1172,7 @@ void write_log_header(FILE *fp, int log_type) {
             " yt_mob_t:90"        // 90: youtube, type of mobile device
         );
 
-        col = 90;
+        col = 91;
         for (i=0;i<10;i++) 
             wfprintf (fp, " c_rate%d:%d", i+1, col++); 
 
