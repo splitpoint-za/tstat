@@ -21,6 +21,7 @@
   * Added RRD to profile missed TCP traffic (from sequence numbers) 
   * Added command-line option to activate IP obfuscation
   * Added support for the new 46-char YouTube IDs
+  * Bugfix: RST packets were not dumped
 
 17/10/11 - MMM
 - Main changes since 2.2:

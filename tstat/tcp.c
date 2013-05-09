@@ -1217,6 +1217,19 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       if (ACK_SET (ptcp))
 	++thisdir->ack_pkts;
 
+      /* make upper layer protocol analysis and update the classified bitrate */
+      /* Probably harmless because the RESET should not have payload, but 
+         this is the only way to call the dump plugin */
+
+      proto_analyzer (pip, ptcp, PROTOCOL_TCP, thisdir, *dir, plast);
+
+      if (thisdir != NULL && thisdir->ptp != NULL)
+       {
+        make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+        make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+       }
+      /* */
+      
       if (ConnReset (ptp_save))
 	{
 	  //fprintf (fp_stdout, "  (new reset)\n");
@@ -1258,15 +1271,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	    }
 	}
 
-      /* make upper layer protocol analysis and update the classified bitrate */
-
-      proto_analyzer (pip, ptcp, PROTOCOL_TCP, thisdir, *dir, plast);
-
-      if (thisdir != NULL && thisdir->ptp != NULL)
-       {
-        make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
-        make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
-       }
       return (FLOW_STAT_OK);
     }
 

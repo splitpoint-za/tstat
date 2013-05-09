@@ -10,6 +10,7 @@ News in 2.4
 * Updated DPI classification
   - Added HLS video classification
   - Updated Facebook, Vimeo, FLV, RTMP, and YouTube classification
+  - Added support for the new 46-char YouTube IDs
 * General improvements and bugfixes
   
 News in 2.3
