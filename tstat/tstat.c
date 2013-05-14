@@ -1017,7 +1017,7 @@ void write_log_header(FILE *fp, int log_type) {
      * LOG_UDP_COMPLETE
      **************************************************/
     else if (log_type == LOG_UDP_COMPLETE) {
-        col = 0;
+        col = 1;
         wfprintf(fp, "#c_ip:%d", col++);            // client ip
         wfprintf(fp, " c_port:%d", col++);          // client port
         wfprintf(fp, " c_first_abs:%d", col++);     // first time absolute
