@@ -296,6 +296,8 @@ FILE *fp_video_logc = NULL;
 FILE *fp_streaming_logc = NULL;
 #endif
 
+FILE *fp_http_logc = NULL;
+
 long log_bitmask = LOG_ALL;
 
 /* discriminate Direction */
@@ -940,6 +942,10 @@ void write_log_header(FILE *fp, int log_type) {
 #endif
         wfprintf(fp, " c_ssl:%d", col++); // server name of SSL client hello message
         wfprintf(fp, " s_ssl:%d", col++); // subject name in SSL server certificate
+#ifdef ENABLE_SPDY
+        wfprintf(fp, " c_spdy:%d", col++);    // SSL client SPDY request
+        wfprintf(fp, " s_spdy:%d", col++);    // SSL server SPDY support
+#endif
 #ifdef SNOOP_DROPBOX
         wfprintf(fp, " dropbox_id:%d", col++);    // dropbox device id
 #endif
@@ -1168,8 +1174,8 @@ void write_log_header(FILE *fp, int log_type) {
             " flv_bytes:86"       // 86: flash video, remaining video bytes to download
             " yt_red_mode:87"     // 87: youtube redirection mode
             " yt_red_cnt:88"      // 88: youtube redirection count
-            " yt_ismob:89"        // 89: youtube, is mobile
-            " yt_mob_t:90"        // 90: youtube, type of mobile device
+            " yt_mobile:89"        // 89: youtube, mobile category
+            " yt_stream:90"        // 90: youtube, streaming category
         );
 
         col = 91;
@@ -1288,6 +1294,60 @@ void write_log_header(FILE *fp, int log_type) {
             " vd_height:82"        // 82: video height pixel
         );
         col = 83;
+        wfprintf(fp, "\n");
+    }
+
+    /**************************************************
+     * LOG_HTTP_COMPLETE
+     **************************************************/
+    else if (log_type == LOG_HTTP_COMPLETE) {
+        wfprintf (fp,
+            /************************
+             * client side
+             ************************/
+            "#C#c_ip:1"             // 1: client ip
+            "\tc_port:2"           // 2: client port
+            /************************
+             * server side
+             ************************/
+            "\ts_ip:3"             // 3: server ip
+            "\ts_port:4"           // 4: server port
+            /************************
+             * Info
+             ************************/
+            "\ttime_abs:5"          // 5: absolute packet time
+            "\tmethod:6"            // 6: method
+            "\thostname:7"          // 7: hostname
+            "\tpath:8"              // 8: path
+            "\treferer:9"           // 9: referer
+            "\tuser_agent:10"       // 10: user agent
+        );
+        col = 11;
+        wfprintf(fp, "\n");
+        wfprintf (fp,
+            /************************
+             * server side
+             ************************/
+            "#S#c_ip:1"             // 1: client ip
+            "\tc_port:2"           // 2: client port
+            /************************
+             * server side
+             ************************/
+            "\ts_ip:3"             // 3: server ip
+            "\ts_port:4"           // 4: server port
+            /************************
+             * Info
+             ************************/
+            "\ttime_abs:5"          // 5: absolute packet time
+            "\tHTTP:6"              // 6: protocol
+            "\tresponse:7"          // 7: response code
+            "\tcontent_len:8"       // 8: content lenght
+            "\tcontent_type:9"      // 9: content type
+            "\tserver:10"           // 10: server
+            "\trange:11"            // 11: range
+            "\tlocation:12"         // 12: location
+        );
+        col = 13;
         wfprintf(fp, "\n");
     }
 
@@ -1471,6 +1531,11 @@ create_new_outfiles (char *filename, Bool reuse_dir)
   }
 #endif
 
+  if (LOG_IS_ENABLED(LOG_HTTP_COMPLETE)) {
+      reopen_logfile(&fp_http_logc,basename,"log_http_complete");
+      write_log_header(fp_http_logc,LOG_HTTP_COMPLETE);
+  }
+
 //AF: this is legacy code
 #ifdef LOG_OOO
   if (LOG_IS_ENABLED(LOG_DUP_OOO)) {
@@ -1524,6 +1589,8 @@ void close_all_logfiles()
       if (fp_streaming_logc != NULL) { gzclose(fp_streaming_logc); fp_streaming_logc=NULL; }
 #endif
 
+      if (fp_http_logc != NULL) { gzclose(fp_http_logc); fp_http_logc=NULL; }
+
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { gzclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
@@ -1565,6 +1632,8 @@ void close_all_logfiles()
 #ifdef STREAMING_CLASSIFIER
       if (fp_streaming_logc != NULL) { fclose(fp_streaming_logc); fp_streaming_logc=NULL; }
 #endif
+
+      if (fp_http_logc != NULL) { fclose(fp_http_logc); fp_http_logc=NULL; }
 
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { fclose(fp_dup_ooo); fp_dup_ooo=NULL; }
@@ -4104,6 +4173,9 @@ void log_parse_ini_arg(char *param_name, int enabled) {
     }
     else if (strcmp(param_name, "log_streaming_complete") == 0) {
         log_parse_ini_arg_log_bitmask(fp_streaming_logc, LOG_STREAMING_COMPLETE, "log_streaming_complete", enabled);
+    }
+    else if (strcmp(param_name, "log_http_complete") == 0) {
+        log_parse_ini_arg_log_bitmask(fp_http_logc, LOG_HTTP_COMPLETE, "log_http_complete", enabled);
     }
     else {
         fprintf(fp_stderr, "ini reader: '%s' - unknown keyword\n", param_name);

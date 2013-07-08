@@ -1,4 +1,4 @@
-Tstat produces a "log_video_complete" files which logs every TCP Video
+Tstat produces a "log_video_complete" file which logs every TCP Video
 connection that has been tracked. Currently are classified as Video 
 the RTMP connections and the relevant HTTP connections (YouTube, Vimeo, generic
 FLV/MP4, VOD and FlashVideo). 
@@ -79,8 +79,8 @@ Here it follows a brief description of the columns.
 ############################################################################
 # 87  # Redir Mode	             # -     # Server Redirection Type [=]
 # 88  # Redir Count                  # -     # Redirection counter [=]
-# 89  # Mobile Media                 # 0/1   # 1 = video is probably accessed using a mobile term (smartphone) or a Media Center, 0 otherwise
-# 90  # Mobile Device                # -     # Type of mobile device 0=None/Undefined 1=Apple iOS 2=Android 3=Other
+# 89  # Mobile Device                # -     # Type of mobile device 0=Desktop 1=Other 2=Apple iOS 3=Android
+# 90  # Streaming                    # -     # Video streaming classification [&]
 ############################################################################
 # 91-100   # Rate samples             # bytes # Bytes in the first 10 rate sampling slots C2S
 # 101-110 # Rate samples             # bytes # Bytes in the first 10 rate sampling slots S2C
@@ -112,3 +112,10 @@ Common values are 34 (360p FLV), 35 (480p FLV), and 22 (720p MP4).
     st=nx is set (with or without redirect_counter parameter) when the nonxt request is redirected to
        a location-identified cache r<N>.<city><X>[gst]<Y>.c.youtube.com. nonxt<N> addresses
        are used for unlisted and private videos.
+[&] Classification for the YouTube streaming technique
+	0	No streaming. Progressive or adaptive download (DASH)
+	1	HLS streaming of recorded content
+	2	HLS streaming of live content
+	3	Advertisement
+	4	HLS streaming of live content (different from 2) 
+	5	Live FLV streaming

@@ -177,9 +177,13 @@ dnl define _BSD_SOURCE for libc-2
 if [[ -f /lib/libc-2* ]]; then
  V_DEFINES="$V_DEFINES -D_BSD_SOURCE"
 else
- ls -1 /lib/*/libc-2* > /dev/null 2>&1
- if [[ "$?" = "0" ]]; then
-   V_DEFINES="$V_DEFINES -D_BSD_SOURCE"
+ if [[ -f /lib64/libc-2* ]]; then
+ V_DEFINES="$V_DEFINES -D_BSD_SOURCE"
+ else
+   ls -1 /lib/*/libc-2* > /dev/null 2>&1
+   if [[ "$?" = "0" ]]; then
+     V_DEFINES="$V_DEFINES -D_BSD_SOURCE"
+   fi
  fi
 fi
 

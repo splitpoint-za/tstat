@@ -27,7 +27,7 @@ extern enum http_content YTMAP(enum http_content );
 
 
 #ifdef VIDEO_DETAILS
-char *patterns[12];
+char *patterns[19];
 char match_buffer[904];
 char yt_id[50];
 char yt_itag[5];
@@ -37,8 +37,8 @@ char yt_redir[7];
 int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
-int  yt_device;
-regex_t re[12];
+int  yt_stream;
+regex_t re[19];
 regmatch_t re_res[2];
 
 /* Indexes for YouTube Mobile parameters */
@@ -63,8 +63,16 @@ void init_web_patterns()
   patterns[9] = "[?&]androidcid=([^& ]+)[& ]";
   patterns[10] = "/[0-9]{8,15}/picture[?/ ]"; /* graph.facebook.com */
   patterns[11] = "[?&]id=(o-[A-Za-z0-9_-]{44})[& ]";
-
-  for (i=0;i<12;i++)
+// HLS YouTube
+  patterns[12] = "/id/([A-Za-z0-9_-]{11})[.]";
+  patterns[13] = "/id/([0-9a-f]{16})/";
+  patterns[14] = "/id/(o-[A-Za-z0-9_-]{44})/";
+  patterns[15] = "/itag/([0-9]+)/";
+  patterns[16] = "/source/([^/]+)/";
+  patterns[17] = "[?&]id=([A-Za-z0-9_-]{11})[& ]";
+  patterns[18] = "/key/([^/?]+)[/?]";
+  
+  for (i=0;i<19;i++)
    {
      regcomp(&re[i],patterns[i],REG_EXTENDED);
    }
@@ -406,7 +414,10 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_ADV;
        break;
      case 'a':
-       if (memcmp(base, "/ads3/flyers/",
+       if (memcmp(base, "/api/stats/",
+        	      ( available_data < 11 ? available_data : 21)) == 0)
+         return HTTP_YOUTUBE_SITE;
+       else if (memcmp(base, "/ads3/flyers/",
         	      ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_FACEBOOK;
        else if (memcmp(base, "/ads2/flyers/",
@@ -838,6 +849,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  url_found[4];
 	   int  idx;
            int  yt_mobile2,mobile_set;
+	   int  yt_device2;
 
            memcpy(match_buffer,base,(available_data<900?available_data:900));
            match_buffer[(available_data<900?available_data:900)]='\0';
@@ -892,40 +904,50 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	    }
 	   else
 	    {
-	      /* key==yta1 or ck1 */
-	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+	      /* key==yt5 or dg_yt0 => desktop */
+	      /* other key (yta2, ck1, etc...) => mobile */
+	      if (url_found[PARAM_KEY]!=0 && 
+	             ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0
+                     )
+		 )
 		{ 
 		  yt_mobile2 = 1;
                   mobile_set = 1;
-		}	 
+		}
 	    } 
 	     
-	   yt_device = 0;
+	   yt_device2 = 1;
 
 	   if ( (url_found[PARAM_CLIENT]!=0) && 
 	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
                    memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
 	      )
 	    {
-	      yt_device = 1;
+	      yt_device2 = 2;
 	    }
 	   else if ( (url_found[PARAM_CLIENT]!=0) && 
 	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
-	      yt_device = 2;
+	      yt_device2 = 3;
 	    }
 	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
-	      yt_device = 2;
+	      yt_device2 = 3;
 	    }
 	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
-	      yt_device = 3;
+	      yt_device2 = 1;
 	    }
-	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && 
+	              ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
+		        memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
+			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 )
+		   )
 	    { 
-	      yt_device = 3;
+	      yt_device2 = 1;
 	    }
 
 
@@ -1054,7 +1076,18 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
+
+	  if (mobile_set==0 && yt_mobile2==0)
+	   {
+	     yt_mobile = 0;
+	     yt_stream = 0;
+	   }
+	  else
+	   {
+	     yt_mobile = yt_device2;
+	     yt_stream = 0;
+	   }
+//        yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
 #endif
           return HTTP_YOUTUBE_204;
          }
@@ -1156,6 +1189,82 @@ enum http_content classify_http_get(void *pdata,int data_length)
        if (memcmp(base, "/home.php?ref=",
                ( available_data < 14 ? available_data : 14)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp (base, "/hls_stream.ts?",
+                  ( available_data < 15 ? available_data : 15)) == 0)
+         {
+	   /* YouTube HLS live streaming connection */
+#ifdef VIDEO_DETAILS
+	   char url_param[80];
+
+           memcpy(match_buffer,base,(available_data<900?available_data:900));
+           match_buffer[(available_data<900?available_data:900)]='\0';
+
+            /* &itag = fmt */
+           if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+               (msize<4?msize:4));
+               yt_itag[msize<4?msize:4]='\0';
+            }
+
+            /* id = id11 */
+           if (regexec(&re[17],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id16 */
+           else if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id46 */
+           else if (regexec(&re[14],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+
+           yt_mobile = 0;
+           yt_stream = 4;
+           
+	   url_param[0] = '\0';
+	   
+	   /* key = yt1 | yta2 */
+           if (regexec(&re[8],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(url_param,match_buffer+re_res[1].rm_so,
+               (msize<79?msize:79));
+               url_param[msize<79?msize:79]='\0';
+            }
+ 
+	   if (memcmp(url_param,"yt1",3)==0)
+	    {
+              /* key = yt1 => desktop */
+		  yt_mobile = 0;
+	    }
+	   else 
+	    {
+              /* key = yta2 or something else => mobile (Apple?) */
+		  yt_mobile = 0;
+	    }
+           
+	   yt_seek = 0;
+	   yt_redir_mode = 0;
+	   yt_redir_count = 0;
+
+#endif
+          return HTTP_YOUTUBE_VIDEO;
+         }
        break;
 
      case 'i':
@@ -1194,6 +1303,86 @@ enum http_content classify_http_get(void *pdata,int data_length)
        if (memcmp(base, "/kh/v=",
                ( available_data < 6 ? available_data : 6)) == 0)
          return HTTP_GMAPS;
+       break;
+
+     case 'l':
+       if (memcmp (base, "/liveplay?",
+                  ( available_data < 10 ? available_data : 10)) == 0)
+         {
+	   /* YouTube live FLV connection */
+#ifdef VIDEO_DETAILS
+	   char url_param[80];
+
+           memcpy(match_buffer,base,(available_data<900?available_data:900));
+           match_buffer[(available_data<900?available_data:900)]='\0';
+
+            /* &itag = fmt */
+           if (regexec(&re[2],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+               (msize<4?msize:4));
+               yt_itag[msize<4?msize:4]='\0';
+            }
+
+            /* id = id11 */
+           if (regexec(&re[17],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id16 */
+           else if (regexec(&re[0],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id46 */
+           else if (regexec(&re[14],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+
+           yt_mobile = 0;
+           yt_stream = 5;
+           
+	   url_param[0] = '\0';
+	   
+	   /* key = yt1 */
+           if (regexec(&re[8],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(url_param,match_buffer+re_res[1].rm_so,
+               (msize<79?msize:79));
+               url_param[msize<79?msize:79]='\0';
+            }
+ 
+	   if (memcmp(url_param,"yt1",3)==0)
+	    {
+              /* key = yt1 => desktop */
+		  yt_mobile = 0;
+	    }
+	   else 
+	    {
+              /* something else => suppose desktop, since it is FLV streaming */
+	      /* The little evidence for key=yt5 points to desktop connections */
+		  yt_mobile = 0;
+	    }
+           
+	   yt_seek = 0;
+	   yt_redir_mode = 0;
+	   yt_redir_count = 0;
+
+#endif
+          return HTTP_YOUTUBE_VIDEO;
+         }
        break;
 
      case 'm':
@@ -1553,6 +1742,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   int  url_found[4];
 	   int  idx;
            int  yt_mobile2,mobile_set;
+	   int yt_device2;
 
            memcpy(match_buffer,base,(available_data<900?available_data:900));
            match_buffer[(available_data<900?available_data:900)]='\0';
@@ -1607,40 +1797,50 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	    }
 	   else
 	    {
-	      /* key==yta1 or ck1 */
-	      if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+	      /* key==yt5 or dg_yt0 => desktop */
+	      /* other key (yta2, ck1, etc...) => mobile */
+	      if (url_found[PARAM_KEY]!=0 && 
+	             ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0
+                     )
+		 )
 		{ 
 		  yt_mobile2 = 1;
                   mobile_set = 1;
-		}	 
+		}
 	    } 
 	     
-	   yt_device = 0;
+	   yt_device2 = 1;
 
 	   if ( (url_found[PARAM_CLIENT]!=0) && 
 	         ( memcmp(url_param[PARAM_CLIENT],"ytapi-apple",11)==0 ||
                    memcmp(url_param[PARAM_CLIENT],"iPhone",6)==0 ) 
 	      )
 	    {
-	      yt_device = 1;
+	      yt_device2 = 2;
 	    }
 	   else if ( (url_found[PARAM_CLIENT]!=0) && 
 	             ( memcmp(url_param[PARAM_CLIENT],"mvapp-android",13)==0 )
 	           )
 	    { 
-	      yt_device = 2;
+	      yt_device2 = 3;
 	    }
 	   else if ( (url_found[PARAM_ANDROIDCID]!=0))
 	    { 
-	      yt_device = 2;
+	      yt_device2 = 3;
 	    }
 	   else if ( (url_found[PARAM_CLIENT]!=0))
 	    { 
-	      yt_device = 3;
+	      yt_device2 = 1;
 	    }
-	   else if (url_found[PARAM_KEY]!=0 && memcmp(url_param[PARAM_KEY],"yt1",3)!=0)
+	   else if (url_found[PARAM_KEY]!=0 && 
+	              ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
+		        memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
+			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 )
+		   )
 	    { 
-	      yt_device = 3;
+	      yt_device2 = 1;
 	    }
 
             /* itag=fmt */
@@ -1768,7 +1968,130 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      yt_redir_mode = 6;
 	      yt_redir_count = rc_redir_count+1;
 	    }
-          yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
+
+	  if (mobile_set==0 && yt_mobile2==0)
+	   {
+	     yt_mobile = 0;
+	     yt_stream = 0;
+	   }
+	  else
+	   {
+	     yt_mobile = yt_device2;
+	     yt_stream = 0;
+	   }
+//        yt_mobile = mobile_set==1 ? yt_mobile2 : 0 ;
+#endif
+          return HTTP_YOUTUBE_VIDEO;
+         }
+       else if (memcmp (base, "/videoplayback/",
+                  ( available_data < 15 ? available_data : 15)) == 0)
+         {
+	   /* YouTube HLS connection or video advertisement*/
+#ifdef VIDEO_DETAILS
+	   char url_param[80];
+	   int  android_cid;
+
+           memcpy(match_buffer,base,(available_data<900?available_data:900));
+           match_buffer[(available_data<900?available_data:900)]='\0';
+
+            /* /itag/fmt/ */
+           if (regexec(&re[15],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_itag,match_buffer+re_res[1].rm_so,
+               (msize<4?msize:4));
+               yt_itag[msize<4?msize:4]='\0';
+            }
+
+            /* id = id11 */
+           if (regexec(&re[12],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id16 */
+           else if (regexec(&re[13],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+            /* id = id46 */
+           else if (regexec(&re[14],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(yt_id,match_buffer+re_res[1].rm_so,
+               (msize<49?msize:49));
+               yt_id[msize<49?msize:49]='\0';
+	    }
+
+           yt_mobile = 0;
+           yt_stream = 0;
+           android_cid = 0;
+	   
+	   url_param[0] = '\0';
+	   
+           if (regexec(&re[9],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+	       android_cid = 1;
+            }
+	   
+           if (regexec(&re[16],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(url_param,match_buffer+re_res[1].rm_so,
+               (msize<79?msize:79));
+               url_param[msize<79?msize:79]='\0';
+            }
+ 
+	   if (memcmp(url_param,"yt_live_",8)==0)
+	    {
+              /* yt_live_broadcast */
+              /* yt_live_monitoring */
+		  yt_stream = 2;
+	    }
+	   else if (memcmp(url_param,"youtube",7)==0)
+	    {
+              /* youtube */
+		  yt_stream = 1;
+	    }
+	   else // if (memcmp(url_param,"doubleclick",11)==0)
+	    {
+              /* gfp_video_ads */
+              /* web_video_ads */
+              /* doubleclick */
+		  yt_stream = 3;
+	    }
+
+	   url_param[0] = '\0';
+	   
+           if (regexec(&re[18],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(url_param,match_buffer+re_res[1].rm_so,
+               (msize<79?msize:79));
+               url_param[msize<79?msize:79]='\0';
+            }
+	   else if (regexec(&re[8],match_buffer,(size_t) 2,re_res,0)==0)
+            {
+             int msize = re_res[1].rm_eo-re_res[1].rm_so;
+              memcpy(url_param,match_buffer+re_res[1].rm_so,
+               (msize<79?msize:79));
+               url_param[msize<79?msize:79]='\0';
+            }
+ 
+	   if (memcmp(url_param,"dg_yt0",6)==0 && yt_stream!=2 )
+	    {
+               yt_mobile = android_cid==1? 3 : 2;
+	    }
+           
+	   yt_seek = 0;
+	   yt_redir_mode = 0;
+	   yt_redir_count = 0;
+
 #endif
           return HTTP_YOUTUBE_VIDEO;
          }
@@ -1783,6 +2106,12 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_GMAPS;
        else if (memcmp(base, "/vt/lyrs=",
                ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/vt?lyrs=",
+               ( available_data < 9 ? available_data : 9)) == 0)
+         return HTTP_GMAPS;
+       else if (memcmp(base, "/vt/ft?lyrs=",
+               ( available_data < 12 ? available_data : 12)) == 0)
          return HTTP_GMAPS;
        else if (available_data > 29 && (memcmp(base, "/vi/",4) == 0) )
         {

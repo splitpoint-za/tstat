@@ -22,6 +22,7 @@ HDR_FILES = \
     $(top_srcdir)/tstat/tcpdump.h\
     $(top_srcdir)/tstat/tcpL7.h\
     $(top_srcdir)/tstat/videoL7.h\
+    $(top_srcdir)/tstat/http.h\
     $(top_srcdir)/tstat/tstat.h\
     $(top_srcdir)/tstat/version.h\
     $(top_srcdir)/tstat/ymsg.h\
@@ -67,6 +68,7 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/p2p.c \
        $(top_srcdir)/tstat/tcpL7.c \
        $(top_srcdir)/tstat/videoL7.c \
+       $(top_srcdir)/tstat/http.c \
        $(top_srcdir)/tstat/web.c \
 	   $(top_srcdir)/tstat/dump.c\
        $(top_srcdir)/tstat/inireader.c

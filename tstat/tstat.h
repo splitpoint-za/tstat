@@ -735,6 +735,14 @@ void videoL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 void make_videoL7_conn_stats (void * thisdir, int tproto);
 void make_videoL7_rate_stats (tcp_pair *thisflow, int len);
 
+/* HTTP Plugin */
+
+void http_init ();
+void *gethttp (struct udphdr *pudp, int tproto, void *pdir, void *plast);
+void http_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
+	       int dir, void *hdr, void *plast);
+void make_http_conn_stats (void * thisdir, int tproto);
+
 
 /* P2P plugin */
 void p2p_init ();
@@ -794,6 +802,7 @@ extern  long log_bitmask;
 #define LOG_VIDEO_COMPLETE      0x0080
 #define LOG_STREAMING_COMPLETE  0x0100
 // other logs disabled by default
+#define LOG_HTTP_COMPLETE       0x0200
 #define LOG_CHAT_MSNOTHER       0x1000  
 #define LOG_L3_BITRATE          0x2000  // -3 command line option (disabled by default)
 // overall mask

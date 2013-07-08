@@ -3137,14 +3137,16 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
   wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
 
+#ifdef ENABLE_SPDY
+/* Record the usage of the SPDY Protocol */
+
+  wfprintf(fp," %d %d",ptp_save->ssl_client_spdy,ptp_save->ssl_server_spdy);
+#endif
+
 #ifdef SNOOP_DROPBOX
   wfprintf(fp," %s",(ptp_save->con_type & HTTP_PROTOCOL) && 
                     (ptp_save->http_data==HTTP_DROPBOX) ? ptp_save->http_ytid:"-");
 #endif
-
-/* At the moment, do not expose the SPDY identification
-  wfprintf(fp," %d %d",ptp_save->ssl_client_spdy,ptp_save->ssl_server_spdy);
-*/
 
 #ifdef PACKET_STATS
   {
@@ -3439,8 +3441,20 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
      	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
      	       ptp_save->http_data==HTTP_YOUTUBE_204 ))
        {
-     	   id16to11(id_string,ptp_save->http_ytid);
-     	   wfprintf (fp_video_logc, " %s %s", ptp_save->http_ytid,id_string);
+          if (strlen(ptp_save->http_ytid)==11)
+	   {
+	     /* Some YouTube HLS flows use the ID11 in the request */
+	     id11to16(id_string, ptp_save->http_ytid);
+	     wfprintf(fp_video_logc, " %s %s", id_string,
+	  		  ptp_save->http_ytid);
+	   }
+	  else
+	   {
+	     /* This is both good for ID16 and ID46 */
+	     id16to11(id_string, ptp_save->http_ytid);
+	     wfprintf(fp_video_logc, " %s %s", ptp_save->http_ytid,
+	  		  id_string);
+	   }
        }
      else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
      			       ( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
@@ -3460,7 +3474,17 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
         	ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
         	ptp_save->http_data==HTTP_YOUTUBE_204 ))
         {
-            wfprintf (fp_video_logc, " %s --", ptp_save->http_ytid);
+          if (strlen(ptp_save->http_ytid)==11)
+	   {
+	     /* Some YouTube HLS flows use the ID11 in the request */
+	     id11to16(id_string, ptp_save->http_ytid);
+	     wfprintf(fp_video_logc, " %s --", id_string);
+	   }
+	  else
+	   {
+	     /* This is both good for ID16 and ID46 */
+             wfprintf (fp_video_logc, " %s --", ptp_save->http_ytid);
+	   }
         }
       else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
         			( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
@@ -3498,7 +3522,7 @@ update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 				 ptp_save->http_ytredir_mode,
 				 ptp_save->http_ytredir_count,
 				 ptp_save->http_ytmobile,
-				 ptp_save->http_ytdevice );
+				 ptp_save->http_ytstream );
        }
       else
        {
@@ -3692,9 +3716,20 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 				== HTTP_YOUTUBE_VIDEO || ptp_save->http_data
 				== HTTP_YOUTUBE_VIDEO204 || ptp_save->http_data
 				== HTTP_YOUTUBE_204)) {
-			id16to11(id_string, ptp_save->http_ytid);
-			wfprintf(fp_streaming_logc, " %s %s", ptp_save->http_ytid,
+                        if (strlen(ptp_save->http_ytid)==11)
+			 {
+	                   /* Some YouTube HLS flows use the ID11 in the request */
+			   id11to16(id_string, ptp_save->http_ytid);
+			   wfprintf(fp_streaming_logc, " %s %s", id_string,
+			                ptp_save->http_ytid);
+			 }
+			else
+			 {
+	                   /* This is both good for ID16 and ID46 */
+			   id16to11(id_string, ptp_save->http_ytid);
+			   wfprintf(fp_streaming_logc, " %s %s", ptp_save->http_ytid,
 					id_string);
+			 }
 		} else if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
 				== HTTP_YOUTUBE_SITE || ptp_save->http_data
 				== HTTP_YOUTUBE_SITE_DIRECT || ptp_save->http_data
@@ -3711,7 +3746,17 @@ void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
 						ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
 						ptp_save->http_data==HTTP_YOUTUBE_204 ))
 		{
-			wfprintf (fp_streaming_logc, " %s --", ptp_save->http_ytid);
+                        if (strlen(ptp_save->http_ytid)==11)
+			 {
+	                   /* Some YouTube HLS flows use the ID11 in the request */
+			   id11to16(id_string, ptp_save->http_ytid);
+			   wfprintf(fp_streaming_logc, " %s --", id_string);
+			 }
+			else
+			 {
+	                   /* This is both good for ID16 and ID46 */
+			   wfprintf (fp_streaming_logc, " %s --", ptp_save->http_ytid);
+			 }
 		}
 		else if ((ptp_save->con_type & HTTP_PROTOCOL) &&
 				( ptp_save->http_data==HTTP_YOUTUBE_SITE ||

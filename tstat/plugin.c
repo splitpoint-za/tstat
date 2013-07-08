@@ -83,6 +83,12 @@ proto_init ()
 		  (void *) dummy_init,
 		  NULL);
 
+  proto_register (PROTOCOL_TCP, "HTTP", "HTTP Requests",
+		  (void *) gethttp,
+		  (void *) http_flow_stat,
+		  (void *) http_init,
+		  (void *) make_http_conn_stats);
+
 #ifdef STREAMING_CLASSIFIER
   proto_register (PROTOCOL_TCP, "STREAMING", "HTTP Video Streaming",
 		  (void *) getvideoL7,

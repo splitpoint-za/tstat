@@ -5,6 +5,7 @@ News in 2.4
   - logs can be enabled/disable individually using runtime.conf
   - improved the reactivity of enabling/disabling logs using runtime.conf (no need to wait the creation o the new directory before to see a new file)
   - dump TCP traffic based on Conn_Type 
+  - log details of HTTP requests/responses
 * Added the option to distiguish internal/external traffic based on the MAC
   addresses
 * Updated DPI classification

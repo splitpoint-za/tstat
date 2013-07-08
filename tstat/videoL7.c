@@ -484,6 +484,15 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
         {
 	  return VIDEO_WMV;
 	}
+       else if ((available_data >= 400) &&
+                (*(base) == 0x47) &&  
+                (*(base+188) == 0x47) &&  
+                (*(base+376) == 0x47)
+		)
+        { /* MPEG TS framing used in HLS */
+          // printf(" video mpegts \n");
+	  return VIDEO_HLS;
+	}
        return VIDEO_NOT_DEFINED;
    }
   return VIDEO_NOT_DEFINED;
