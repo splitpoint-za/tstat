@@ -22,6 +22,11 @@
 #include <sys/param.h>
 #include <sys/time.h>
 
+#ifdef __ANDROID__
+#include <sys/endian.h>
+#undef swap16
+#undef swap32
+#endif
 
 #define VALID_VERSION 2		/*the version must be 2 */
 #define VALID_PT      127	/* the PT must be equal or smaller than  127 */

@@ -735,12 +735,14 @@ main (int argc, char *argv[]) {
     }
 
 
+#ifndef __ANDROID__
   if (threaded)
     {
       /* Closing flow_closing thread */
       pthread_cancel (thread_done_periodic);
       pthread_cancel (thread_all_dumping);
     }
+#endif
 
   /* clean up output */
   if (printticks)

@@ -708,6 +708,12 @@ init_live_tcpdump (char *filename)
 
 
   memset (&eth_header, 0, EH_SIZE);
+  /*
+   Not the best solution, but force the payload type to be
+   ETHERTYPE_IP also for pcap live capture, as done when reading
+   from file.
+  */
+  eth_header.ether_type = htons (ETHERTYPE_IP);
   ip_buf = MallocZ (IP_MAXPACKET);
   return (pread_tcpdump);
 }

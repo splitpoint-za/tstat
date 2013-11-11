@@ -85,6 +85,7 @@ static long tcp_maxbytes = 0;
 static long udp_maxpackets = 0;
 static long tcp_maxpackets = 0;
 static u_int32_t stop_dumping_mask = 0;
+u_int32_t http_full_url = 0;
 
 // monitor for writing access to dump files
 static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;                            
@@ -264,6 +265,11 @@ void dump_parse_ini_arg(char *param_name, int param_value) {
             stop_dumping_mask = param_value;
         }
     }
+    else if (strcmp(param_name, "http_full_url") == 0) {
+        if (param_value > 0) {
+            http_full_url = param_value;
+        }
+    }
     else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
         exit(1);
@@ -281,6 +287,7 @@ void dump_init(void) {
     tcp_maxbytes = 0;
     udp_maxbytes = 0;
     stop_dumping_mask = 0;
+    http_full_url = 0;
     /* UDP dump protocols 
      * for semplicity we use a vector with as long as the number of classes
      * identified by the DPI. Among these there are some useless classes

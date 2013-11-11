@@ -44,7 +44,12 @@
 #include <netinet/ether.h>
 #endif
 #include <netinet/ip.h>
+#ifdef __ANDROID__
+#include "tstat_android_tcp.h"
+#include "tstat_android_ether.h"
+#else
 #include <netinet/tcp.h>
+#endif
 #include <netinet/udp.h>
 #include <netdb.h>
 #include <ctype.h>
@@ -70,6 +75,9 @@
    #include "TargetConditionals.h"
 #endif
 
+#ifdef __ANDROID__
+ //  #include "tstat_android.h"
+#endif
 /* #include "memwatch.h" */
 /* #include <mpatrol.h> */
 

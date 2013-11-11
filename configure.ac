@@ -74,8 +74,20 @@ esac
 
 ## Checks for libraries
 AC_CHECK_LIB([m], [log],, AC_MSG_ERROR([missing 'm' library]))
-AC_CHECK_LIB([pthread], [pthread_cond_init],,AC_MSG_ERROR([missing 'pthread' library]))
+#AC_CHECK_LIB([pthread], [pthread_cond_init],,AC_MSG_ERROR([missing 'pthread' library]))
 
+## --enable-android option
+ENABLE_ANDROID=no
+AC_ARG_ENABLE(android, 
+    AS_HELP_STRING([--enable-android], [ignore the pthread test for Android compilation]),
+    ENABLE_ANDROID=$enableval)
+AM_CONDITIONAL([ANDROID], [test "x$ENABLE_ANDROID" = "xyes"])
+if test ".${ENABLE_ANDROID}" = ".no"; then
+   AC_CHECK_LIB([pthread], [pthread_cond_init],,AC_MSG_ERROR([missing 'pthread' library]))
+fi
+
+##AM_COND_IF([ANDROID],,
+##           [AC_CHECK_LIB([pthread], [pthread_cond_init],,AC_MSG_ERROR([missing 'pthread' library]))])
 
 ## --enable-libtstat option
 ENABLE_LIBTSTAT=no
@@ -185,6 +197,11 @@ else
      V_DEFINES="$V_DEFINES -D_BSD_SOURCE"
    fi
  fi
+fi
+
+dnl define __FAVOR_BSD when compiling for Android
+if test ".${ENABLE_ANDROID}" = ".yes"; then
+     V_DEFINES="$V_DEFINES -D__FAVOR_BSD"
 fi
 
 #####################

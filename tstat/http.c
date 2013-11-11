@@ -24,21 +24,24 @@
 #define HTTP_SMALL_BUFFER_SIZE  200
 #define HTTP_LARGE_BUFFER_SIZE 1600
 
-char *http_patterns[12];
-regex_t http_re[12];
+char *http_patterns[13];
+regex_t http_re[13];
 regmatch_t re_res[3];
 char http_url[HTTP_LARGE_BUFFER_SIZE];
+char http_url_private[HTTP_LARGE_BUFFER_SIZE];
 char http_method[10];
 char http_host[HTTP_SMALL_BUFFER_SIZE];
 char http_ua[HTTP_SMALL_BUFFER_SIZE];
 char http_ctype[HTTP_SMALL_BUFFER_SIZE];
 char http_clen[HTTP_SMALL_BUFFER_SIZE];
 char http_referer[HTTP_LARGE_BUFFER_SIZE];
+char http_referer_private[HTTP_LARGE_BUFFER_SIZE];
 char http_response[5];
 char http_range[HTTP_SMALL_BUFFER_SIZE];
 char http_server[HTTP_SMALL_BUFFER_SIZE];
 
 extern FILE *fp_http_logc;
+extern u_int32_t http_full_url;
 
 void init_http_patterns()
 {
@@ -56,7 +59,10 @@ void init_http_patterns()
   /* Very long path in truncated packet */
   http_patterns[9] = "^([A-Z]+) ([^[:cntrl:][:space:]]+)"; 
 
-  for (i=0;i<10;i++)
+  /* Remove any parameter information to limit privacy issues */
+  http_patterns[10] = "^([^?]+)"; /* To be used with path, Referer and Location  */
+  
+  for (i=0;i<11;i++)
    {
      regcomp(&http_re[i],http_patterns[i],REG_EXTENDED);
    }
@@ -213,6 +219,40 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_ua,"-");
 	   }
 
+         if (http_full_url==0)
+	  {
+	    if (regexec(&http_re[10],http_url,(size_t) 2,re_res,0)==0)
+             {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+               memcpy(http_url_private,http_url+re_res[1].rm_so,
+                 (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_url_private[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
+	     }
+            else
+	     {
+	       strcpy(http_url_private,http_url);
+	     }
+
+	    if (regexec(&http_re[10],http_referer,(size_t) 2,re_res,0)==0)
+             {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+               memcpy(http_referer_private,http_referer+re_res[1].rm_so,
+                 (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_referer_private[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
+	     }
+            else
+	     {
+	       strcpy(http_referer_private,http_referer);
+	     }
+
+	  }
+	 else
+	  {
+	       strcpy(http_url_private,http_url);
+	       strcpy(http_referer_private,http_referer);
+	  }
 
          *(char *)(pdata + data_length) = last_payload_char;
 
@@ -226,7 +266,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
             wfprintf (fp_http_logc,"\t%f",time2double(current_time)/1e6);
             wfprintf (fp_http_logc,"\t%s\t%s",http_method,http_host);
 
-            wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_url,http_referer,http_ua);
+            wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_url_private,http_referer_private,http_ua);
 
             wfprintf (fp_http_logc,"\n");
 	  }
@@ -318,6 +358,27 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_url,"-");
 	   }
 
+         if (http_full_url==0)
+	  {
+	    if (regexec(&http_re[10],http_url,(size_t) 2,re_res,0)==0)
+             {
+               int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+               memcpy(http_url_private,http_url+re_res[1].rm_so,
+                 (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_url_private[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
+	     }
+            else
+	     {
+	       strcpy(http_url_private,http_url);
+	     }
+
+	  }
+	 else
+	  {
+	       strcpy(http_url_private,http_url);
+	  }
+
          *(char *)(pdata + data_length) = last_payload_char;
 
          if (fp_http_logc != NULL && LOG_IS_ENABLED(LOG_HTTP_COMPLETE) )
@@ -329,7 +390,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 				    
             wfprintf (fp_http_logc,"\t%f",time2double(current_time)/1e6);
             wfprintf (fp_http_logc,"\t%s\t%s\t%s\t%s","HTTP",http_response,http_clen,http_ctype);
-            wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_server,http_range,http_url);
+            wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_server,http_range,http_url_private);
 
             wfprintf (fp_http_logc,"\n");
 	  }

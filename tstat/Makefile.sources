@@ -28,7 +28,9 @@ HDR_FILES = \
     $(top_srcdir)/tstat/ymsg.h\
     $(top_srcdir)/tstat/inireader.h\
     $(top_srcdir)/tstat/p2p.h\
-    $(top_srcdir)/tstat/l7types.h
+    $(top_srcdir)/tstat/l7types.h\
+    $(top_srcdir)/tstat/tstat_android_ether.h\
+    $(top_srcdir)/tstat/tstat_android_tcp.h
 
 CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/etherpeek.c \
@@ -71,4 +73,5 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/http.c \
        $(top_srcdir)/tstat/web.c \
 	   $(top_srcdir)/tstat/dump.c\
-       $(top_srcdir)/tstat/inireader.c
+       $(top_srcdir)/tstat/inireader.c\
+       $(top_srcdir)/tstat/tstat_android_ether.c
