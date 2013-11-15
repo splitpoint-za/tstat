@@ -27,7 +27,7 @@
   * Added log_http_complete to log/dump the HTTP requests (enabled via runtime.conf)
   * Fixed compilation problem for CentOS 6.4 (64-bit)
   * Changed default behavior of log_http_complete to limit the exposed information
-  * Added support for compilation in Android environment
+  * Added support for compilation in Android environment (thanks to Giorgos Dimopoulos) 
 
 17/10/11 - MMM
 - Main changes since 2.2:
