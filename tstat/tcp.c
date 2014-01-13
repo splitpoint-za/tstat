@@ -985,6 +985,13 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       ++thisdir->sacks_sent;
     }
 
+  /* check mptcp */
+  if (ptcpo->mptcp_req)
+    {
+      thisdir->mptcp_req = 1;
+    }
+
+
   if (*dir == C2S)
     ptp_save->c2s.ip_bytes += ip_len;
   else
@@ -1857,6 +1864,12 @@ ParseOptions: packet %lu %s option truncated, skipping other options\n", \
 		}
 	    }
 	  break;
+	case TCPOPT_MPTCP:
+	  CHECK_O_LEN ("TCPOPT_MPTCP");
+	  tcpo.mptcp_req = 1;
+	  popt += *plen;
+	  break;
+
 	default:
 	  if (debug)
 	    fprintf (fp_stderr,
@@ -2425,6 +2438,30 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
       else
 	{
 	  add_histo (tcp_opts_TS, 4);
+	}
+
+      /* MultiPath TCP - mptcp
+       *  [1] A<->B  both agree
+       *  [2] A ->B  a set
+       *  [3] A<- B  b set
+       *  [4] not set
+       */
+
+      if (ptp_save->c2s.mptcp_req && ptp_save->s2c.mptcp_req)
+	{
+	  add_histo (tcp_opts_MPTCP, 1);
+	}
+      else if (ptp_save->c2s.mptcp_req)
+	{
+	  add_histo (tcp_opts_MPTCP, 2);
+	}
+      else if (ptp_save->s2c.mptcp_req)
+	{
+	  add_histo (tcp_opts_MPTCP, 3);
+	}
+      else
+	{
+	  add_histo (tcp_opts_MPTCP, 4);
 	}
 
       /* MSS
@@ -3215,7 +3252,12 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
          
   }
 #endif
-//      wfprintf (fp, " %6.3f %6.3f",ptp_save->entropy_h,ptp_save->entropy_l);
+
+#ifdef ENABLE_LOG_MPTCP
+  /* MPTCP usage */
+  wfprintf (fp," %d %d",ptp_save->c2s.mptcp_req, ptp_save->s2c.mptcp_req);
+#endif
+
       wfprintf (fp, "\n");
 
    }

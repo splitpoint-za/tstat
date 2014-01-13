@@ -1235,6 +1235,7 @@ create_all_histo (void)
     create_histo ("tcp_opts_WS", "TCP option: WindowScale", 1, 4, 1);
   tcp_opts_TS =
     create_histo ("tcp_opts_TS", "TCP option: Timestamp", 1, 4, 1);
+  tcp_opts_MPTCP = create_histo ("tcp_opts_MPTCP", "TCP option: MPTCP", 1, 4, 1);
 
   tcp_mss_a =
     create_histo ("tcp_mss_a", "TCP declared client MSS [byte]", 0, 1600, 4);

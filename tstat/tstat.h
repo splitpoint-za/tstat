@@ -331,6 +331,10 @@ typedef struct sack_block
 }
 sack_block;
 
+
+/* MultiPath TCP - mptcp - option - RFC 6824 */
+#define TCPOPT_MPTCP 30 /* mptcp option number as assigned by IANA */
+
 #define MAX_UNKNOWN 16
 typedef struct opt_unknown
 {
@@ -377,6 +381,8 @@ struct tcp_options
   Bool sack_req;		/* sacks requested              */
   s_char sack_count;		/* sack count in this packet */
   sack_block sacks[MAX_SACKS];	/* sack blocks */
+
+  Bool mptcp_req;		/* mptcp requested              */
 
   /* echo request and reply */
   /* assume that value of -1 means unused  (?) */

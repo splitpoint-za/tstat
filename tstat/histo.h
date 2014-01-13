@@ -246,6 +246,7 @@ struct double_histo_list *tcp_bitrate_nc_out;
 struct double_histo_list *tcp_opts_SACK;
 struct double_histo_list *tcp_opts_WS;
 struct double_histo_list *tcp_opts_TS;
+struct double_histo_list *tcp_opts_MPTCP;
 
 struct double_histo_list *tcp_mss_a;
 struct double_histo_list *tcp_mss_b;

@@ -325,6 +325,7 @@ typedef struct tcb
   Bool f1323_ws;		/* did he request 1323 window scaling? */
   Bool f1323_ts;		/* did he request 1323 timestamps? */
   Bool fsack_req;		/* did he request SACKs? */
+  Bool mptcp_req;		/* did he request MPTCP? */
   u_char window_scale;
 
   /* statistics added */

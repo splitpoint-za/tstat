@@ -379,8 +379,8 @@ enum http_content classify_vimeo(char *base, int available_data)
       {
         return HTTP_VIMEO;
       }
-     else if ((memcmp(base + i,".mp4?token=",
-     	    ((available_data - i ) < 11 ? available_data - i : 11)) == 0)
+     else if ((memcmp(base + i,".mp4?token",
+     	    ((available_data - i ) < 10 ? available_data - i : 10)) == 0)
      	)
       {	
         return HTTP_VIMEO;

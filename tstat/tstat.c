@@ -1018,6 +1018,12 @@ void write_log_header(FILE *fp, int log_type) {
         wfprintf(fp, " c_pkts_push:%d", col++);
         wfprintf(fp, " s_pkts_push:%d", col++);
 #endif
+
+#ifdef ENABLE_LOG_MPTCP
+/* MPTCP information at the end of the line */ 
+        wfprintf(fp, " c_mptcp:%d", col++);    // Client MPTCP request
+        wfprintf(fp, " s_mptcp:%d", col++);    // Server MPTCP support
+#endif
         wfprintf (fp, "\n");
     }
 
