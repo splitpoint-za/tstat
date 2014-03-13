@@ -30,6 +30,7 @@
   * Added support for compilation in Android environment (thanks to Giorgos Dimopoulos) 
   * Added support for MultiPath TCP statistics
   * Updated Vimeo classification
+  * Added Adobe Dynamic Streaming classification (as MP4)
 
 17/10/11 - MMM
 - Main changes since 2.2:

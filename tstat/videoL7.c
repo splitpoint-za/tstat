@@ -634,6 +634,12 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
 	        {
   	          return VIDEO_MP4;
   	        }
+               /* Adobe Dynamic Streaming - Content-Type: video/(f4m|f4f|abst) */
+	       else if (memcmp(content_type + 6, "x-f4f",
+  				  (subType_len < 5 ? subType_len : 5)) == 0)
+	        {
+  	          return VIDEO_MP4;
+  	        }
 	       else if (memcmp(content_type + 6, "x-msvideo",
   				  (subType_len < 9 ? subType_len : 9)) == 0)
 	        {
@@ -688,6 +694,27 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
   	        }
 	       else if (memcmp(content_type + 6, "f4v",
   				  (subType_len < 3 ? subType_len : 3)) == 0)
+	        {
+    	          return VIDEO_MP4;
+  	        } 
+               /* Adobe Dynamic Streaming - Content-Type: video/(f4m|f4f|abst) */
+	       else if (memcmp(content_type + 6, "f4m",
+  				  (subType_len < 3 ? subType_len : 3)) == 0)
+	        {
+    	          return VIDEO_MP4;
+  	        } 
+	       else if (memcmp(content_type + 6, "f4f",
+  				  (subType_len < 3 ? subType_len : 3)) == 0)
+	        {
+    	          return VIDEO_MP4;
+  	        } 
+	       else
+  	         return VIDEO_UNKNOWN;
+ 	       break;
+	     case 'a':
+               /* Adobe Dynamic Streaming - Content-Type: video/(f4m|f4f|abst) */
+	       if (memcmp(content_type + 6, "abst",
+  				  (subType_len < 4 ? subType_len : 4)) == 0)
 	        {
     	          return VIDEO_MP4;
   	        } 
