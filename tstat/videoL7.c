@@ -533,8 +533,15 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
   	   vre_res[1].rm_eo -= 1;
   	   msize -= 1;
          }
-        memcpy(content_type, (char *) (pdata + vre_res[1].rm_so),(msize < 60 ? msize : 60));
-  	content_type[(msize < 60 ? msize : 60)] = '\0';
+        if (msize>0)
+         {
+           memcpy(content_type, (char *) (pdata + vre_res[1].rm_so),(msize < 60 ? msize : 60));
+  	   content_type[(msize < 60 ? msize : 60)] = '\0';
+         }
+        else
+         {
+           return VIDEO_NOT_DEFINED;
+         }
       } 
      else
       {

@@ -31,6 +31,7 @@
   * Added support for MultiPath TCP statistics
   * Updated Vimeo classification
   * Added Adobe Dynamic Streaming classification (as MP4)
+  * Fixed issue with the video Content-Type identification
 
 17/10/11 - MMM
 - Main changes since 2.2:
