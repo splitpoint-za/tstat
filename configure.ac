@@ -214,10 +214,20 @@ fi
 
 ######################
 ## ZLIB library
-AC_CHECK_LIB([z], [gzopen], [AC_CHECK_HEADERS(zlib.h, have_zlib=yes, have_zlib=no)], [have_zlib=no])
-if test "x$have_zlib" = "xyes"; then
+## --enable-zlib option
+ENABLE_ZLIB=no
+AC_ARG_ENABLE(zlib, 
+    AS_HELP_STRING([--enable-zlib], [enable zlib support to generate compressed data]),
+    ENABLE_ZLIB=$enableval)
+AM_CONDITIONAL([ZLIB], [test "x$ENABLE_ZLIB" = "xyes"])
+if test ".${ENABLE_ZLIB}" = ".yes"; then
+  AC_CHECK_LIB([z], [gzopen], [AC_CHECK_HEADERS(zlib.h, have_zlib=yes, have_zlib=no)], [have_zlib=no])
+  if test "x$have_zlib" = "xyes"; then
     V_DEFINES="$V_DEFINES -DHAVE_ZLIB"
     LIBS="$LIBS -lz"
+  fi
+else
+  have_zlib=no
 fi
 
 
