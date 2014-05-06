@@ -107,7 +107,7 @@ Assuming that you want version C<2.x.y>:
          tar -xzvf tstat-2.x.y.tar.gz
          cd tstat-2.x.y
          ./autogen.sh
-         ./configure [--enable-libtstat]
+         ./configure [--enable-libtstat] [--enable-zlib]
          make
          make install (with root privileges)
 
@@ -141,10 +141,15 @@ a configuration option to control this feature
     ./configure --enable-libtstat    # build tstat, libtstat and libtstat-demo
     ./configure                      # build only tstat
 
+It is possible, if C<Zlib> is found on the system, to compile Tstat to support the
+direct creation of zlib compressed logs and dump files.
+
+    ./configure --enable-zlib        # build tstat with zlib support
+
 At the end of C<configure> is printed a small report:
 
     -------------------------------------------------
-      tstat Version 2.2
+      tstat Version 2.4
       -lpcap -lpthread -lm  -lrrd -lz
 
       Prefix: '/usr/local'
@@ -1618,7 +1623,7 @@ continue investing in Tstat.
 
 
 
-Copyright (c) 2001-2012 Politecnico di Torino.  All rights reserved.
+Copyright (c) 2001-2014 Politecnico di Torino.  All rights reserved.
 
  
 This program is free software; you can redistribute it and/or modify

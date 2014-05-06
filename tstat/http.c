@@ -31,7 +31,7 @@ char http_url[HTTP_LARGE_BUFFER_SIZE];
 char http_url_private[HTTP_LARGE_BUFFER_SIZE];
 char http_method[10];
 char http_host[HTTP_SMALL_BUFFER_SIZE];
-char http_ua[HTTP_SMALL_BUFFER_SIZE];
+char http_ua[HTTP_LARGE_BUFFER_SIZE];
 char http_ctype[HTTP_SMALL_BUFFER_SIZE];
 char http_clen[HTTP_SMALL_BUFFER_SIZE];
 char http_referer[HTTP_LARGE_BUFFER_SIZE];
@@ -91,6 +91,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
   void *pdata; /*start of payload */
   int data_length, payload_len;
+  tcp_seq seqnum;
   tcb *tcp_stats;
   char last_payload_char;
 
@@ -119,6 +120,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
   pdata = (char *) ptcp + ptcp->th_off * 4;
   payload_len = getpayloadlength(pip, plast) - ptcp->th_off * 4;
   data_length = (char *) plast - (char *) pdata + 1;
+  seqnum = ntohl(ptcp->th_seq);
 
   if (data_length <= 0 || payload_len == 0)
     return;
@@ -211,8 +213,8 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
               memcpy(http_ua,base+re_res[1].rm_so,
-               (msize<(HTTP_SMALL_BUFFER_SIZE-1)?msize:(HTTP_SMALL_BUFFER_SIZE-1)));
-               http_ua[msize<(HTTP_SMALL_BUFFER_SIZE-1)?msize:(HTTP_SMALL_BUFFER_SIZE-1)]='\0';
+               (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_ua[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
 	    }
           else
 	   {
@@ -264,6 +266,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
                                     ServiceName(ptp->addr_pair.b_port));
 				    
             wfprintf (fp_http_logc,"\t%f",time2double(current_time)/1e6);
+  /*          wfprintf (fp_http_logc,"\t%d",seqnum-tcp_stats->syn-1); */
             wfprintf (fp_http_logc,"\t%s\t%s",http_method,http_host);
 
             wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_url_private,http_referer_private,http_ua);
@@ -389,6 +392,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
                                     ServiceName(ptp->addr_pair.b_port));
 				    
             wfprintf (fp_http_logc,"\t%f",time2double(current_time)/1e6);
+    /*      wfprintf (fp_http_logc,"\t%d",seqnum-tcp_stats->syn-1); */
             wfprintf (fp_http_logc,"\t%s\t%s\t%s\t%s","HTTP",http_response,http_clen,http_ctype);
             wfprintf (fp_http_logc,"\t%s\t%s\t%s",http_server,http_range,http_url_private);
 

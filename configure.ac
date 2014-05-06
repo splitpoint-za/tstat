@@ -7,7 +7,7 @@
 m4_define([_version_major], [2])
 m4_define([_version_minor], [4])
 m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Mon Mar 11 14:25:20 CET 2013"])
+m4_define([_version_date], ["Tue May  6 10:00:14 CEST 2014"])
 m4_define([_version_flavor], ["Almdudler"])
 m4_define([_libtstat_version], [1.0.0])
 

@@ -88,6 +88,13 @@ Here it follows a brief description of the columns.
 # 112-121 # PSH-Messages size        # bytes # Bytes in the first 10 PSH-separated 'messages in the S2C flow 
 ############################################################################
 
+Columns 91-110 refers to the estimation of the initial flow bitrate
+obtained by counting the amount of bytes transfered in both directions in
+the first 10 measurements intervals (10 seconds) (part of the information
+summerized in columns 22-28 and 51-57). Columns 111-121 estimate
+the structure of the S2C streaming flow, counting the blocks of data (as
+PSH-separated messages) and the dimension of the first 10 measured blocks.
+
 [*] The YouTube video format is the 'fmt/itag' value indicated in 
 http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs 
 Common values are 34 (360p FLV), 35 (480p FLV), and 22 (720p MP4).
