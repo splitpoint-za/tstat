@@ -1115,7 +1115,16 @@ The configuration file has an C<ini> file syntax:
     [log]
     histo_engine = 0    # logs created by histogram engine
     rrd_engine = 0      # logs created by rrd engine
-    log_engine = 0      # all files named log_<something>
+    log_tcp_complete = 0            # tcp connections correctly terminated
+    log_tcp_nocomplete = 0          # tcp connections not properly terminated
+    log_udp_complete = 0            # udp flows
+    log_mm_complete = 0             # multimedia
+    log_skype_complete = 0          # skype traffic
+    log_chat_complete = 0           # MSN/Yahoo/Jabber chat flows
+    log_chat_messages = 0           # MSN/Yahoo/Jabber chat messages
+    log_video_complete = 0          # youtube video
+    log_streaming_complete = 0      # generic video
+    log_http_complete = 0           # all the HTTP requests/responses
 
     # protocols to dump
     [dump]
@@ -1138,6 +1147,7 @@ The configuration file has an C<ini> file syntax:
     udp_ppstream = 0
     udp_teredo = 0
     udp_vod = 0
+    udp_sip = 0
     udp_unknown = 0    # all the udp traffic that the DPI doesn't recognize
 
     tcp_videostreaming = 0 
@@ -1150,6 +1160,9 @@ The configuration file has an C<ini> file syntax:
     udp_maxbytes = 0
     tcp_maxpackets = 0
     tcp_maxbytes = 0
+
+    stop_dumping_mask = 0  # bitmask to control the dumping of tcp packets based on flow type
+
 
 The file in composed of the two sections C<log> and C<dump> which indicate which
 type of log and dump trace to create.
@@ -1206,6 +1219,25 @@ each TCP flow (whichever condition if reached first), you can use
 C<udp_maxpackets> and C<udp_maxbytes> provide the same functionality for UDP flows.
 If both C<xxx_maxpackets> and C<xxx_maxbytes> are set to 0, the complete TCP/UDP 
 flows will be saved, with no size limitation.
+
+C<stop_dumping_mask> is a bitmask that is used to stop dumping tcp packets of flows we
+are not interested to.
+It is a bitmask based on protocol.h types that the con_type can take.
+Setting this to 0 will keep logging everything. Setting a bit to 1 will stop logging
+packets of those protocol as soon as the classifier set those flags (e.g., setting it to
+1025 (1+1024), all http and smtp traffic will be discarded). As for other parameters, the
+value can be set either as a decimal number, or as an hexadecimal number (prefixing it
+with 0x).
+Note that we cannot discard those packets of a flow that we have seen before
+actually identifying the protocol. For example, three-way-handshake segments will be
+always there.
+Examples:
+
+     stop_dumping_mask = 262143  # => 11 1111 1111 1111 1111 discard everything except UNKNOWN
+     stop_dumping_mask = 262142  # => 11 1111 1111 1111 1110 log only UNKNOWN and HTTP
+     stop_dumping_mask = 0x3DFFF # => 11 1101 1111 1111 1111 log only UNKNOWN and SSL/TLS
+     stop_dumping_mask = 1       # => 00 0000 0000 0000 0001 log everything which is not HTTP
+     stop_dumping_mask = 0       # => log everything
 
 During the runtime execution of Tstat, the configuration file is controlled periodically
 looking for changes in the options. In this way, when Tstat is used for online monitoring, 
