@@ -309,6 +309,12 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    case IPP2P_SIP:
 	      udir->type = UDP_SIP;
 	      break;  
+	    case IPP2P_DTLS:
+	      udir->type = UDP_DTLS;
+	      break;  
+	    case IPP2P_QUIC:
+	      udir->type = UDP_QUIC;
+	      break;  
 	   }
 
 #ifdef P2P_DETAILS
@@ -632,12 +638,8 @@ make_p2p_conn_stats (void * flow, int tproto)
        return;
 #endif
 
-#if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
-  return;
-#else
   if (!LOG_IS_ENABLED(LOG_UDP_COMPLETE) || fp_udp_logc == NULL)
     return;
-#endif
 
   thisUdir = thisC2S;
   pup = thisUdir->pup;
@@ -647,10 +649,15 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     1   Source Address
   //     2   Source Port
 
-  wfprintf (fp_udp_logc, "%s %s",
+  if (pup->crypto_src==FALSE)
+     wfprintf (fp_udp_logc, "%s %s",
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
-
+  else 
+     wfprintf (fp_udp_logc, "%s %s",
+	       HostNameEncrypted (pup->addr_pair.a_address),
+	       ServiceName (pup->addr_pair.a_port));
+	       
   //     3   Flow Start Time
   //     4   Flow Elapsed Time [s]
   //     5   Flow Size [Bytes]
@@ -667,8 +674,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   // 7 internal address
   // 8 udp_type
 
-  wfprintf (fp_udp_logc, " %d %d",
-	   thisflow->internal_src,  UDP_p2p_to_logtype(thisUdir));
+  wfprintf (fp_udp_logc, " %d %d %d",
+	   thisflow->internal_src, thisflow->crypto_src, UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
   wfprintf (fp_udp_logc, " %d %d %d %d %d %d %d %d %d %d",
@@ -704,8 +711,13 @@ make_p2p_conn_stats (void * flow, int tproto)
   //     9   Source Address
   //     10   Source Port
 
-  wfprintf (fp_udp_logc, " %s %s",
+  if (pup->crypto_dst==FALSE)
+     wfprintf (fp_udp_logc, " %s %s",
 	       HostName (pup->addr_pair.b_address),
+	       ServiceName (pup->addr_pair.b_port));
+  else
+     wfprintf (fp_udp_logc, " %s %s",
+	       HostNameEncrypted (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
 
   //     11   Flow Start Time
@@ -724,8 +736,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   // 15 internal address
   // 16 udp_type
 
-  wfprintf (fp_udp_logc, " %d %d",
-	   thisflow->internal_dst, UDP_p2p_to_logtype(thisUdir));
+  wfprintf (fp_udp_logc, " %d %d %d",
+	   thisflow->internal_dst, thisflow->crypto_dst, UDP_p2p_to_logtype(thisUdir));
 
 #ifdef P2P_DETAILS
   wfprintf (fp_udp_logc, " %d %d %d %d %d %d",
@@ -753,6 +765,12 @@ make_p2p_conn_stats (void * flow, int tproto)
 	   thisUdir->p2p.pkt_type_num[9]);
 #endif
 
+#ifdef DNS_CACHE_PROCESSOR
+  wfprintf (fp_udp_logc, " %s",thisflow->dns_name!=NULL?thisflow->dns_name:"-");
+#endif
+
+  // wfprintf (fp_udp_logc, " %d %d",thisC2S->is_QUIC,thisS2C->is_QUIC);
+  
   wfprintf (fp_udp_logc, "\n");
 
   return;
@@ -874,6 +892,12 @@ int UDP_p2p_to_L7type (ucb *thisflow)
 
     case UDP_SIP:
       return L7_FLOW_SIP;
+
+    case UDP_DTLS:
+      return L7_FLOW_DTLS;
+
+    case UDP_QUIC:
+      return L7_FLOW_QUIC;
 
     case UDP_UNKNOWN:
     case FIRST_RTP:

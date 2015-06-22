@@ -208,7 +208,11 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     1   Client IP Address
   //     2   Client Port
 
-  wfprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
+  if (ptp->crypto_src==FALSE)
+     wfprintf (fp_chat_logc, "%s %s", HostName (ptp->addr_pair.a_address),
+	   ServiceName (ptp->addr_pair.a_port));
+  else
+     wfprintf (fp_chat_logc, "%s %s", HostNameEncrypted (ptp->addr_pair.a_address),
 	   ServiceName (ptp->addr_pair.a_port));
 
   //     3   Flow Size [Bytes] 
@@ -229,7 +233,11 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   //     6   Server IP Address
   //     7   Server Port
 
-  wfprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
+  if (ptp->crypto_dst==FALSE)
+     wfprintf (fp_chat_logc, " %s %s", HostName (ptp->addr_pair.b_address),
+	   ServiceName (ptp->addr_pair.b_port));
+  else
+     wfprintf (fp_chat_logc, " %s %s", HostNameEncrypted (ptp->addr_pair.b_address),
 	   ServiceName (ptp->addr_pair.b_port));
 
   //     8   Flow Size [Bytes] 
@@ -265,6 +273,8 @@ print_ymsg_conn_stats (tcp_pair *ptp)
 
   wfprintf (fp_chat_logc, " %d %ld T %d", ptp->internal_dst,
 	   ptp->id_number, ptp->con_type);
+
+  wfprintf (fp_chat_logc, " %d %d", ptp->crypto_src, ptp->crypto_dst);
 
 //  if (debug > 2)
 //    wfprintf (fp_chat_logc, " %d %d", pymsg->arrived, pymsg->departed);

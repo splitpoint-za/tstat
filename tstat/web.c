@@ -18,16 +18,13 @@
 
 #include "tstat.h"
 #include "tcpL7.h"
-#ifdef VIDEO_DETAILS
 #include <regex.h>
-#endif
 
 extern enum video_content VIDEO_MAP(tcp_pair *);
 extern enum http_content YTMAP(enum http_content );
 
 
-#ifdef VIDEO_DETAILS
-char *patterns[19];
+char *patterns[21];
 char match_buffer[904];
 char yt_id[50];
 char yt_itag[5];
@@ -38,7 +35,7 @@ int  yt_redir_mode;
 int  yt_redir_count;
 int  yt_mobile;
 int  yt_stream;
-regex_t re[19];
+regex_t re[21];
 regmatch_t re_res[2];
 
 /* Indexes for YouTube Mobile parameters */
@@ -71,8 +68,10 @@ void init_web_patterns()
   patterns[16] = "/source/([^/]+)/";
   patterns[17] = "[?&]id=([A-Za-z0-9_-]{11})[& ]";
   patterns[18] = "/key/([^/?]+)[/?]";
+  patterns[19] = "[?&]?upn=([A-Za-z0-9_-]{11})[& ]";
+  patterns[20] = "/upn/([A-Za-z0-9_-]{11})[.]";
   
-  for (i=0;i<19;i++)
+  for (i=0;i<21;i++)
    {
      regcomp(&re[i],patterns[i],REG_EXTENDED);
    }
@@ -248,8 +247,6 @@ void parse_flv_header(tcp_pair *ptp, void *pdata,int data_length)
 
   return;
 }
-
-#endif
 
 enum http_content classify_flickr(char *base, int available_data)
 {
@@ -634,6 +631,9 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/connect/xd_proxy.php",
                ( available_data < 21 ? available_data : 21)) == 0)
          return HTTP_FACEBOOK;
+       else if (memcmp(base, "/connect/xd_arbiter/",
+               ( available_data < 20 ? available_data : 20)) == 0)
+         return HTTP_FACEBOOK;
        else if (memcmp(base, "/connect/xd_arbiter.php",
                ( available_data < 23 ? available_data : 23)) == 0)
          return HTTP_FACEBOOK;
@@ -909,7 +909,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      if (url_found[PARAM_KEY]!=0 && 
 	             ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
 		       memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
-		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0
+		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"cms1",4)!=0   /* cms is quite common, and not only necessarly mobile */
                      )
 		 )
 		{ 
@@ -944,7 +945,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   else if (url_found[PARAM_KEY]!=0 && 
 	              ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
 		        memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
-			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 )
+			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 &&
+		        memcmp(url_param[PARAM_KEY],"cms1",4)!=0 )   /* cms is quite common, and not only necessarly mobile */
 		   )
 	    { 
 	      yt_device2 = 1;
@@ -1495,12 +1497,15 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   if (
                 memcmp(base + 9 , "activity.php?", 13)==0 || 
                 memcmp(base + 9 , "likebox.php?", 12)==0 || 
+                memcmp(base + 9 , "like_box.php?", 13)==0 || 
                 memcmp(base + 9 , "like.php?", 9)==0 || 
+                memcmp(base + 9 , "login_button.php?", 17)==0 || 
                 memcmp(base + 9 , "subscribe.php?", 14)==0 || 
                 memcmp(base + 9 , "registration.php?", 17)==0 || 
                 memcmp(base + 9 , "facepile.php?", 12)==0 || 
                 memcmp(base + 9 , "fan.php?", 8)==0 || 
 		memcmp(base + 9 , "send.php?", 9)==0 || 
+                memcmp(base + 9 , "share_button.php?", 17)==0 || 
                 memcmp(base + 9 , "comments.php?", 13)==0 || 
                 memcmp(base + 9 , "recommendations.php?", 20)==0 
 	      )
@@ -1802,7 +1807,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	      if (url_found[PARAM_KEY]!=0 && 
 	             ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
 		       memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
-		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0
+		       memcmp(url_param[PARAM_KEY],"yt5",3)!=0 &&
+		       memcmp(url_param[PARAM_KEY],"cms1",4)!=0   /* cms is quite common, and not only necessarly mobile */
                      )
 		 )
 		{ 
@@ -1837,7 +1843,8 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	   else if (url_found[PARAM_KEY]!=0 && 
 	              ( memcmp(url_param[PARAM_KEY],"yt1",3)!=0 &&
 		        memcmp(url_param[PARAM_KEY],"dg_yt0",6)!=0 &&
-			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 )
+			memcmp(url_param[PARAM_KEY],"yt5",3)!=0 &&
+		        memcmp(url_param[PARAM_KEY],"cms1",4)!=0 )  /* cms is quite common, and not only necessarly mobile */
 		   )
 	    { 
 	      yt_device2 = 1;
@@ -2172,7 +2179,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
 	}
        else if (available_data > 12 && (memcmp(base, "/v",2) == 0) )
    	{
-	  /* Possibly obsolete */
+	  /* Possibly obsolete - It was Facebook, now mostly VK.com */
           status1=0;
    	  i = 2;
    	  while (i<12)
@@ -2186,7 +2193,7 @@ enum http_content classify_http_get(void *pdata,int data_length)
    	     i++;
    	   }
    	  if (status1==0)
-   	    return HTTP_FACEBOOK;
+   	    return HTTP_SOCIAL;
    	}		 
        break;
 

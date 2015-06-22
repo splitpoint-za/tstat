@@ -17,9 +17,11 @@
 */
 #include "tstat.h"
 #include "dump.h"
+#include "options.h"
+#include "globals.h"
 #include <string.h>
 
-typedef void ini_section_handler(char * param_name, int param_value);
+typedef void ini_section_handler(char * param_name, param_value param_value);
 typedef void ini_section_limit(void);
 
 struct ini_section {
@@ -32,6 +34,8 @@ struct ini_section {
 static struct ini_section ini_sections[] = {
     {"[dump]", dump_parse_ini_arg, dump_ini_start_section, dump_ini_end_section},
     {"[log]", log_parse_ini_arg, log_parse_start_section, log_parse_end_section},
+    {"[options]",options_parse_ini_arg,options_parse_start_section,options_parse_end_section},
+    {"[globals]",globals_parse_ini_arg,globals_parse_start_section,globals_parse_end_section},
 };
 #define INI_SECTION_LEN (sizeof(ini_sections) / sizeof(struct ini_section))
 #define BUF_SIZE 80
@@ -94,7 +98,7 @@ char * readline(FILE *fp, int skip_comment, int skip_void_lines) {
 void ini_read(char *fname) {
     FILE *fp;
     char *line, *word, *param_name;
-    int param_value;
+    param_value param_value;
     int i, len;
     struct ini_section *curr_section;
 
@@ -112,7 +116,8 @@ void ini_read(char *fname) {
 
         word = strtok(line, " \t\n");
         param_name = NULL;
-        param_value = INI_PARAM_VALUE_DEFAULT;
+        param_value.value.ivalue = INI_PARAM_VALUE_DEFAULT;
+	param_value.type = INTEGER;
         while(word != NULL) {
             //skip comments and void lines
             if (word[0] == '#' || word[0] == '\0')
@@ -127,7 +132,7 @@ void ini_read(char *fname) {
 
                 curr_section = NULL;
                 for (i = 0; i < INI_SECTION_LEN; i++) {
-                    if (strcmp(word, ini_sections[i].name) == 0)
+                    if (strcasecmp(word, ini_sections[i].name) == 0)
                         break;
                 }
                 if (i == INI_SECTION_LEN) {
@@ -144,7 +149,7 @@ void ini_read(char *fname) {
             else if (word[0] != '=') {
                 if (!param_name)
                     param_name = word;
-                else if (param_value == INI_PARAM_VALUE_DEFAULT) {
+                else if (param_value.value.ivalue == INI_PARAM_VALUE_DEFAULT) {
                     len = strlen(word);
                     if (len>2 && word[0]=='0' && tolower(word[1])=='x')
                      {
@@ -154,18 +159,31 @@ void ini_read(char *fname) {
                          fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
                          exit(1);
                         }
-                       sscanf(word,"%x",&param_value);
+                       sscanf(word,"%x",&param_value.value.ivalue);
                      }
                     else
                      {
-                      for (i = 0; i < len && isdigit(word[i]); i++)
-                        ;
-                      if (i != len) {
+		      int floating = 0;
+                      for (i = 0; i < len && ( isdigit(word[i]) || word[i]=='.' ); i++)
+		       {
+			 if (word[i]=='.') floating++;
+		       }
+		       
+                      if (i != len || floating>1) {
                         fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
                         exit(1);
                        }
-                      param_value = atoi(word);
-                     }
+                      if (floating==1)
+		       {
+			 param_value.type = DOUBLE;
+			 param_value.value.dvalue = atof(word);
+                       }
+                      else
+		       {
+			 param_value.type = INTEGER;
+                         param_value.value.ivalue = atoi(word);
+		       }
+		     }
                 }
                 else {
                     fprintf (fp_stderr, "inireader: '%s' - syntax error\n", word);
@@ -180,14 +198,17 @@ void ini_read(char *fname) {
             curr_section->handler != NULL && 
             param_name != NULL) 
         {
-            if (param_value == INI_PARAM_VALUE_DEFAULT)
-                param_value = 1;
+            if (param_value.value.ivalue == INI_PARAM_VALUE_DEFAULT)
+                param_value.value.ivalue = 1;
             curr_section->handler(param_name, param_value);
         }
     }
 
-    if (curr_section->handler_end) {
+    if (curr_section && curr_section->handler_end) {
         curr_section->handler_end();
+    }
+    else if (curr_section==NULL) {
+        fprintf (fp_stderr, "inireader: warning - No section header in file '%s' - File ignored\n", fname);
     }
 
     fclose(fp);

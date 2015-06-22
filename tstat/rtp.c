@@ -1127,26 +1127,52 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 
       if (dir == C2S)
 	{
-	  wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+	  if (pup->crypto_src==FALSE)
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
 		   PROTOCOL_UDP,
 		   RTP_PROTOCOL,
 		   HostName (pup->addr_pair.a_address),
 		   ServiceName (pup->addr_pair.a_port));
-	  wfprintf (fp_dup_ooo_log,
+          else
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+		   PROTOCOL_UDP,
+		   RTP_PROTOCOL,
+		   HostNameEncrypted (pup->addr_pair.a_address),
+		   ServiceName (pup->addr_pair.a_port));
+	  if (pup->crypto_dst==FALSE)
+	     wfprintf (fp_dup_ooo_log,
 		   " %s %s",
 		   HostName (pup->addr_pair.b_address),
+		   ServiceName (pup->addr_pair.b_port));
+	  else
+	     wfprintf (fp_dup_ooo_log,
+		   " %s %s",
+		   HostNameEncrypted (pup->addr_pair.b_address),
 		   ServiceName (pup->addr_pair.b_port));
 	}
       else
 	{
-	  wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+	  if (pup->crypto_dst==FALSE)
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
 		   PROTOCOL_UDP,
 		   RTP_PROTOCOL,
 		   HostName (pup->addr_pair.b_address),
 		   ServiceName (pup->addr_pair.b_port));
-	  wfprintf (fp_dup_ooo_log,
+          else
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+		   PROTOCOL_UDP,
+		   RTP_PROTOCOL,
+		   HostNameEncrypted (pup->addr_pair.b_address),
+		   ServiceName (pup->addr_pair.b_port));
+	  if (pup->crypto_src==FALSE)
+	     wfprintf (fp_dup_ooo_log,
 		   " %s %s",
 		   HostName (pup->addr_pair.a_address),
+		   ServiceName (pup->addr_pair.a_port));
+	  else
+	     wfprintf (fp_dup_ooo_log,
+		   " %s %s",
+		   HostNameEncrypted (pup->addr_pair.a_address),
 		   ServiceName (pup->addr_pair.a_port));
 	}
       wfprintf (fp_dup_ooo_log, " %d", seg_type);
@@ -1504,10 +1530,18 @@ update_conn_log_v2(udp_pair *flow)
 	  return;
 
   /* Request C-->S */
-  wfprintf (fp_rtp_logc, "%d %d %s %s %u",
+  if (flow->crypto_src==FALSE)
+     wfprintf (fp_rtp_logc, "%d %d %s %s %u",
           PROTOCOL_UDP,
 	  flow->c2s.type,
 	  HostName (flow->addr_pair.a_address),
+	  ServiceName (flow->addr_pair.a_port),
+	  flow->internal_src);
+  else 
+     wfprintf (fp_rtp_logc, "%d %d %s %s %u",
+          PROTOCOL_UDP,
+	  flow->c2s.type,
+	  HostNameEncrypted (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
 	  flow->internal_src);
 
@@ -1603,9 +1637,16 @@ update_conn_log_v2(udp_pair *flow)
   }
 	
   /* Answer C<--S */
-  wfprintf (fp_rtp_logc, " %d %s %s %u",
+  if (flow->crypto_dst==FALSE)
+     wfprintf (fp_rtp_logc, " %d %s %s %u",
 	  flow->s2c.type,
 	  HostName (flow->addr_pair.b_address),
+	  ServiceName (flow->addr_pair.b_port),
+	  flow->internal_dst);
+  else
+     wfprintf (fp_rtp_logc, " %d %s %s %u",
+	  flow->s2c.type,
+	  HostNameEncrypted (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
 	  flow->internal_dst);
 
@@ -1730,7 +1771,7 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
   int seg_type = IN_SEQ;
   extern FILE *fp_dup_ooo_log;
 #endif
-
+  extern unsigned int ip_obfuscate_mask;
 
   f_rtp = &thisdir->flow.rtp;
   pup = thisdir->pup;
@@ -1743,11 +1784,30 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
   if (pup->addr_pair.b_address.addr_vers == 4)
     {
       uint32_t ip_addr;
-      if (dir == C2S)
-	ip_addr = ntohl (pup->addr_pair.b_address.un.ip4.s_addr);
+      if (ip_obfuscate_mask==0x00000000)
+       {
+	  if (dir == C2S)
+	    ip_addr = ntohl (pup->addr_pair.b_address.un.ip4.s_addr);
+	  else
+	    ip_addr = ntohl (pup->addr_pair.a_address.un.ip4.s_addr);
+       }
       else
-	ip_addr = ntohl (pup->addr_pair.a_address.un.ip4.s_addr);
-
+       {
+	  if (dir == C2S)
+	  {
+	    if (pup->internal_dst)
+	      ip_addr = ntohl (pup->addr_pair.b_address.un.ip4.s_addr ^ ip_obfuscate_mask);
+	    else
+	      ip_addr = ntohl (pup->addr_pair.b_address.un.ip4.s_addr);
+	  }
+	  else
+	  {
+	    if (pup->internal_src)
+	      ip_addr = ntohl (pup->addr_pair.a_address.un.ip4.s_addr ^ ip_obfuscate_mask);
+	    else
+	      ip_addr = ntohl (pup->addr_pair.a_address.un.ip4.s_addr);
+	  }
+       }
       if (ip_addr >= LB_MULTICAST && ip_addr < UB_MULTICAST)
 	uni_multi = MULTICAST;
       else
@@ -1835,26 +1895,52 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 
       if (dir == C2S)
 	{
-	  wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+	  if (pup->crypto_src==FALSE)
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
 		   PROTOCOL_UDP,
 		   RTP_PROTOCOL,
 		   HostName (pup->addr_pair.a_address),
 		   ServiceName (pup->addr_pair.a_port));
-	  wfprintf (fp_dup_ooo_log,
+	  else
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+		   PROTOCOL_UDP,
+		   RTP_PROTOCOL,
+		   HostNameEncrypted (pup->addr_pair.a_address),
+		   ServiceName (pup->addr_pair.a_port));
+	  if (pup->crypto_dst==FALSE)
+	     wfprintf (fp_dup_ooo_log,
 		   " %s %s",
 		   HostName (pup->addr_pair.b_address),
+		   ServiceName (pup->addr_pair.b_port));
+	  else
+	     wfprintf (fp_dup_ooo_log,
+		   " %s %s",
+		   HostNameEncrypted (pup->addr_pair.b_address),
 		   ServiceName (pup->addr_pair.b_port));
 	}
       else
 	{
-	  wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+	  if (pup->crypto_dst==FALSE)
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
 		   PROTOCOL_UDP,
 		   RTP_PROTOCOL,
 		   HostName (pup->addr_pair.b_address),
 		   ServiceName (pup->addr_pair.b_port));
-	  wfprintf (fp_dup_ooo_log,
+	  else
+	     wfprintf (fp_dup_ooo_log, "%d %d %s %s",
+		   PROTOCOL_UDP,
+		   RTP_PROTOCOL,
+		   HostNameEncrypted (pup->addr_pair.b_address),
+		   ServiceName (pup->addr_pair.b_port));
+	  if (pup->crypto_src==FALSE)
+	     wfprintf (fp_dup_ooo_log,
 		   " %s %s",
 		   HostName (pup->addr_pair.a_address),
+		   ServiceName (pup->addr_pair.a_port));
+	  else
+	     wfprintf (fp_dup_ooo_log,
+		   " %s %s",
+		   HostNameEncrypted (pup->addr_pair.a_address),
 		   ServiceName (pup->addr_pair.a_port));
 	}
       wfprintf (fp_dup_ooo_log, " %d %d %d\n",
@@ -2051,24 +2137,48 @@ update_rtp_conn_log_v1 (ucb * thisdir, int dir)
   
   if (dir == C2S)
     {
-      wfprintf (fp_rtp_logc, "%d %d %s %s",
+      if (pup->crypto_src==FALSE)
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTP_PROTOCOL,
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
-      wfprintf (fp_rtp_logc, " %s %s",
+      else
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
+	       PROTOCOL_UDP,
+	       RTP_PROTOCOL,
+	       HostNameEncrypted (pup->addr_pair.a_address),
+	       ServiceName (pup->addr_pair.a_port));
+      if (pup->crypto_dst==FALSE)
+         wfprintf (fp_rtp_logc, " %s %s",
 	       HostName (pup->addr_pair.b_address),
+	       ServiceName (pup->addr_pair.b_port));
+      else
+         wfprintf (fp_rtp_logc, " %s %s",
+	       HostNameEncrypted (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
     }
   else
     {
-      wfprintf (fp_rtp_logc, "%d %d %s %s",
+      if (pup->crypto_dst==FALSE)
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTP_PROTOCOL,
 	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
-      wfprintf (fp_rtp_logc, " %s %s",
+      else
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
+	       PROTOCOL_UDP,
+	       RTP_PROTOCOL,
+	       HostNameEncrypted (pup->addr_pair.b_address),
+	       ServiceName (pup->addr_pair.b_port));
+      if (pup->crypto_src==FALSE)
+         wfprintf (fp_rtp_logc, " %s %s",
 	       HostName (pup->addr_pair.a_address),
+	       ServiceName (pup->addr_pair.a_port));
+      else
+         wfprintf (fp_rtp_logc, " %s %s",
+	       HostNameEncrypted (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
     }
 
@@ -2195,24 +2305,48 @@ update_rtcp_conn_log_v1 (ucb * thisdir, int dir)
 
   if (dir == C2S)
     {
-      wfprintf (fp_rtp_logc, "%d %d %s %s",
+      if (pup->crypto_src==FALSE)
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTCP_PROTOCOL,
 	       HostName (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
-      wfprintf (fp_rtp_logc, " %s %s",
+      else
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
+	       PROTOCOL_UDP,
+	       RTCP_PROTOCOL,
+	       HostNameEncrypted (pup->addr_pair.a_address),
+	       ServiceName (pup->addr_pair.a_port));
+      if (pup->crypto_dst==FALSE)
+         wfprintf (fp_rtp_logc, " %s %s",
 	       HostName (pup->addr_pair.b_address),
+	       ServiceName (pup->addr_pair.b_port));
+      else
+         wfprintf (fp_rtp_logc, " %s %s",
+	       HostNameEncrypted (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
     }
   else
     {
-      wfprintf (fp_rtp_logc, "%d %d %s %s",
+      if (pup->crypto_dst==FALSE)
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
 	       PROTOCOL_UDP,
 	       RTCP_PROTOCOL,
 	       HostName (pup->addr_pair.b_address),
 	       ServiceName (pup->addr_pair.b_port));
-      wfprintf (fp_rtp_logc, " %s %s",
+      else
+         wfprintf (fp_rtp_logc, "%d %d %s %s",
+	       PROTOCOL_UDP,
+	       RTCP_PROTOCOL,
+	       HostNameEncrypted (pup->addr_pair.b_address),
+	       ServiceName (pup->addr_pair.b_port));
+      if (pup->crypto_dst==FALSE)
+         wfprintf (fp_rtp_logc, " %s %s",
 	       HostName (pup->addr_pair.a_address),
+	       ServiceName (pup->addr_pair.a_port));
+      else
+         wfprintf (fp_rtp_logc, " %s %s",
+	       HostNameEncrypted (pup->addr_pair.a_address),
 	       ServiceName (pup->addr_pair.a_port));
     }
 

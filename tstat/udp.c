@@ -19,14 +19,11 @@
 
 #include "tstat.h"
 #include "tcpL7.h"
+#include "dns_cache.h"
 
-
-/* Dichiarazione dei mutex per gestione dei thread */
-extern pthread_mutex_t utp_lock_mutex;
-extern pthread_mutex_t flow_close_started_mutex;
-extern pthread_mutex_t flow_close_cond_mutex;
-extern pthread_cond_t flow_close_cond;
-extern Bool threaded;
+#ifdef DNS_CACHE_PROCESSOR
+extern Bool dns_enabled;
+#endif
 
 extern struct L4_bitrates L4_bitrate;
 
@@ -59,7 +56,7 @@ dup_udp_check (struct ip *pip, struct udphdr *pudp, ucb * thisdir)
   double delta_t = elapsed (thisdir->last_pkt_time, current_time);
   if (thisdir->last_ip_id == pip->ip_id &&
       thisdir->last_checksum == ntohs(pudp->uh_sum) && 
-      delta_t < MIN_DELTA_T_UDP_DUP_PKT && thisdir->last_len == pip->ip_len)
+      delta_t < GLOBALS.Min_Delta_T_UDP_Dup_Pkt && thisdir->last_len == pip->ip_len)
     {
 //       fprintf (fp_stdout, "dup udp %d , id = %u ",tot++, pip->ip_id);
 //       fprintf (fp_stdout, "TTL: %d ID: %d Checksum: %d Delta_t: %g\n", 
@@ -86,16 +83,16 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 
   /* look for the next eventually available free block */
   num_udp_pairs++;
-  num_udp_pairs = num_udp_pairs % MAX_UDP_PAIRS;
+  num_udp_pairs = num_udp_pairs % GLOBALS.Max_UDP_Pairs;
   /* make a new one, if possible */
   while ((num_udp_pairs != old_new_udp_pairs) && (utp[num_udp_pairs] != NULL)
-	 && (steps < LIST_SEARCH_DEPT))
+	 && (steps < GLOBALS.List_Search_Dept))
     {
       steps++;
       /* look for the next one */
 //         fprintf (fp_stdout, "%d %d\n", num_udp_pairs, old_new_udp_pairs);
       num_udp_pairs++;
-      num_udp_pairs = num_udp_pairs % MAX_UDP_PAIRS;
+      num_udp_pairs = num_udp_pairs % GLOBALS.Max_UDP_Pairs;
     }
   if (utp[num_udp_pairs] != NULL)
     {
@@ -132,6 +129,19 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
   pup->cloud_src = cloud_src;
   pup->cloud_dst = cloud_dst;
 
+  if (crypto_src)
+   {
+     store_crypto_ip(&(pup->addr_pair.a_address.un.ip4));
+   }
+
+  if (crypto_dst)
+   {
+     store_crypto_ip(&(pup->addr_pair.b_address.un.ip4));
+   }
+
+  pup->crypto_src = crypto_src;
+  pup->crypto_dst = crypto_dst;
+
   pup->c2s.type = UDP_UNKNOWN;
   pup->s2c.type = UDP_UNKNOWN;
   
@@ -141,11 +151,38 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
   pup->c2s.uTP_state = UTP_UNKNOWN;
   pup->s2c.uTP_state = UTP_UNKNOWN;
 
+  pup->c2s.QUIC_state = QUIC_UNKNOWN;
+  pup->s2c.QUIC_state = QUIC_UNKNOWN;
+  
+#ifdef DNS_CACHE_PROCESSOR
+ if (dns_enabled)
+  {
+    /* Do reverse lookup */
+    struct DNS_data* dns_data = get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+    if(dns_data!=NULL){
+	  pup->dns_name = dns_data->hostname;
+	  pup->dns_server = dns_data->dns_server;
+	  pup->request_time = dns_data->request_time;
+	  pup->response_time = dns_data->response_time;
+     }
+  }
+ else
+  pup->dns_name = NULL;
+//  pup->dns_name = reverse_lookup(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+#else
+  pup->dns_name = NULL;
+/*
+  pup->dns_server = NULL;
+  pup->request_time = NULL;
+  pup->response_time = NULL;
+*/  
+#endif
+
   return (utp[num_udp_pairs]);
 }
 
 
-udp_pair *pup_hashtable[HASH_TABLE_SIZE] = { NULL };
+udp_pair **pup_hashtable;
 
 
 /* connection records are stored in a hash table.  Buckets are linked	*/
@@ -174,7 +211,7 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 	    ntohs (pudp->uh_sport), ntohs (pudp->uh_dport));
 
   /* grab the hash value (already computed by CopyAddr) */
-  hval = tp_in.addr_pair.hash % HASH_TABLE_SIZE;
+  hval = tp_in.addr_pair.hash % GLOBALS.Hash_Table_Size;
 
 
   pup_last = NULL;
@@ -246,30 +283,11 @@ FindUTP (struct ip * pip, struct udphdr * pudp, int *pdir)
 a new one */
 
   // we fire it at DOUBLE rate, but actually clean only those > UDP_IDLE_TIME
-#ifdef WIPE_UDP_SINGLETONS
-  if (elapsed (last_cleaned, current_time) > UDP_SINGLETON_TIME / 2)
-#else
-  if (elapsed (last_cleaned, current_time) > UDP_IDLE_TIME / 2)
-#endif
+  if (elapsed (last_cleaned, current_time) > GLOBALS.GC_Fire_Time)
     {
-      if (threaded)
-	{
-	  pthread_mutex_lock (&flow_close_cond_mutex);
-
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "Signaling thread FLOW CLOSE\n");
-#endif
-	  pthread_cond_signal (&flow_close_cond);
-	  pthread_mutex_unlock (&flow_close_cond_mutex);
-
-	  pthread_mutex_lock (&flow_close_started_mutex);
-	  pthread_mutex_unlock (&flow_close_started_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nlocked thread FLOW CLOSE\n");
-#endif
-	}
-      else
-	trace_done_periodic ();
+      int i;
+      for (i=0; i< elapsed (last_cleaned, current_time) / GLOBALS.GC_Fire_Time; i++ )
+         trace_done_periodic ();
       last_cleaned = current_time;
     }
 
@@ -277,18 +295,6 @@ a new one */
   f_UDP_count++;
   add_histo (L4_flow_number, L4_FLOW_UDP);
 
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nFindUTP: Try to lock thread UTP\n");
-#endif
-
-      pthread_mutex_lock (&utp_lock_mutex);
-
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nFindUTP: Got lock thread UTP\n");
-#endif
-    }
   pup = NewUTP (pip, pudp);
 
   /* put at the head of the access list */
@@ -305,15 +311,6 @@ a new one */
         AVE_arrival(current_time, &missed_flows_win_UDP);
 
   *pdir = C2S;
-
-  if (threaded)
-    {
-      pthread_mutex_unlock (&utp_lock_mutex);
-
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nFindUTP: Unlocked thread TTP\n");
-#endif
-    }
 
   /*Return the new utp */
 
@@ -591,6 +588,259 @@ void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
       { 
         // fprintf(fp_stderr, "uTP type overriding %d\n",otherdir->type);
     	otherdir->type=P2P_UTP; 
+      }
+   }
+  return;
+}
+
+void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
+                ucb *thisdir, ucb *otherdir)
+{
+  int payload_len;
+  int data_len;
+  unsigned char *base;
+  int seq_nr;
+  char connection_id[8];
+
+  if (thisdir->is_QUIC==1 && otherdir->is_QUIC==1)
+    return;  /* Flow already classified */
+
+  payload_len = ntohs (pudp->uh_ulen);
+  /* This is the UDP complete length, included the header size */
+
+  base = (unsigned char *) pudp;
+  data_len = (unsigned char *) plast - (unsigned char *) base + 1;
+
+  if (data_len < 27 || payload_len == 0)
+    return;  /* Minimum safe QUIC size is probably 8+19 bytes */
+  
+  if ( base[8] > 0x3F )
+    return; /* Minimal protocol matching failed*/
+
+  switch(thisdir->QUIC_state)
+   {
+/*
+  The QUIC framing has a 2-19 byte header, starting with a
+  public flag byte.
+  The format for the public flag is 
+  00 xx yy r v (Reserved - SeqNr size - ConnID size - Reset - Version)
+  
+  A brief capture shows reasonable usage of:
+  0x0d -> Client opening, 8 byte CID, Version, 1 byte SeqNr - OPEN_CID_1B_V
+  0x0c -> Reopening/data, 8 byte CID, 1 byte SeqNr            DATA_CID_1B
+  0x1c -> Reopening/data, 8 byte CID, 2 byte SeqNr            DATA_CID_2B
+  0x00 -> Data, No CID, 1 byte SeqNr                          DATA_1B
+  0x10 -< Data, No CID, 2 byte SeqNr                          DATA_1B
+  
+  Currently (May 2015) either no CID or 8 byte CID are used.
+  Other sizes for CID or SeqNr seem not used.
+  
+  SeqNr may be 1 byte or more... and the sender can just send the 
+  LSB of the current SeqNr.
+
+  Since we are going to ignore the MSB of the SeqNr, we might just consider 3 states,
+  OPENV, OPEN, DATA
+  
+  Possible rules
+  
+  Unknown -> 0x0d -> OPENV -> OPENV_SENT -> is_QUIC
+  Unknown -> 0x0c -> OPEN  -> OPEN_SENT
+  Unknown -> 0x1c -> OPEN  -> OPEN_SENT
+  Unknown -> 0x00 -> DATA  -> DATA_SENT
+  Unknown -> 0x10 -> DATA  -> DATA_SENT
+  OPEN_SENT -> 0x0c/0x1c -> DATA_ID -> if CID == CID and SeqNr = SeqNr+1 -> is_QUIC
+  DATA_SENT -> 0x00/0x10 -> DATA -> if SeqNr == SeqNr+1 -> is_QUIC
+
+  For 'safeness' we might ignore DATA frames (0x00/0x01) until OPENV/OPEN has been seen in the opposite direction
+  
+  Let's start with unidirectional status, just checking CID and SeqNr.
+  Depending on the result, we might correlate the two directions.
+
+*/
+     case QUIC_UNKNOWN:
+       switch (base[8])
+        {
+	  case 0x0d:
+	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
+	     {
+	       thisdir->QUIC_seq_nr = base[21];
+	       memcpy(thisdir->QUIC_conn_id,base+9,8);
+	       thisdir->QUIC_state=QUIC_OPENV_SENT;
+	       /* If SeqNr == 1, the match is strong enough to guarantee the classification */
+               if (thisdir->QUIC_seq_nr == 1)
+	          thisdir->is_QUIC = 1;
+	     }
+	    break;
+	  case 0x0c:
+	  case 0x1c:
+	     thisdir->QUIC_seq_nr = (int)base[17];
+	     memcpy(thisdir->QUIC_conn_id,base+9,8);
+	     thisdir->QUIC_state=QUIC_OPEN_SENT;
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		// This is the first in this direction. Let's check if the 
+		// CID in this direction is the same than the one in the opposite direction
+		if (memcmp(thisdir->QUIC_conn_id,otherdir->QUIC_conn_id,8)==0)
+		 {
+	            thisdir->is_QUIC = 1;
+		 }
+	      }
+	    break;
+	  case 0x00:
+	  case 0x10:
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		/* Given the lightweight matching, we wait until the other direction has started
+		   the QUIC classification
+		*/
+	        thisdir->QUIC_seq_nr = (int)base[9];
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }	
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     case QUIC_OPENV_SENT:
+     case QUIC_OPEN_SENT:
+       /* If we are here, we still have to see meaningful information in both directions */
+       /* If there is an CID, We expect to match the ID with the previous ID state, and that the sequence number is +1 */
+       switch (base[8])
+        {
+	  case 0x0d:
+	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
+	     {
+	       seq_nr = (int)base[21];
+	       memcpy(connection_id,base+9,8);
+	       if ( memcmp(connection_id,thisdir->QUIC_conn_id,8)==0 &&
+		      (seq_nr == thisdir->QUIC_seq_nr + 1) )
+		 {
+		   thisdir->QUIC_seq_nr = seq_nr;
+		   thisdir->is_QUIC = 1;  
+		 }
+	       else
+		 {
+		   /* Update the information, overriding the previous status */
+		   memcpy(thisdir->QUIC_conn_id,connection_id,8);
+		   thisdir->QUIC_seq_nr = seq_nr;
+	           thisdir->QUIC_state=QUIC_OPENV_SENT;
+                   if (thisdir->QUIC_seq_nr == 1)
+	              thisdir->is_QUIC = 1;
+		 }
+	     }
+	    break;
+	  case 0x0c:
+	  case 0x1c:
+	    /* We match with the previous in the same direction */
+	    seq_nr = (int)base[17];
+	    memcpy(connection_id,base+9,8);
+	    if ( memcmp(connection_id,thisdir->QUIC_conn_id,8)==0 &&
+		 (seq_nr == thisdir->QUIC_seq_nr + 1) )
+	      {
+		thisdir->QUIC_seq_nr = seq_nr;
+		thisdir->is_QUIC = 1;  
+	      }
+	    else
+	      {
+		/* Update the information */
+		memcpy(thisdir->QUIC_conn_id,connection_id,8);
+		thisdir->QUIC_seq_nr = seq_nr;
+	        thisdir->QUIC_state=QUIC_OPEN_SENT;
+	      }
+	    break;
+	  case 0x00:
+	  case 0x10:
+	    /* If we are here, we had a previous OPEN state, but now we have some DATA */
+	    /* We use the previous logic, and elaborate only if the status in the opposite direction */
+	    /* is not unknown */
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		/* Given the lightweight matching, we wait until the other direction has started
+		   the QUIC classification
+		*/
+	        thisdir->QUIC_seq_nr = (int)base[9];
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }	
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     case QUIC_DATA_SENT:
+       /* If we are here, we started the classification in the opposite direction, and we started seeing data in this direction */ 
+       switch (base[8])
+        {
+	  case 0x0d:
+	    /* Another OPENV - Reset the status */
+	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
+	     {
+	       thisdir->QUIC_seq_nr = base[21];
+	       memcpy(thisdir->QUIC_conn_id,base+9,8);
+	       thisdir->QUIC_state=QUIC_OPENV_SENT;
+	       /* If SeqNr == 1, the match is strong enough to guarantee the classification */
+               if (thisdir->QUIC_seq_nr == 1)
+	          thisdir->is_QUIC = 1;
+	     }
+	    break;
+	  case 0x0c:
+	  case 0x1c:
+	    /* Another OPEN - Reset the status */
+	     thisdir->QUIC_seq_nr = (int)base[17];
+	     memcpy(thisdir->QUIC_conn_id,base+9,8);
+	     thisdir->QUIC_state=QUIC_OPEN_SENT;
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		// This is the first in this direction. Let's check if the 
+		// CID in this direction is the same than the one in the opposite direction
+		if (memcmp(thisdir->QUIC_conn_id,otherdir->QUIC_conn_id,8)==0)
+		 {
+	            thisdir->is_QUIC = 1;
+		 }
+	      }
+	    break;
+	  case 0x00:
+	  case 0x10:
+	    /* If we are here, we had a previous DATA state, we match the sequence number */
+	     seq_nr = (int)base[9];
+	     if ( seq_nr == thisdir->QUIC_seq_nr + 1 )
+	      {
+		thisdir->QUIC_seq_nr = seq_nr;
+		thisdir->is_QUIC = 1;  
+	      }
+	     else
+	      {
+		thisdir->QUIC_seq_nr = seq_nr;
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }
+	    break;
+	  default:
+	    break;
+	}
+       break;
+     default:
+       break;
+   }
+
+  if (thisdir->is_QUIC==1 && otherdir->is_QUIC==1)
+   {
+     if (thisdir->type==UDP_UNKNOWN ||
+    	 thisdir->type==FIRST_RTP || 
+    	 thisdir->type==FIRST_RTCP)
+      { thisdir->type=UDP_QUIC; }
+     else
+      { 
+        // fprintf(fp_stderr, "QUIC type overriding %d\n",thisdir->type);
+    	thisdir->type=UDP_QUIC; 
+      }
+
+     if (otherdir->type==UDP_UNKNOWN ||
+    	 otherdir->type==FIRST_RTP || 
+    	 otherdir->type==FIRST_RTCP)
+      { otherdir->type=UDP_QUIC; }
+     else
+      { 
+        // fprintf(fp_stderr, "QUIC type overriding %d\n",otherdir->type);
+    	otherdir->type=UDP_QUIC; 
       }
    }
   return;
@@ -901,6 +1151,9 @@ behavioral_flow_wrap (struct ip *pip, void *pproto, int tproto, void *pdir,
 		if (pup_save->packets<MAX_UDP_UTP)
 		  check_uTP(pip, pudp,plast,thisdir,otherdir);
 		
+		if (pup_save->packets<MAX_UDP_QUIC)
+		  check_QUIC(pip, pudp,plast,thisdir,otherdir);
+
 		if (pup_save->packets<MAX_UDP_VOD)
 		  check_udp_vod(pip, pudp,plast,thisdir,otherdir);
 		
@@ -941,14 +1194,19 @@ void
 udptrace_init (void)
 {
   static Bool initted = FALSE;
+  extern udp_pair **pup_hashtable;
 
   if (initted)
     return;
 
   initted = TRUE;
 
+  /* initialize the hash table */
+
+  pup_hashtable = (udp_pair **) MallocZ (GLOBALS.Hash_Table_Size * sizeof (udp_pair *));
+
   /* create an array to hold any pairs that we might create */
-  utp = (udp_pair **) MallocZ (MAX_UDP_PAIRS * sizeof (udp_pair *));
+  utp = (udp_pair **) MallocZ (GLOBALS.Max_UDP_Pairs * sizeof (udp_pair *));
 }
 
 void
@@ -958,7 +1216,7 @@ udptrace_done (void)
     int ix;
     int dir = -1;
 
-    for (ix = 0; ix < MAX_UDP_PAIRS; ix++) {
+    for (ix = 0; ix < GLOBALS.Max_UDP_Pairs; ix++) {
         pup = utp[ix];
         // check if the flow has been already closed
         if (pup == NULL)
@@ -1059,7 +1317,7 @@ void
 close_udp_flow (udp_pair * pup, int ix, int dir)
 {
 
-  extern udp_pair *pup_hashtable[];
+  extern udp_pair **pup_hashtable;
   udp_pair **ppuph_head = NULL;
   udp_pair *puph_tmp, *puph, *puph_prev;
   unsigned int cleaned = 0;
@@ -1067,29 +1325,6 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   int j;
   int tmp;
 
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nTrace_done_periodic: trying lock thread UTP\n");
-#endif
-      pthread_mutex_lock (&utp_lock_mutex);
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nTrace_done_periodic: got lock thread UTP\n");
-#endif
-      if ((pup == NULL))
-	/* someonelse already cleaned this pup */
-	{
-	  pthread_mutex_unlock (&utp_lock_mutex);
-	  return;
-	}
-      if ((elapsed (pup->last_time, current_time) <= UDP_IDLE_TIME)
-	  || (pup->last_time.tv_sec == 0 && pup->last_time.tv_usec == 0))
-	{
-	  /* someonelse already cleaned this pup */
-	  pthread_mutex_unlock (&utp_lock_mutex);
-	  return;
-	}
-    }
   /* must be cleaned */
   cleaned++;
 
@@ -1100,7 +1335,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   tot_conn_UDP--;
 
   /* free up hash element->.. */
-  hval = pup->addr_pair.hash % HASH_TABLE_SIZE;
+  hval = pup->addr_pair.hash % GLOBALS.Hash_Table_Size;
 
   ppuph_head = &pup_hashtable[hval];
   j = 0;
@@ -1129,7 +1364,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
 
   if (ix == -1)			/* I should look for the correct ix value */
     {
-      for (ix = 0; ix < MAX_UDP_PAIRS; ++ix)
+      for (ix = 0; ix < GLOBALS.Max_UDP_Pairs; ++ix)
 	{
 	  //      pup = utp[ix];
 
@@ -1144,13 +1379,5 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
     }
 
   utp[ix] = NULL;
-
-  if (threaded)
-    {
-      pthread_mutex_unlock (&utp_lock_mutex);
-#ifdef DEBUG_THREAD_UTP
-      fprintf (fp_stdout, "\n\nTrace_done_periodic: released lock thread UTP\n");
-#endif
-    }
 
 }

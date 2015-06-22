@@ -19,6 +19,14 @@
 
 #ifdef HAVE_RRDTOOL
 
+#ifdef RRD_THREADED
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#endif
+
 #include <assert.h>
 #include "tstat.h"
 
@@ -45,6 +53,12 @@ void histo_parse_rrdconf (void);
 /* these two are taken from rrd_tool.c */
 int rrdtool_count_args (char *aLine);
 int rrdtool_create_args (char *pName, char *aLine, int argc, char **argv);
+
+#ifdef RRD_THREADED
+int command_pipe[2];
+void * call_rrd_update(void*arg);
+pthread_t write_thread;
+#endif
 
 typedef struct _rrd
 {
@@ -103,6 +117,11 @@ rrdtool_init ()
 {
   int i;
 
+#ifdef RRD_THREADED
+  pipe(command_pipe);
+  fcntl(command_pipe[1], F_SETPIPE_SZ, 1048576);
+#endif
+  
   rrd_clear_error ();
   rrd.fatal = 1;
   rrdtool_parse_config ();
@@ -111,10 +130,27 @@ rrdtool_init ()
   for (i = 0; i < MAX_RRD_ARGV; i++)
     rrd.argv[i] = (char *) malloc (512);
 
+#ifdef RRD_THREADED 
+  /* Create files at beginning, no blocks later!!!          */
+  //rrdtool_create_all();     
+
+  /* Set current thread with high CPU and IO priority 
+  struct sched_param sc_par;
+  sc_par.sched_priority = 0;
+  pthread_setschedparam(pthread_self(), SCHED_OTHER, &sc_par);
+  setpriority(PRIO_PROCESS, 0, -20); */
+  //syscall(SYS_ioprio_set,1, 0,  (2<< 13)| 0); 
+  pthread_create (&write_thread, NULL, (void *) &call_rrd_update, (void *) NULL);
+#else
+
   /* we rather want to create this now...    */
   /* but we need to wait for the first entry */
   /* so this is deferred to update           */
   /*            rrdtool_create_all();        */
+
+#endif
+
+
 }
 
 
@@ -638,8 +674,8 @@ rrdtool_create_command (const char *name, const char *what)
   /* MTRG-like behavior for on-line usage */
   sprintf (temp_rrd.cmd,
         "create %s --step %lu --start %ld DS:%s:GAUGE:%lu:U:U %s %s %s %s",
-        temp_rrd.file, (unsigned long) (MAX_TIME_STEP / 1000000),
-        (long) rrd.time_update - 10, name, (unsigned long) (MAX_TIME_STEP / 500000),
+        temp_rrd.file, (unsigned long) (GLOBALS.Max_Time_Step / 1000000),
+        (long) rrd.time_update - 10, name, (unsigned long) (GLOBALS.Max_Time_Step / 500000),
 	   RRA_DAILY, RRA_WEEKLY, RRA_MONTHLY, RRA_YEARLY);
   if (debug > 1)
     fprintf (fp_stderr, "rrdtool: rrd_create('%s')\n", temp_rrd.cmd);
@@ -681,6 +717,13 @@ rrdtool_update_command (const char *name, const char *what, double val)
   if (rrd.time_update == 0)
     rrd.time_update = (unsigned long) current_time.tv_sec;
 
+#ifdef RRD_THREADED
+  sprintf (rrd.cmd, "update %s %ld:%f\n", rrd.file, rrd.time_update, val);
+  if (RRD_DEBUG)
+    fprintf (fp_stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
+  
+  write (command_pipe[1],rrd.cmd, strlen(rrd.cmd) );
+#else
   sprintf (rrd.cmd, "update %s %ld:%f", rrd.file, rrd.time_update, val);
   if (RRD_DEBUG)
     fprintf (fp_stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
@@ -698,11 +741,57 @@ rrdtool_update_command (const char *name, const char *what, double val)
 	exit (1);
       rrd_clear_error ();
     }
+#endif
+  
 }
 
+#ifdef RRD_THREADED
+void * call_rrd_update(void*arg){
+	char buffer [2000];
+	int i = 0;
+	time_t t;
+	srand((unsigned) time(&t));
+	
+	/* Set Cpu and I/O low priority 
+	struct sched_param sc_par;
+	sc_par.sched_priority = 0;
+	pthread_setschedparam(pthread_self(), SCHED_OTHER, &sc_par);
+	setpriority(PRIO_PROCESS, 0, 19);
+	syscall(SYS_ioprio_set,1, 0,  (2<< 13)| 7);*/
 
+	/* Open pipe as a stream */
+	FILE * buffer_pipe = fdopen(command_pipe[0], "r");
+	rrd_clear_error ();
+	/* Infinite loop on pipe */
+	while(1){
+		usleep(10000);
+		fgets(buffer,2000,buffer_pipe);
 
+		/* Replace \n with \0 */
+		buffer[strlen(buffer)-1]= '\0';
 
+		/* Execute update */
+		rrdtool_str2argv(buffer);
+		optind = 0; 
+		opterr = 0;
+		rrd_update (rrd.argc, rrd.argv);
+
+		//if (i++%1000 == 0)printf("RRD\n"); 
+	
+		/* Check errors */
+		if (rrd_test_error ())
+		{
+			fprintf (fp_stderr, "rrdtool: update command:\n'%s'\n", buffer);
+			fprintf (fp_stderr, "rrdtool: update error!\n%s\n", rrd_get_error ());
+			if (rrd.fatal)
+				exit (1);
+			rrd_clear_error ();
+		}
+		
+	}
+	return NULL;
+}
+#endif
 
 /*-----------------------------------------------------------*/
 #endif

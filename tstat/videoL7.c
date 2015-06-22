@@ -490,9 +490,18 @@ enum video_content classify_video_by_payload(tcp_pair *ptp, void *pdata,
                 (*(base+376) == 0x47)
 		)
         { /* MPEG TS framing used in HLS */
+          /* Since NDS is also using MPEG TS framing, it will also patch partial
+             NDS flows */
           // printf(" video mpegts \n");
-	  return VIDEO_HLS;
-	}
+          return VIDEO_HLS;
+        }
+       else if ((available_data >= 16) &&
+                 memcmp(base, "\x47\x1F\xFF\x10", 4) == 0 &&
+                 memcmp(base + 4, "NDS File", 8) == 0)
+        { /* NDS File Format - Cisco Videoscape - Sky+ VOD stream */
+          /* Actually a NULL MPEG TS frame */
+          return VIDEO_NFF;
+        }
        return VIDEO_NOT_DEFINED;
    }
   return VIDEO_NOT_DEFINED;
@@ -737,6 +746,16 @@ enum video_content classify_video_by_ctype(void *pdata, int data_length)
 	       else
   	         return VIDEO_UNKNOWN;
  	       break;
+             case 'n':
+               if (memcmp(content_type + 6, "nff",
+                                  (subType_len < 3 ? subType_len : 3)) == 0)
+                {
+                  /* NDS File Format - Cisco Videoscape - Sky+ VOD stream */
+                  return VIDEO_NFF;
+                }
+               else
+                 return VIDEO_UNKNOWN;
+               break;
 	     case 'o':
 	       if (memcmp(content_type + 6, "ogg",
   				  (subType_len < 3 ? subType_len : 3)) == 0)

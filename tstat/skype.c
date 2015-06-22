@@ -1092,9 +1092,14 @@ print_skype_conn_stats_UDP (void *thisdir, int olddir)
     //     2   Client Port
     //     3   Internal address (0=no, 1=yes)
 
-    wfprintf (fp_skype_logc,"%s %s %d",
+    if (pup->crypto_src==FALSE)
+       wfprintf (fp_skype_logc,"%s %s %d %d",
   	     HostName (pup->addr_pair.a_address),
-  	     ServiceName (pup->addr_pair.a_port), pup->internal_src);
+  	     ServiceName (pup->addr_pair.a_port), pup->internal_src, pup->crypto_src);
+    else
+       wfprintf (fp_skype_logc,"%s %s %d %d",
+  	     HostNameEncrypted (pup->addr_pair.a_address),
+  	     ServiceName (pup->addr_pair.a_port), pup->internal_src, pup->crypto_src);
 
     //     4   Flow Size [Bytes]
     wfprintf (fp_skype_logc, " %llu", thisUdir->data_bytes);
@@ -1175,9 +1180,14 @@ print_skype_conn_stats_UDP (void *thisdir, int olddir)
     //    25   Server Port
     //    26   Internal address (0=no, 1=yes)
 
-    wfprintf (fp_skype_logc, " %s %s %d",
+    if (pup->crypto_dst==FALSE)
+       wfprintf (fp_skype_logc, " %s %s %d %d",
   	     HostName (pup->addr_pair.b_address),
-  	     ServiceName (pup->addr_pair.b_port), pup->internal_dst);
+  	     ServiceName (pup->addr_pair.b_port), pup->internal_dst, pup->crypto_dst);
+    else
+       wfprintf (fp_skype_logc, " %s %s %d %d",
+  	     HostNameEncrypted (pup->addr_pair.b_address),
+  	     ServiceName (pup->addr_pair.b_port), pup->internal_dst, pup->crypto_dst);
 
     //    27	Flow Size [Bytes]
     wfprintf (fp_skype_logc, " %llu", thisUdir->data_bytes);
@@ -1494,9 +1504,14 @@ print_skype_conn_stats_TCP (void *thisdir, int olddir)
      //     2	Client Port
      //     3	Internal address (0=no, 1=yes)
 
-     wfprintf (fp_skype_logc, "%s %s %d",
+     if (ptp->crypto_src==FALSE)
+        wfprintf (fp_skype_logc, "%s %s %d %d",
    	      HostName (ptp->addr_pair.a_address),
-   	      ServiceName (ptp->addr_pair.a_port), ptp->internal_src);
+   	      ServiceName (ptp->addr_pair.a_port), ptp->internal_src, ptp->crypto_src);
+     else
+        wfprintf (fp_skype_logc, "%s %s %d %d",
+   	      HostNameEncrypted (ptp->addr_pair.a_address),
+   	      ServiceName (ptp->addr_pair.a_port), ptp->internal_src, ptp->crypto_src);
  
      //     4	Flow Size [Bytes]
 
@@ -1561,9 +1576,14 @@ print_skype_conn_stats_TCP (void *thisdir, int olddir)
      //    15	Server Port
      //    16	Internal address (0=no, 1=yes)
 
-     wfprintf (fp_skype_logc, " %s %s %d",
+     if (ptp->crypto_dst==FALSE)
+        wfprintf (fp_skype_logc, " %s %s %d %d",
    	      HostName (ptp->addr_pair.b_address),
-   	      ServiceName (ptp->addr_pair.b_port), ptp->internal_dst);
+   	      ServiceName (ptp->addr_pair.b_port), ptp->internal_dst, ptp->crypto_dst);
+     else
+        wfprintf (fp_skype_logc, " %s %s %d %d",
+   	      HostNameEncrypted (ptp->addr_pair.b_address),
+   	      ServiceName (ptp->addr_pair.b_port), ptp->internal_dst, ptp->crypto_dst);
 
      //    17	Flow Size [Bytes]
 

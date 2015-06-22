@@ -24,7 +24,7 @@ void dump_flow_stat     (struct ip *pip, void *pproto, int tproto,
 void dump_flush         (Bool trace_completed);
 void dump_create_outdir (char * basedir);
 //void dump_restart       (void);
-void dump_parse_ini_arg (char *param_name, int param_value);
+void dump_parse_ini_arg (char *param_name, param_value param_value);
 void dump_ini_start_section (void);
 void dump_ini_end_section (void);
 void dump_ip(void *pip, void *plast);

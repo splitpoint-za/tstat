@@ -34,6 +34,13 @@ a brief overview of the cross-compilation procedure.
   The "other configure options" will be the ones normally needed for Android
   cross-compilation, like --host and/or --build.
   
+- [Optional] If you are compiling the DNHunter support, follow the DNHunter
+  compilation  procedure, defining also the C++ compiler (e.g. 
+  CXX=arm-linux-androideabi-g++ ) and updating the corresponding symbol in 
+  build_dns, so that the g++ linker can be used. 
+  At the time of writing these instructions, Tstat with DNHunter support
+  has not yet being deployed over an Android device.
+
 - After the compilation, tstat should be ready to be run over the (rooted) 
   Android device, like a normal command line application, with the same 
   command line options and configuration files used on any other device.

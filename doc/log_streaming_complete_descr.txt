@@ -46,36 +46,39 @@ Here it follows a brief description of the columns.
 # 28  # 57  # max rate	             # -     # Maximum rate sample
 # 29  # 58  # Src Internal           # 0/1   # 0 = external ip address, 1 = internal ip address 
 ############################################################################
-# 59  # Completion time              # ms    # Flow duration since first packet to last packet
-# 60  # First time	             # ms    # Flow first packet since first segment ever
-# 61  # Last time	             # ms    # Flow last segment since first segment ever
+# 59  # First time	             # ms    # Flow first packet absolute time (epoch)
+# 60  # Last time	             # ms    # Flow last segment absolute time (epoch)
+# 61  # Completion time              # ms    # Flow duration since first packet to last packet
 # 62  # C first payload              # ms    # Client first segment with payload since the first flow segment
 # 63  # S first payload              # ms    # Server first segment with payload since the first flow segment
 # 64  # C last payload               # ms    # Client last segment with payload since the first flow segment
 # 65  # S last payload               # ms    # Server last segment with payload since the first flow segment
 # 66  # C first ack            	     # ms    # Client first ACK segment (without SYN) since the first flow segment
 # 67  # S first ack                  # ms    # Server first ACK segment (without SYN) since the first flow segment
-# 68  # First time abs               # ms    # Flow first packet absolute time (epoch)
-# 69  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
-# 70  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
-# 71  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
-# 72  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
+# 68  # Connection type              # -     # Bitmask stating the connection type (by TCPL7 payload inspection engine). See protocol.h
+# 69  # P2P type	             # -     # Type of P2P protocol, as identified by the IPP2P engine. See ipp2p_tstat.h 
+# 70  # HTTP type                    # -     # For HTTP flows, the identified Web2.0 content. See the http_content enum in struct.h
+# 71  # HTTP Response                # -     # First HTTP Response code seen in the server->client communication
 ############################################################################
-# 73  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
-# 74  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
-# 75  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
-# 76  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
+# 72  # Video ID16	             # -     # 16-char YouTube video identifier, '--' otherwise
+# 73  # Video ID11	             # -     # 11-char YouTube video request ID if YOUTUBE_REQUEST_ID is defined, '--' otherwise
+# 74  # Video Format	             # -     # YouTube Video Format code [*], '--' otherwise.
+# 75  # Begin Offset	             # ms    # Playback offset for the Youtube video, 0 otherwise
 ############################################################################
-# 77  # Video Content-Type           # -     # The identified video format, based on the HTTP Content-Type information. See (1) for the description
-# 78  # Video Payload                # -     # The identified video format, based on the video payload information. See (1) for the description
+# 76  # Video Content-Type           # -     # The identified video format, based on the HTTP Content-Type information. See (1) for the description
+# 77  # Video Payload                # -     # The identified video format, based on the video payload information. See (1) for the description
 ############################################################################
-# 79  # Video duration	             # s     # Video duration as indicated in the payload [+]
-# 80  # Video total datarate         # kbps  # Total data rate as indicated in payload [+*]
-# 81  # Video width                  # pixel # Video width as indicated in the payload [+]
-# 82  # Video height                 # pixel # Video heigth as indicated in the payload [+]
+# 78  # Video duration	             # s     # Video duration as indicated in the payload [+]
+# 79  # Video total datarate         # kbps  # Total data rate as indicated in payload [+*]
+# 80  # Video width                  # pixel # Video width as indicated in the payload [+]
+# 81  # Video height                 # pixel # Video heigth as indicated in the payload [+]
 ############################################################################
+# 83  # FQDN                         # -     # Fully Qualified Domain Name recovered using DNHunter
+# 84  # IP of DNS resolver           # -     # IP address of the contacted DNS resolver
+# 85  # DNS request time             # ms    # unixtime (in ms) of the DNS request 
+# 86  # DNS response time            # ms    # unixtime (in ms) of the DNS response 
 
-VIDEO format - col. 77/78 (1)
+VIDEO format - col. 76/77 (1)
 ###################################################################################################################
 # Value # VIDEO FORMAT    # Description                       							  #
 ###################################################################################################################

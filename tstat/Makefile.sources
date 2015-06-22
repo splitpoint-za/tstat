@@ -29,8 +29,19 @@ HDR_FILES = \
     $(top_srcdir)/tstat/inireader.h\
     $(top_srcdir)/tstat/p2p.h\
     $(top_srcdir)/tstat/l7types.h\
+    $(top_srcdir)/tstat/options.h\
+    $(top_srcdir)/tstat/dns_namefilter.h\
+    $(top_srcdir)/tstat/dns_cache.h\
+    $(top_srcdir)/tstat/dnscache/DNSEntry.h\
+    $(top_srcdir)/tstat/dnscache/DNSCache.h\
     $(top_srcdir)/tstat/tstat_android_ether.h\
-    $(top_srcdir)/tstat/tstat_android_tcp.h
+    $(top_srcdir)/tstat/tstat_android_tcp.h\
+    $(top_srcdir)/tstat/crypto.h\
+    $(top_srcdir)/tstat/panon.h\
+    $(top_srcdir)/tstat/base64.h\
+    $(top_srcdir)/tstat/rijndael.h\
+    $(top_srcdir)/tstat/uthash.h\
+    $(top_srcdir)/tstat/globals.h
 
 CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/etherpeek.c \
@@ -72,6 +83,15 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/videoL7.c \
        $(top_srcdir)/tstat/http.c \
        $(top_srcdir)/tstat/web.c \
-	   $(top_srcdir)/tstat/dump.c\
+       $(top_srcdir)/tstat/dns_cache.c\
+       $(top_srcdir)/tstat/dns_namefilter.c\
+       $(top_srcdir)/tstat/dnscache/DNSEntry.cpp\
+       $(top_srcdir)/tstat/dnscache/DNSCache.cpp\
+       $(top_srcdir)/tstat/dump.c\
+       $(top_srcdir)/tstat/options.c\
        $(top_srcdir)/tstat/inireader.c\
-       $(top_srcdir)/tstat/tstat_android_ether.c
+       $(top_srcdir)/tstat/tstat_android_ether.c\
+       $(top_srcdir)/tstat/rijndael.c\
+       $(top_srcdir)/tstat/panon.c\
+       $(top_srcdir)/tstat/crypto.c\
+       $(top_srcdir)/tstat/globals.c

@@ -95,7 +95,8 @@ extern u_long udp_trace_count;
 typedef struct eth_filter
 {
   int tot_internal_eth;
-  uint8_t addr[MAX_INTERNAL_ETHERS][6];
+  // uint8_t addr[MAX_INTERNAL_ETHERS][6];
+  uint8_t **addr;
 } eth_filter;
 
 /* Skype */
@@ -462,6 +463,8 @@ typedef struct tcb
 #ifdef PACKET_STATS
  u_int seg_count;
  u_int seg_size[MAX_COUNT_SEGMENTS];
+ u_int ssl_handshake_seg_count;
+ u_int ssl_handshake_seg_size[MAX_COUNT_SEGMENTS];
  double last_seg_time;
  double seg_intertime[MAX_COUNT_SEGMENTS];
  double data_pkts_sum2;
@@ -469,7 +472,6 @@ typedef struct tcb
  double seg_intertime_sum2;
 #endif
 
-#ifdef VIDEO_DETAILS
  timeval rate_last_sample;
  double rate_left_edge;
  double rate_right_edge;
@@ -482,7 +484,6 @@ typedef struct tcb
  u_int  rate_bytes;
  u_int  rate_empty_streak;
  u_int  rate_begin_bytes[10];
-#endif
 }
 tcb;
 
@@ -524,13 +525,23 @@ enum state_type
   IMAP_OPENING,
   IMAP_COMMAND,
   SSL_HANDSHAKE,
-  SSL_SERVER,
+  SSL_DATA,
   SSH_SERVER,
   RTMP_HANDSHAKE,
   IGNORE_FURTHER_PACKETS
 };
 
-
+enum npnalpn {
+    TLS_EMPTY  =   0,
+    NPN_EMPTY  =   1,
+    NPN_HTTP   =   2,
+    NPN_SPDY   =   4,
+    NPN_H2     =   8,
+    ALPN_EMPTY =  16,
+    ALPN_HTTP  =  32,
+    ALPN_SPDY  =  64,
+    ALPN_H2    = 128,
+};
 
 enum video_content
 {
@@ -547,6 +558,7 @@ enum video_content
 	VIDEO_ASF,							/*  10 - x-ms-asf		*/
 	VIDEO_UNKNOWN,						/*  11 - Unclassified VIDEO 		*/
         VIDEO_HLS,                                             /* 12 - HLS Stream (SkyGo) */
+        VIDEO_NFF,                                             /* 13 - NDS File Format / Cisco Videoscape (Sky+ VOD Stream) */
 	VIDEO_LAST_TYPE
 };
 
@@ -668,7 +680,8 @@ struct stcp_pair
   unsigned char rtp_pt;
   Bool ignore_dpi;
   enum http_content http_data;
-#ifdef VIDEO_DETAILS
+  int  http_request_count;
+  int  http_response_count;
   char http_ytid[50];
   char http_ytitag[4];
   int  http_ytseek;
@@ -678,7 +691,6 @@ struct stcp_pair
   char http_response[4];
   int  http_ytmobile; /* Mobile device 0=desktop 1=Other 2=Apple 3=Android */
   int  http_ytstream;   
-#endif
 
   /* obfuscate ed2k identification */
   unsigned state_11:1;
@@ -698,6 +710,8 @@ struct stcp_pair
   u_int16_t nibble_packet_count;
   double entropy_l;
   double entropy_h;
+  u_int16_t entropy_l_valid;
+  u_int16_t entropy_h_valid;
 
   /* rtmp identification */
   unsigned state_rtmp_c2s_seen:1;
@@ -710,11 +724,30 @@ struct stcp_pair
   /* Cloud identification */
   Bool cloud_src;
   Bool cloud_dst;
+
+  /* Cloud identification */
+  Bool crypto_src;
+  Bool crypto_dst;
   
-  char *ssl_client_subject;
-  char *ssl_server_subject;
-  Bool ssl_client_spdy;
-  Bool ssl_server_spdy;
+  char   *ssl_client_subject;
+  char   *ssl_server_subject;
+  enum npnalpn ssl_client_npnalpn;
+  enum npnalpn ssl_server_npnalpn;
+  timeval ssl_client_data_time;
+  timeval ssl_server_data_time;
+  timeval ssl_client_before_data_time;
+  timeval ssl_server_before_data_time;
+  seqnum  ssl_client_data_byte;
+  seqnum  ssl_server_data_byte;
+  Bool    ssl_client_data_seen;
+  Bool    ssl_server_data_seen;
+  Bool    ssl_sessionid_reuse;
+
+  /* DNS reverse lookup */
+  char* dns_name;
+  struct in_addr dns_server;
+  timeval request_time;
+  timeval response_time;
   
   /* Exclude packets from this flow when generating the tcp_complete.pcap */
    Bool stop_dumping_tcp;
@@ -763,6 +796,8 @@ enum udp_type
   P2P_PPSTREAM,
   TEREDO,
   UDP_SIP,
+  UDP_DTLS,
+  UDP_QUIC,
   LAST_UDP_PROTOCOL
 };
 
@@ -821,6 +856,10 @@ enum udp_type
  printf("TEREDO = %d\n",temp); \
  temp = UDP_SIP; \
  printf("UDP_SIP = %d\n",temp); \
+ temp = UDP_DTLS; \
+ printf("UDP_DTLS = %d\n",temp); \
+ temp = UDP_QUIC; \
+ printf("UDP_QUIC = %d\n",temp); \
 }
 
 
@@ -912,6 +951,14 @@ enum uTP_udp_state
   UTP_ACK_SENT
 };
 
+enum QUIC_udp_state
+{
+  QUIC_UNKNOWN=0,
+  QUIC_OPENV_SENT,
+  QUIC_OPEN_SENT,
+  QUIC_DATA_SENT
+};
+
 /* minimal support for UDP "connections" */
 typedef struct ucb
 {
@@ -931,6 +978,11 @@ typedef struct ucb
   int uTP_conn_id;
   int uTP_syn_seq_nr;
   Bool is_uTP;
+  enum QUIC_udp_state QUIC_state;
+  char QUIC_conn_id[8];
+  int QUIC_seq_nr;
+  Bool is_QUIC;
+
   int VOD_scrambled_sig[2];
   u_short VOD_count;
   Bool first_VOD;
@@ -993,8 +1045,18 @@ struct sudp_pair
   Bool cloud_src;
   Bool cloud_dst;
 
+  /* Crypto identification */
+  Bool crypto_src;
+  Bool crypto_dst;
+
   /* linked list of usage */
   struct sudp_pair *next;
+
+  /* DNS reverse lookup */
+  char *dns_name;
+  struct in_addr dns_server;
+  timeval request_time;
+  timeval response_time;
 };
 typedef struct sudp_pair udp_pair;
 typedef struct udphdr udphdr;
@@ -1094,3 +1156,62 @@ enum ip_direction {
  SRC_OUT_DST_IN  = 3,
  SRC_OUT_DST_OUT = 4
 };
+
+/* Struct mirroring the constants defined in param.h */
+
+struct global_parameters {
+ int Max_ADX_Slots;
+
+ int Max_Internal_Ethers;
+ int Max_Internal_Hosts;
+ int Max_Cloud_Hosts;
+ int Max_Crypto_Hosts;
+ int Max_White_Hosts;
+
+ int Max_Seg_Per_Quad;
+ 
+ int TCP_Idle_Time;
+ int UDP_Idle_Time;
+ int TCP_Singleton_Time;
+ int UDP_Singleton_Time;
+ 
+ int GC_Cycle_Time;
+ int GC_Split_Ratio;
+ int GC_Fire_Time; /* We keep it global, but as a derived value */
+
+ double Runtime_Config_Idle;
+ int Runtime_Mtime_Counter;
+
+ int Max_TCP_Pairs;
+ int Max_UDP_Pairs;
+ 
+ int List_Search_Dept;
+ 
+ int Hash_Table_Size;
+
+ double Max_Time_Step;
+ 
+ int Dirs;
+
+ double Min_Delta_T_UDP_Dup_Pkt;
+ double Min_Delta_T_TCP_Dup_Pkt;
+
+ int Entropy_Sample;
+ double Entropy_Threshold;
+ 
+ int Rate_Sampling;
+
+ int Max_Crypto_Cache_Size;
+
+ int DNS_Cache_Size;
+};
+
+typedef struct param_value
+{
+  enum   { INTEGER, DOUBLE, STRING } type;
+  union  {
+  int    ivalue;
+  double dvalue;
+  char   *svalue;
+  } value;
+} param_value;

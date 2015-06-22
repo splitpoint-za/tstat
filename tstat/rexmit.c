@@ -54,9 +54,6 @@ identification heuristic. Functions have been modified to manage this new field.
 #define ALPHA 0.125
 #define BETA 0.250
 
-extern pthread_mutex_t ttp_lock_mutex;
-extern Bool threaded;
-
 /* locally global variables*/
 
 
@@ -248,7 +245,7 @@ addseg (tcb * ptcb,
 
   /* MGM - management of the number of segments within this quadrant */
 
-  if (pquad->no_of_segments > MAX_SEG_PER_QUAD)
+  if (pquad->no_of_segments > GLOBALS.Max_Seg_Per_Quad)
     {
       /* free up the first segment in this quadrant */
       segment *tmp_pseg = pquad->seglist_head;
@@ -305,29 +302,8 @@ create_seg (seqnum seq, seglen len, u_short this_ip_id)
   segment *pseg;
 
   //pseg = (segment *) MallocZ (sizeof (segment));
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
-#endif
-      pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
-#endif
-    }
 
   pseg = (segment *) segment_alloc ();
-
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
-#endif
-      pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
-#endif
-    }
 
   pseg->time = current_time;
   pseg->seq_firstbyte = seq;
@@ -344,29 +320,8 @@ create_quadrant (void)
 {
   quadrant *pquad;
 
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
-#endif
-      pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
-#endif
-    }
-
   pquad = (quadrant *) quadrant_alloc ();
 
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
-#endif
-      pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
-#endif
-    }
   return (pquad);
 }
 

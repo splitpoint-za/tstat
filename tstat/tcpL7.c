@@ -28,6 +28,7 @@
 /* log(2) used in the entropy computation */
 #define LOG2 0.6931471805599453
 
+void compute_nibbles_entropy (tcp_pair *ptp);
 int map_flow_type(tcp_pair *thisflow);
 
 extern struct L4_bitrates L4_bitrate;
@@ -89,18 +90,79 @@ gettcpL7 (struct udphdr *pudp, int tproto, void *pdir, void *plast)
   return (void *) pudp;
 }
 
+int ssl_parse_npnalpn_extension(char *base, int idx, int ii, int data_limit, int ext_len, Bool isNPN) {
+    int res = 0;
+    int iii = 0;
+    int safety = 20;
+    while ( iii < ext_len && (idx + ii + iii) < data_limit && safety > 0 ) 
+     {
+        unsigned char npnproto_len = (unsigned char)base[idx + ii + iii];
+
+	safety--; /* Not nice, but we need to avoid an infinite loop */
+	
+	//if (npnproto_len < 0)
+	// {
+	//   fprintf(fp_stderr,"Warning: failure parsing TLS header (npnproto_len = %d)\n",npnproto_len);
+	//   break;
+	// }
+	 
+        if (npnproto_len == 0)
+	 {
+
+            res = (isNPN) ? NPN_EMPTY : ALPN_EMPTY;
+            break;
+         }
+
+        iii += 1;
+        if (idx + ii + iii + npnproto_len > data_limit) 
+            break;
+        // check if NPN carries the string "spdy/"
+        else if (base[idx + ii + iii]  == 0x73 &&
+                base[idx + ii + iii+1] == 0x70 &&
+                base[idx + ii + iii+2] == 0x64 &&
+                base[idx + ii + iii+3] == 0x79 &&
+                base[idx + ii + iii+4] == 0x2F) 
+          {
+           res |= (isNPN) ? NPN_SPDY : ALPN_SPDY;
+          }
+        // check if NPN carries the string "h2-"
+        else if (base[idx + ii + iii]  == 0x68 &&
+                base[idx + ii + iii+1] == 0x32 &&
+                base[idx + ii + iii+2] == 0x2D) 
+          {
+            res |= (isNPN) ? NPN_H2 : ALPN_H2;
+          }
+        else if (base[idx + ii + iii]  == 0x68 &&
+                base[idx + ii + iii+1] == 0x74 &&
+                base[idx + ii + iii+2] == 0x74 &&
+                base[idx + ii + iii+3] == 0x70 &&
+                base[idx + ii + iii+4] == 0x2F)
+          {
+            res |= (isNPN) ? NPN_HTTP : ALPN_HTTP;
+          }
+        iii += npnproto_len;
+     }
+     
+    if (safety == 0)
+     {
+       fprintf(fp_stderr,"Warning: failure parsing TLS header (too many iterations)\n");
+     }
+     
+    return res;
+}
+
 Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_length)
 {
   int record_length;
   char *base;
-  int idx,ext_len,ext_type,name_len;
+  int idx,all_ext_len,ext_type,ext_len,name_len,data_limit;
   int ii,j,next;
   
-  if (  *(char *)pdata == 0x16 && 
+  if (  *(char *)pdata == 0x16 &&  //fixed value
       *(char *)(pdata + 1) == 0x03 && 
     ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 ) && 
-    ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) &&
-      *(char *)(pdata + 5) == 0x01
+    ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) && // SSL/TLS max record size is 16kB
+      *(char *)(pdata + 5) == 0x01 // Client Hello message type
      )
    { 
      /* Match SSL 3 - TLS 1.x Handshake Client HELLO */
@@ -108,56 +170,136 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 
       base = (char *)pdata;
 
-      idx = 43;
-      idx += base[idx] + 1;
-      idx += ntohs(*(tt_uint16 *)(base+idx)) + 2;
-      idx += base[idx] + 1;
+      // Lenght of the Hello Message, including 5 bytes for the TLS header
+      int message_length = 5 + ntohs(*(tt_uint16 *)(base+3));
+      
+      // All tests must be limited to the Hello Message, so
+      // we define the minimum between the Message Lenght and the 
+      // actual data available in the segment
+      
+      data_limit = min(data_length,message_length);
+      
+      // Index of the SessionID lenght field
+      idx = 43;              
 
-      ext_len = ntohs(*(tt_uint16 *)(base+idx));
-      idx += 2;
-      ii = 0;
+      // Add session length = 1st byte of cipher suite section
+      if (idx > data_limit) 
+        return TRUE;
+      
+      idx += 1 + base[idx];
+
+      // Add length of cipher suite section = 1st byte of compression section
+      if (idx + 2 > data_limit) 
+        return TRUE;
+      
+      idx += 2 + ntohs(*(tt_uint16 *)(base+idx)); 
+
+      // Add length of compression section = 1st byte of extensions section
+      if (idx > data_limit)
+        return TRUE;
+      idx += 1 + base[idx];
+
+      // Full extensions section length
+      if (idx + 2 > data_limit) 
+        return TRUE;
+
+      all_ext_len = ntohs(*(tt_uint16 *)(base+idx));
+      if (all_ext_len < 0)
+        return TRUE;
+      idx += 2; 
+      
+      // 1st byte of the 1st extension
+      ii = 0;   // pointer within the current extension
       next = 0;
-      while (ii<ext_len && idx+ii<data_length)
+      while (ii < all_ext_len && idx+ii < data_limit)
        {
-         ext_type = ntohs(*(tt_uint16 *)(base+idx+ii));
-	 ii += 2;
-	 next += 2;
-	 if (idx+ii>=data_length) 
-	   break;
-         switch (ext_type)
-	  {
-            case 0x00:
-	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
-	      ii += 5;
-	      if (idx+ii>=data_length) 
-	         break;
-	      name_len = ntohs(*(tt_uint16 *)(base+idx+ii));
-	      ii +=2;
-	      if (idx+ii>=data_length) 
-	         break;
-	      for (j=0;j<name_len && j<79 && idx+ii+j<data_length;j++)
-	       {
-	          cname[j]=base[idx+ii+j];
-	       }
-	      cname[j]='\0';
+          // extract extension type
+          if (idx+ii+2 > data_limit) 
+            return TRUE;
+          ext_type = ntohs(*(tt_uint16 *)(base+idx+ii));
+          ii += 2;
 
-	      if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
-	       {
-	         ptp->ssl_client_subject = strdup(cname);
-	       }
+          // extract extension length
+          if (idx + ii + 2 > data_limit) 
+            return TRUE;
+          ext_len = ntohs(*(tt_uint16 *)(base + idx + ii));
+          if (ext_len < 0)
+            return TRUE;
+          ii += 2;
 
-              ii = next;
-	      break;
-	    case 0x3374:
-	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
-              ptp->ssl_client_spdy = 1;
-              ii = next;
-	      break;
-	    default:
-	      next += 2+ ntohs(*(tt_uint16 *)(base+idx+next));
-	      ii = next;
-	      break;
-	  }
+          switch (ext_type)
+           {
+              // SNI (Server Name Indication)
+              case 0x0000:
+                  // extension length
+                  if (idx+ii+2 > data_limit) 
+                    return TRUE;
+                  next = ii + ext_len;
+
+                  // skip up to the 1st byte of "Server Name"
+                  ii += 3;
+                  if (idx+ii+2 > data_limit) 
+                    return TRUE;
+                  name_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+                  ii += 2;
+
+                  // copy server name
+                  if (idx+ii > data_limit) 
+                    return TRUE;
+                  for (j=0; j < name_len && j < 79 && idx+ii+j < data_limit; j++)
+                   {
+                      cname[j]=base[idx+ii+j];
+                   }
+                  cname[j]='\0';
+
+                  // crosscheck that subject has a reasonable syntax
+                  if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
+                   {
+                      ptp->ssl_client_subject = strdup(cname);
+                   }
+
+                  ii = next;
+                  break;
+
+              // NPN (Next Protocol Negotiation)
+              // the assumption in place is that if the client employ NPN, then it is for SPDY
+              case 0x3374:
+                  if (ext_len == 0) 
+		   {
+                      ptp->ssl_client_npnalpn |= NPN_EMPTY;
+                   }
+                  else 
+		   {
+                      ptp->ssl_client_npnalpn |= ssl_parse_npnalpn_extension(base, idx, ii, data_limit, ext_len, TRUE);
+                   }
+
+                  ii += ext_len;
+                  break;
+
+              case 0x0010:
+                  if (ext_len == 0) 
+		   {
+                      ptp->ssl_client_npnalpn |= ALPN_EMPTY;
+                   }
+                  else 
+		   {
+                      if (idx + ii + 2 > data_limit) 
+                        return TRUE;
+                      // extract the protocols length
+                      ext_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+                      if (ext_len < 0)
+                        return TRUE;
+                      ii += 2; 
+                      ptp->ssl_client_npnalpn |= ssl_parse_npnalpn_extension(base, idx, ii, data_limit, ext_len, FALSE);
+                   }
+
+                  ii += ext_len;
+                  break;
+
+              default:
+                  ii += ext_len;
+                  break;
+           }
        }
 
       return TRUE;
@@ -178,17 +320,96 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
   return FALSE;
 }
 
-Bool ssl_server_check(void *pdata)
+
+Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_length)
 {
-  if (  *(char *)pdata == 0x16 && 
+  if (  payload_len >= 5 &&         // check if we have enough bytes
+        *(char *)pdata == 0x16 &&   // fixed value
         *(char *)(pdata + 1) == 0x03 && 
       ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 ) && 
-      ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) &&
-        *(char *)(pdata + 5) == 0x02
+      ( *(char *)(pdata + 3) >= 0x00 && *(char *)(pdata + 3) <= 0x39 ) && // SSL/TLS max record size is 16kB
+        *(char *)(pdata + 5) == 0x02 //Server Hello message type
      )
    { 
      /* Match SSL 3 - TLS 1.x Handshake Server HELLO */
-      return TRUE;
+     
+     int idx = 43; // sessionID length
+     int ii, all_ext_len, ext_len, ext_type, data_limit;
+     char *base = (char *)pdata;
+
+      // Lenght of the Hello Message, including 5 bytes for the TLS header
+     int message_length = 5 + ntohs(*(tt_uint16 *)(base+3));
+      
+     // All tests must be limited to the Hello Message, so
+     // we define the minimum between the Message Lenght and the 
+     // actual data available in the segment
+      
+     data_limit = min(data_length,message_length);
+
+     if (idx >= payload_len) return TRUE;
+
+     //index of the sessionID length
+     if (base[idx] == 0x00)
+       idx += 1;
+     else
+       idx += base[idx]+1;
+
+     //index of the start of cipher suite section
+     if (idx + 2 >= data_limit) 
+       return TRUE;
+     idx += 2;
+
+     //index of the start of the compression section
+     if (base[idx] != 0x00)
+       idx += ntohs(*(tt_uint16 *)(base+idx)) + 2; 
+     else
+       idx += 1;
+
+     //total size of the extension
+     if (idx + 2 >= data_limit) 
+       return TRUE;
+     all_ext_len = ntohs(*(tt_uint16 *)(base+idx));
+
+     idx += 2; // 1st byte of the 1st extension
+     ii = 0;
+     while (ii < all_ext_len && idx < data_limit)
+      {
+        // extension type
+        ext_type = ntohs(*(tt_uint16 *)(base+idx+ii));
+        ii += 2;
+
+        // extension length
+        if (idx + ii + 2 >= data_limit) 
+	  break;
+        ext_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+        ii += 2;
+
+        switch (ext_type) 
+	 {
+           // NPN (Next Protocol Negotiation)
+           // the assumption in place is that if the client employ NPN, then it is for SPDY
+           case 0x3374:
+             if (idx + ii < data_limit) 
+	       {
+                 ptp->ssl_server_npnalpn |= ssl_parse_npnalpn_extension(base, idx, ii, data_limit, ext_len, TRUE);
+               }
+             break;
+           case 0x0010:
+             if (idx + ii + 2 >= data_limit) 
+               return TRUE;
+             // extract the protocols length
+             ext_len = ntohs(*(tt_uint16 *)(base+idx+ii));
+             ii += 2; 
+             ptp->ssl_server_npnalpn |= ssl_parse_npnalpn_extension(base, idx, ii, data_limit, ext_len, FALSE);
+             break;
+        // default:
+        //   if (idx+next >= data_length) return TRUE;
+         }
+        ii += ext_len;
+      }
+
+     /* In any case, it's SSL/TLS, so we return TRUE */
+     return TRUE;
    }
   return FALSE;
 }
@@ -208,7 +429,7 @@ int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
   
   for (i=0;i<data_length-7 && !done ;i++)
    {
-     if (base[i]!=0x06 && base[i]!=0x33) continue;
+     if (base[i]!=0x06) continue;
      if ( base[i]==0x06   && base[i+1]==0x03 && base[i+2]==0x55 && 
           base[i+3]==0x04 && base[i+4]==0x03 )
       {
@@ -226,13 +447,22 @@ int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
 	  }
 
       }
-     else if ( base[i]==0x33   && base[i+1]==0x74 && base[i+5]==0x73 && 
-          base[i+6]==0x70 && base[i+7]==0x64 && base[i+8]==0x79)
-      {
-        ptp->ssl_server_spdy = 1;
-      }
    }
   return 0;
+}
+
+Bool ssl_application_data_check(void *pdata)
+{
+  if (  *(char *)pdata == 0x17 && 
+        *(char *)(pdata + 1) == 0x03 && 
+      ( *(char *)(pdata + 2) >= 0x00 && *(char *)(pdata + 2) <= 0x03 )
+     )
+   {
+     /* We trust that the connection has already been classified as SSL, so we just check the first bytes */
+     return TRUE;
+   }
+  else 
+     return FALSE;
 }
 
 Bool ssh_header_check(void *pdata)
@@ -373,7 +603,7 @@ void mse_protocol_check(tcp_pair *ptp)
    At the handshake, the (concurrent) handshake between A<->B is
     A -> B between 96 and 608 bytes
     B -> A between 96 and 608 bytes
-   Data entropy is high (>ENTROPY_THRESHOLD for both the high and the low
+   Data entropy is high (>GLOBALS.Entropy_Threshold for both the high and the low
    nibbles)
    Due to the protocol behavior, messages are overlapped and fragmented 
    randomly, so we must check the cumulative size of consecutive packets
@@ -404,12 +634,20 @@ void mse_protocol_check(tcp_pair *ptp)
        length_test = TRUE;
      }
   }
-     
-  if (length_test == TRUE && ptp->entropy_h>ENTROPY_THRESHOLD && 
-                             ptp->entropy_l>ENTROPY_THRESHOLD )
-    if (ptp->con_type==UNKNOWN_PROTOCOL)
-      /* Don't overwrite existing classification with MSE/PE */
-      ptp->con_type |= MSE_PROTOCOL; 
+  
+  if (length_test == TRUE)
+   {
+     if (ptp->entropy_h_valid!=1 || ptp->entropy_l_valid!=1)
+      {
+	compute_nibbles_entropy(ptp);
+      }
+      
+     if ( ptp->entropy_h>GLOBALS.Entropy_Threshold && 
+          ptp->entropy_l>GLOBALS.Entropy_Threshold )
+       if (ptp->con_type==UNKNOWN_PROTOCOL)
+         /* Don't overwrite existing classification with MSE/PE */
+         ptp->con_type |= MSE_PROTOCOL; 
+   }
 
  return;
  
@@ -474,6 +712,53 @@ void msn_s2c_state_update(tcp_pair *ptp, int state,int http_tunneling, void *pda
 }
 #endif
 
+void compute_nibbles_entropy (tcp_pair *ptp)
+{
+/* Compute information entropy over high and low nibbles (4 bits)
+   of the available payload. Only the first four payload packets are
+   considered. 
+*/
+  int i;
+  double probi;
+
+  if (ptp == NULL)
+    return;
+
+  if (ptp->entropy_h_valid == 0)
+   {
+     ptp->entropy_h = 0.0;
+     if (ptp->nibble_h_count>0)
+      {
+        for (i=0; i<16;i++)
+         {
+           if (ptp->nibbles_h[i]==0) continue;
+           probi = ptp->nibbles_h[i]*1.0/ptp->nibble_h_count;
+           ptp->entropy_h += (-1.0)*probi*log(probi);
+         }
+        ptp->entropy_h /= LOG2;
+        ptp->entropy_h_valid = 1;
+      }
+   }
+
+  if (ptp->entropy_l_valid == 0)
+   {
+     ptp->entropy_l = 0.0;
+     if (ptp->nibble_l_count>0)
+      {
+        for (i=0; i<16;i++)
+         {
+           if (ptp->nibbles_l[i]==0) continue;
+           probi = ptp->nibbles_l[i]*1.0/ptp->nibble_l_count;
+           ptp->entropy_l += (-1.0)*probi*log(probi);
+         }
+        ptp->entropy_l /= LOG2;
+        ptp->entropy_l_valid = 1;
+      }
+   }
+
+  return;
+}
+
 void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
 	       int dir, void *hdr, void *plast)
 {
@@ -487,7 +772,6 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
   int i;
   char c;
   char c1,c2;
-  double probi;
 
   tcphdr *ptcp;
   ptcp = (tcphdr *) hdr;
@@ -512,7 +796,7 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
   if (data_length <= 0 || payload_len == 0)
     return;
 
-  for (i=0;i<min(data_length,ENTROPY_SAMPLE);i++)
+  for (i=0;i<min(data_length,GLOBALS.Entropy_Sample);i++)
    {
      c = *(char *)(pdata+i);
 
@@ -521,34 +805,12 @@ void compute_nibbles (struct ip *pip, void *pproto, int tproto, void *pdir,
 
      ptp->nibbles_l[(int)c1]++;
      ptp->nibble_l_count++;
+     ptp->entropy_l_valid = 0;
      ptp->nibbles_h[(int)c2]++;
      ptp->nibble_h_count++;
+     ptp->entropy_h_valid = 0;
    }
    ptp->nibble_packet_count++;
-
-   ptp->entropy_h = 0.0;
-   if (ptp->nibble_h_count>0)
-    {
-      for (i=0; i<16;i++)
-      {
-        if (ptp->nibbles_h[i]==0) continue;
-        probi = ptp->nibbles_h[i]*1.0/ptp->nibble_h_count;
-        ptp->entropy_h += (-1.0)*probi*log(probi);
-      }
-      ptp->entropy_h /= LOG2;
-    }
-
-   ptp->entropy_l = 0.0;
-   if (ptp->nibble_l_count>0)
-    {
-      for (i=0; i<16;i++)
-      {
-        if (ptp->nibbles_l[i]==0) continue;
-        probi = ptp->nibbles_l[i]*1.0/ptp->nibble_l_count;
-        ptp->entropy_l += (-1.0)*probi*log(probi);
-      }
-      ptp->entropy_l /= LOG2;
-    }
 
   return;
 }
@@ -823,14 +1085,19 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	      break;
 
            default:
-             if ( dir==C2S && 
-	         ((char *) pdata + 6 <= (char *) plast) &&
-	          ssl_client_check(ptp,pdata,payload_len,data_length) )
-	        break;
-
-	     if (ptp->packets > MAX_UNKNOWN_PACKETS)
-	         ptp->state = IGNORE_FURTHER_PACKETS;
-	     break;
+             if ( dir==C2S && ((char *) pdata + 6 <= (char *) plast) && ssl_client_check(ptp,pdata,payload_len,data_length) ) {
+                 // check if the Client Hello message carries a sessionID
+                 // 44th byte carries the length of the sessionID field
+                 ptp->ssl_sessionid_reuse = FALSE;
+                 if ((char *)pdata + 43 <= (char *)plast && *(char *)(pdata + 43) != 0x00)
+                     ptp->ssl_sessionid_reuse = TRUE;
+                 
+             }
+             else {
+                 if (ptp->packets > MAX_UNKNOWN_PACKETS)
+                     ptp->state = IGNORE_FURTHER_PACKETS;
+             }
+             break;
 	 }
 	break;
      case SMTP_OPENING:
@@ -933,7 +1200,24 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 		  {
                     memcpy(ptp->http_response,(char *) pdata+9,3);
 		    ptp->http_response[3]='\0';
-                  }
+		    /* At lease one webserver (IdeaWebServer/v0.80) returns an invalid "0" response code
+		    producing an invalid http_response[] field.
+		    Let's do a sanity check, so that only digits are included
+		    */
+		    {
+		      int idx;
+		      for (idx = 0; idx<3 ; idx++)
+		      {
+			if (!isdigit(ptp->http_response[idx]))
+			  {
+			    ptp->http_response[idx]='\0';
+			    break;
+			  }
+		      }
+		      if (strlen(ptp->http_response)==0)
+                        strncpy(ptp->http_response,"000",4);
+		    }
+		  }
                 else
 		  {
                     strncpy(ptp->http_response,"000",4);
@@ -1265,19 +1549,15 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 #endif     
      case SSL_HANDSHAKE:
         if (dir == S2C && ((char *) pdata + 6 <= (char *) plast) &&
-	    ssl_server_check(pdata) )
+	    ssl_server_check(ptp, pdata, payload_len, data_length) )
 	  {
             ssl_certificate_check(ptp,pdata,data_length);
 
 	    ptp->con_type |= SSL_PROTOCOL;
 	    ptp->con_type &= ~OBF_PROTOCOL;
 	    ptp->con_type &= ~MSE_PROTOCOL;
-	    ptp->state = IGNORE_FURTHER_PACKETS;
+	    ptp->state = SSL_DATA;
 
-	    if (ptp->ssl_server_subject != NULL)
-	       ptp->state = IGNORE_FURTHER_PACKETS;
-	    else
-	       ptp->state = SSL_SERVER;
 	  }
          else
 	  {
@@ -1289,17 +1569,52 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	  }  
         break;
 
-     case SSL_SERVER:
-        if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))
+     case SSL_DATA:
+        if (dir == C2S && ((char *) pdata + 6 <= (char *) plast))
 	  {
-            if ( *(char *)pdata == 0x16 && *(char *)(pdata + 5) == 0x0B)
+            if ( !(ptp->ssl_client_data_seen) && ssl_application_data_check(pdata) )
 	     {
-               ssl_certificate_check(ptp,pdata,data_length);
+	       ptp->ssl_client_data_time = current_time;
+	       ptp->ssl_client_data_seen = TRUE;
+           ptp->ssl_client_data_byte = ptp->c2s.max_seq - ptp->c2s.syn - payload_len;
+#ifdef PACKET_STATS
+           if (thisdir->seg_count > 0) {
+               // copy values
+               memcpy(&(thisdir->ssl_handshake_seg_size[0]), &(thisdir->seg_size[0]), sizeof(u_int) * MAX_COUNT_SEGMENTS);
+               thisdir->ssl_handshake_seg_count = thisdir->seg_count - 1;
+               // reset segment size values
+               u_int last_value = thisdir->seg_size[thisdir->seg_count - 1];
+               memset(&(thisdir->seg_size[0]), 0, sizeof(u_int) * MAX_COUNT_SEGMENTS);
+               thisdir->seg_size[0] = last_value;
+               thisdir->seg_count = 1;
+           }
+#endif
 	     }
+	  }
+	else if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))
+	  {
+	    if (ptp->ssl_server_subject != NULL)
+	     {
+	       if ( *(char *)pdata == 0x16 && *(char *)(pdata + 5) == 0x0B)
+	        {
+                  ssl_certificate_check(ptp,pdata,data_length);
+	        }
+	     }
+
+	    if ( !(ptp->ssl_server_data_seen) && ssl_application_data_check(pdata) )
+	     {
+	       ptp->ssl_server_data_time = current_time;
+	       ptp->ssl_server_data_seen = TRUE;
+	       ptp->ssl_server_data_byte = ptp->s2c.max_seq - ptp->s2c.syn - payload_len;
+	     }
+	  }
+	  
+	if (ptp->ssl_client_data_seen && ptp->ssl_server_data_seen)
+	  {
 	    ptp->state = IGNORE_FURTHER_PACKETS;
 	  }
         break;
-
+	
      case SSH_SERVER:
         if (dir == C2S && ((char *) pdata + 7 <= (char *) plast))
 	 {
@@ -1328,6 +1643,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
   if (ptp->packets > MAX_PACKETS_CON)
      ptp->state = IGNORE_FURTHER_PACKETS;
+
+  if (dir == C2S && ptp->state != IGNORE_FURTHER_PACKETS && ptp->ssl_client_data_seen != TRUE)
+     ptp->ssl_client_before_data_time = current_time;
+  else if (dir == S2C && ptp->state != IGNORE_FURTHER_PACKETS && ptp->ssl_server_data_seen != TRUE)
+     ptp->ssl_server_before_data_time = current_time;
 
   return; 
 }
@@ -1658,7 +1978,7 @@ make_udpL7_rate_stats (ucb * thisflow, int len)
   else if (!internal_src && internal_dst)
     {
        L7_udp_bitrate.in[type] += len;
-       if (cloud_dst)
+       if (cloud_src)
         {
           L7_udp_bitrate.c_in[type] += len;
         }

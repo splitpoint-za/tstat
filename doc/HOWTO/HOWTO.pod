@@ -88,7 +88,7 @@ in case you use such hardware. With these libraries,
 you are ready to capture and process the traffic flowing
 in your LAN.
 
-Since Tstat uses pthread to improve the performance in case of real time
+Since Tstat might use pthread to improve the performance in case of real time
 analysis, your system must support POSIX threads as well if you want to
 profit of this feature. However, keep in mind that threaded execution 
 is only an optional feature, and is necessary only for online traffic
@@ -235,15 +235,20 @@ Tstat primary usage is as a command-line tool; the synopsis of
 the command is the following:
 
     Usage:
-        tstat [-htuvwpgSL] [-d[-d]]
+        tstat [-htuvwpgSL0] [-d[-d]]
               [-s dir]
               [-N file]
               [-C file]
+              [-Y file]
+              [--keyvalue key | --keyfile file | --keybase64 file]                                                              
+              [-W file]
               [-B bayes.conf]
               [-T runtime.conf]
+              [-G globals.conf]                                   
               [-z file]
               [-A mask]
               [-H ?|file ]
+              [-F file]                                           
               [-Z] [-P]
               [-r RRD_out_dir] [-R rrd_conf]
               [-l] [-i interface] [-E snaplen]
@@ -258,7 +263,7 @@ the command is the following:
         -w: print [lots] of warning
         -c: concatenate the finput files
             (input files should already be in the correct order)
-        -p: enable multi-threaded engine (useful for live capture)
+        -0: force the strict(er) privacy mode for logs
         -d: increase debug level (repeat to increase debug level)
 
         -s dir: puts the trace analysis results into directory
@@ -293,6 +298,34 @@ the command is the following:
                  (cloud) during the analysis.
                  Subnets are specified like in the -N option.
 
+        -Y file: specify the file name which contains the
+                 description of the encrypted networks.  
+                 This file must contain the subnets for which the IPv4 address
+                 will be anonymized using the Crypto-PAn algorithm.            
+                 Subnets are specified like in the -N option.                 
+
+        --keyvalue key: specify a string to be used as the key for address
+                 anonymization.                                           
+                 Valid only if the -Y option is also specified. Only one option
+                 among --keyvalue, --keyfile, and --keybase64 can be used.     
+
+        --keyfile file: specify the file name which contain the plain text key
+                 for address anonymization.                                   
+                 Valid only if the -Y option is also specified. Only one option
+                 among --keyvalue, --keyfile, and --keybase64 can be used.     
+
+        --keybase64 file: specify the file name which contain the Base64 encoded
+                 key for address anonymization.                                 
+                 Valid only if the -Y option is also specified. Only one option 
+                 among --keyvalue, --keyfile, and --keybase64 can be used.      
+
+        -W file: specify the file name which contains the
+                 description of the whitelisted hosts/networks.
+                 This file must contain the subnets for which the IPv4 address
+                 will be whitelisted and *NOT* anonymized using the Crypto-PAn algorithm.
+                 Subnets are specified like in the -N option.                            
+                 Meaningful only if the -Y option is also specified.                     
+
         -H ?: print internal histograms names and definitions
         -H file: Read histogram configuration from file
                  file describes which histograms tstat should collect
@@ -318,9 +351,15 @@ the command is the following:
                       configuration files from Bayes_Dir
         -T runtime.conf: configuration file to enable/disable dumping
                          of traces and logs at runtime
+        -G globals.conf: configuration file to provide at startup new values
+                         to the internal global configuration constants     
         -z file: redirect all the stdout/stderr messages to the file specified
         -A mask: enable XOR-based anonymization for internal IPv4 addresses.
                  'mask' is a decimal, octal, or hexadecimal value.
+        -X: disable the DN-Hunter DNS engine 
+        -F file: specify the file name which contains the
+                 list of DNS domains to be included/excluded from the
+                 TCP traffic dump. Activated in the runtime configuration (-T)
         -Z: Create gzip compressed (.gz) log files.
         -P: Create gzip compressed (.gz) pcap dump files.
         -R conf: specify the configuration file for integration with
@@ -495,6 +534,26 @@ the following command sequence:
          ./tstat  -i eth0 -l -f tcpdump.conf -N net.conf -s filtered
 
 
+=head2 Process Signalling
+
+While Tstat runs, it is possible to interact with the program using Unix signals. 
+This might be useful if Tstat is executed unsupervised, or without full terminal control 
+(redirecting stdout/stderr using the C<-z> option). 
+
+Currently Tstat reacts to the C<USR1> and C<INT> signals.
+
+Sending a C<USR1> signal to a running ‘Tstat’ process makes it print the current flow 
+statistics to standard error and then resume its operations.
+
+Sending a C<INT> signal to a running ‘Tstat’ process makes it gracefully terminate its 
+operations, writing all the statistics to the output files, flushing and closing the files, and
+printing the overall flow statistics to stderr before exiting. This is equivalent to interrupting
+the program pressing C<Ctrl-C> from the control terminal. 
+
+If Tstat is running unsupervised, you should avoid terminating the process using the C<KILL> signal
+( C<'signal -KILL'> or C<'signal -9'>), since it will possibly leave the log files in an 
+inconsistent state, and you should therefore use either the C<INT> or the C<TERM> signals
+ (C<'signal -INT'> or C<'signal -TERM'>).
 
 =head1 Output
 
@@ -835,6 +894,75 @@ traces (.pcap.gz) when the command line option C<-P> is used. Internal compressi
 of the packet traces is highly CPU demanding: before enabling it, you should consider 
 its possible effects on the Tstat performance.
 
+=head2 Privacy concerns
+
+To cope with privacy concerns and possible legal requirements, Tstat has a few options
+to mitigate the user information exposed in the log files.
+
+One main privacy concern is the presence of the actual user IP addresses in logs.
+To hide this information, Tstat implements two possible solutions. 
+
+The first one is a simple XOR-based obfuscation of the IP address, activated by the 
+command line option C<-A mask>. The 32-bit mask is applied B<only> to internal IPv4 
+addresses, as defined by either the C<-N> or the C<-M> command line options. If no 
+internal network is defined, all IPs are considered internal and they are all 
+obfuscated, reducing the usefulness of the logs to identify well known services.
+The XOR-based obfuscation is applied as soon as the IP datagram is parsed, so
+any saved packet level trace will contain the obfuscated IP addresses.
+
+The second solution is a complex cryptographical anonymization of the IP addresses,
+based on the well known Crypto-PAn[*] algorithm.
+Crypto-PAn is a prefix-preserving IP anonymizer, and it is activated providing a 
+list of IP networks to be anonymized using the command line option C<-Y>. 
+The networks are indicated in a format similar to the one used for the C<-N> and C<-C>
+command line options. Any IPv4 address matching one of those networks is marked for 
+encryption. Since the anonymization operations are CPU-intensive, any IP address 
+is anonymized only once, the translation cached, and it is actually used only when the 
+IP address must be printed in the logs. 
+Since the original IP address is still used internally by Tstat and the translation is 
+only used when printing the logs, any saved packet level trace will contain the 
+B<original non encrypted> IP addresses.
+It is possible indicate a list of IP addresses and networks to be excluded from the 
+encryption process using the C<-W> command line option with a file in the same format 
+used for the C<-N> option. Addresses satisfying both the C<-Y> and the C<-W> lists 
+will be whitelisted and will appear B<unencrypted> in the log files.
+
+The encrytion key used by the Crypto-PAn algorithm can be provided either directly on 
+the command line, using the C<--keyvalue> option, or from a file, using 
+either the C<--keyfile> or the C<--keybase64> options. The C<--keyfile> option
+can be used for a plain text ASCII key, while the C<--keybase64> option will treat 
+content as a Base64 encoded key, so its suitable for an encoded binary key. In any case
+the key is supposed to be 32 bytes long: longer keys are truncated to 32 bytes, and 
+shorter keys are padded with zeros. If no key is provided, a key is generated reading 
+32 random bytes read from C</dev/random>, so it will change every time Tstat starts.
+Due to the blocking nature of C</dev/random>, it might take some time for Tstat to
+start if there is not enough entropy on the system random generator.
+
+The key used in each Tstat session is always saved in Base64 format in a file named 
+F<CPanKey_<datetime>>  (where I<datetime> is the current time of the day) that is 
+created in the log directory root (the one indicated by the C<-s> command line option).
+The generated file is suitable to be later used as the argument of the C<--keybase64> 
+option.
+
+Only IPv4 address are obfuscated or anonymized. There is currently no support in Tstat
+for IPv6 anonymization, and obfuscation of TCP/UDP port numbers is of limited usage in
+a traffic analysis tool such as Tstat.
+Obfuscated (C<-A>) addresses are not explicitely indicated in the log files (if they are
+internal, and obfuscation was active, they are actually obfuscated). The presence of 
+anonymized (C<-Y>) address is explicitely indicated in the log files in the C<c_iscrypto>
+and C<s_iscrypto> columns.
+The C<-A> and C<-Y> options are not mutually exclusive, so it is possible to obfuscate the
+internal addresses and, at the same time, anonymize another, possible overlapping, set of
+IP addresses.
+
+Beside the privacy issues related to the IP addresses, logs contain information that 
+might be considered sensitive, i.e. the URLs information in C<log_http_complete> and 
+the YouTube VideoIDs in C<log_video_complete>. The command line option C<-0> make Tstat 
+run in privacy mode: in this mode, the runtime.conf option C<httplog_full_url> is forced 
+to 0, so that full URLs cannot be logged in C<log_http_complete>, and the YouTube 
+Video IDs in C<log_video_complete> are masked as C<'XXX'>.
+
+[*] L<http://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/>
 
 =head2 Post Processing
 
@@ -1107,6 +1235,9 @@ became to bigs, and to dynamically change the set of packet level traces to coll
 The module works with simple polling system that is it periodically tests if a configuration file,
 specified with the C<-T> option when Tstat is executed, is changed from the previous check
 and in this case, the new configuration replace the previous one.
+The polling process is controlled by the global constants C<Runtime_Config_Idle> and 
+C<Runtime_Mtime_Counter>, that can be overriden at startup with the C<-G> option, as described
+in the L<Global Constants> section.
 
 The configuration file has an C<ini> file syntax:
 
@@ -1118,18 +1249,37 @@ The configuration file has an C<ini> file syntax:
     log_tcp_complete = 0            # tcp connections correctly terminated
     log_tcp_nocomplete = 0          # tcp connections not properly terminated
     log_udp_complete = 0            # udp flows
-    log_mm_complete = 0             # multimedia
+    log_mm_complete = 0             # multimedia 
     log_skype_complete = 0          # skype traffic
     log_chat_complete = 0           # MSN/Yahoo/Jabber chat flows
     log_chat_messages = 0           # MSN/Yahoo/Jabber chat messages
-    log_video_complete = 0          # youtube video
-    log_streaming_complete = 0      # generic video
+    log_video_complete = 0          # video (YouTube and others)
     log_http_complete = 0           # all the HTTP requests/responses
+
+    # log options
+    [options]
+    tcplog_end_to_end = 0	# End_to_End set of measures (RTT, TTL)
+    tcplog_layer7 = 0		# Layer7 set of measures (SSL cert., message counts)
+    tcplog_p2p = 0		# P2P set of measures (P2P subtype and ED2K data)
+    tcplog_options = 0		# TCP Options set of measures
+    tcplog_advanced = 0		# Advanced set of measures
+    httplog_full_url = 0 	# Partial (=1) or full (=2) URLs in log_http_complete
+
+    videolog_end_to_end = 0	# TCP End_to_End set of measures (RTT, TTL)
+    videolog_layer7 = 0		# Layer7 set of measures (SSL cert., message counts)
+    videolog_videoinfo = 0	# Additional video info (resolution, bitrate)
+    videolog_youtube = 0	# YouTube specific information
+    videolog_options = 0	# TCP Options set of measures
+    videolog_advanced = 0	# Video-related Advanced mesurements (rate)
 
     # protocols to dump
     [dump]
     snap_len = 0        # max num of bytes to dump from ip hdr (included)
                         # 0 == all bytes
+    slice_win = 0       # dimension (in secs) of the dumping window
+                        # used to slice the input traffic in different traces
+                        # 0 == no slicing
+
     udp_dns = 0
     udp_rtp = 0
     udp_rtcp = 0
@@ -1148,6 +1298,8 @@ The configuration file has an C<ini> file syntax:
     udp_teredo = 0
     udp_vod = 0
     udp_sip = 0
+    udp_dtls = 0
+    udp_quic = 0
     udp_unknown = 0    # all the udp traffic that the DPI doesn't recognize
 
     tcp_videostreaming = 0 
@@ -1161,11 +1313,14 @@ The configuration file has an C<ini> file syntax:
     tcp_maxpackets = 0
     tcp_maxbytes = 0
 
-    stop_dumping_mask = 0  # bitmask to control the dumping of tcp packets based on flow type
+    dns_filter = 0     # enable the dns filtering
+    
+    stop_dumping_mask = 0  # bitmask to control the dumping of tcp packets
+                           # based on flow classification
 
 
-The file in composed of the two sections C<log> and C<dump> which indicate which
-type of log and dump trace to create.
+The file in composed of the three sections C<log>, C<options>, and C<dump> which indicate which
+type of log and dump trace to create, and additional information on the log content.
 Except for a few exceptions, all features are on/off type i.e. 1 and 0 values are used to 
 enable/disable them. One exception is C<snap_len>, used to indicate the maximum number of bytes
 dump from the input packet starting from IP level included. For example, supposing
@@ -1192,7 +1347,7 @@ happens after the 3-way handshaking finished, so saved flows would be
 incomplete. 
 C<tcp_videostreaming> is an exception, used to dump TCP flows that were classified
 as video through the Streaming DPI engine (the ones logged in
-C<log_streaming_complete>), even if the 3-way handshaking and the first flow payload
+C<log_video_complete>), even if the 3-way handshaking and the first flow payload
 packets would be skipped. This could be activated if you're interested in performing
 a secondary analysis on characteristics of the video stream.
 
@@ -1220,6 +1375,11 @@ C<udp_maxpackets> and C<udp_maxbytes> provide the same functionality for UDP flo
 If both C<xxx_maxpackets> and C<xxx_maxbytes> are set to 0, the complete TCP/UDP 
 flows will be saved, with no size limitation.
 
+C<dns_filter> enables the filter based on DNS names requested by clients.
+You can see the tstat-conf/DNS_filter_example.txt file for more details.
+A filename must be provided with the C<-F> command line option, and its content cannot 
+be changed at runtime.
+
 C<stop_dumping_mask> is a bitmask that is used to stop dumping tcp packets of flows we
 are not interested to.
 It is a bitmask based on protocol.h types that the con_type can take.
@@ -1233,7 +1393,8 @@ actually identifying the protocol. For example, three-way-handshake segments wil
 always there.
 Examples:
 
-     stop_dumping_mask = 262143  # => 11 1111 1111 1111 1111 discard everything except UNKNOWN
+     stop_dumping_mask = 262143  # => 11 1111 1111 1111 1111 discard everything 
+                                 #                           we know except UNKNOWN
      stop_dumping_mask = 262142  # => 11 1111 1111 1111 1110 log only UNKNOWN and HTTP
      stop_dumping_mask = 0x3DFFF # => 11 1101 1111 1111 1111 log only UNKNOWN and SSL/TLS
      stop_dumping_mask = 1       # => 00 0000 0000 0000 0001 log everything which is not HTTP
@@ -1246,8 +1407,70 @@ When a change is identified a new C<tracesNN> output directory is created
 in the root output directory to collect all the new traces 
 and is also generated a file called C<log.txt> that indicate the dump configuration 
 used for that particular dump.
+Since the parameters in the C<options> section control the output format of the log files,
+when a change is sensed to any of them, the old log files are closed, and a new output directory
+is created.
 
 
+=head1 Global Constants
+
+The dimensions of the internal data structures and some key operational parameters are defined 
+in Tstat at compilation time (in source file C<param.h>). 
+To allow some flexibility in Tstat deployment on live probes, like tailoring the capture process
+to the actual traffic, the default internal values can be overriden,
+providing new values at startup using the C<-G> command line option and a C<ini> file.
+
+The C<ini> file dedicated to the global constants is identified by the C<[globals]> header, 
+valid only in C<-G> context and that cannot appear in the runtime configuration Tstat C<ini> 
+file (C<-T>).
+
+A complete commented example of C<ini> is provided in the Tstat source distribution as the file 
+C<tstat-conf/globals.conf>. We report here a simplified list of the available parameters.
+
+    > cat tstat-conf/globals.conf
+    [globals]
+    # Important for the system dimensioning
+    max_tcp_pairs = 180000	# Max number of tracked TCP flows
+    max_udp_pairs = 360000	# Max number of tracked UDP flows
+    hash_table_size = 2000003	# Size of the TCP/UDP flow hashes
+
+    # Important for the system performances
+    tcp_idle_time = 300.0	# Timeout to close regular TCP flows [seconds]
+    udp_idle_time = 200.0	# Timeout to close regular UDP flows [seconds]
+    tcp_singleton_time = 10.0	# Timeout to close singleton TCP flows [seconds] 
+    udp_singleton_time = 10.0   # Timeout to close singleton UDP flows [seconds]
+    gc_cycle_time = 5.0		# Duration of the Garbage Collection cycle [seconds]
+    gc_split_ratio = 10000	# Number of partitions of the Garbage Collection cycle
+
+    # Change only if the default values are too small
+    max_adx_slots      = 70001	# Size of the hash for IP address hit counter
+    max_internal_hosts = 100    # Max number of internal networks (-N)
+    max_cloud_hosts    = 100	# Max number of 'cloud' networks (-C)
+    max_crypto_hosts   = 40	# Max number of encrypted networks (-Y)
+    max_white_hosts    = 100    # Max number of whitelisted networks (-W)
+    max_internal_ethers = 20    # Max number of Ethernet addresses for internal traffic (-M)
+    max_crypto_cache_size = 130000	# Size of the LRU cache used in address encryption
+    dns_cache_size = 100000	# Size of the DNS cache used by the DNhunter module 
+
+    # Change to tailor the logging activity
+    runtime_config_idle = 21.0	# Check interval for runtime.conf file (-T) 
+    runtime_mtime_counter = 3   # Check cycles for runtime.conf (-T)
+    max_time_step = 300.0	# Interval for histogram/RRD collection [seconds]
+    dirs = 12			# Number of Max_Time_Step intervals for each log directory
+    rate_sampling = 1.0		# Interval for TCP flow rate measures [seconds]
+
+    # Very specific, change at your risk
+    max_seg_per_quad = 100	# Max number of segments in flow recostructions
+    list_search_dept = 200	# Lenght of the linear search for TCP/UDP flows
+    entropy_sample    = 60	# Number of bytes per packet used for encryption detection
+    entropy_threshold = 3.7	# Entropy threshold used for encryption detection
+    min_delta_t_tcp_dup_pkt = 2000.0 	# Interarrival time for TCP DUP detection [microseconds]
+    min_delta_t_udp_dup_pkt = 1000.0 	# Interarrival time for UDP DUP detection [microseconds]
+    
+Parameter names are case-insensitive. Values in the C<[globals]> section can have integer or 
+floating point value. Types are loosely enforced, i.e. integer values can be provided to floating point parameters,
+but not the opposite. A warning or an error message is generated when the value or the type of
+a parameter is not correct or cannot be safely converted to the right type.
 
 
 =head1 DPMI Module

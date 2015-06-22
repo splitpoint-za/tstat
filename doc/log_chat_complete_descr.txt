@@ -28,6 +28,9 @@ according to C2S - Client-to-Server and S2C - Server-to-Client traffic direction
 # 27  #     # 'T'                    # -     # Label to state a TCP Flow
 # 28  #     # Chat Protocol          # 32=MSN, 64=Yahoo, 128=Jabber/GTalk # Type of Upper Level Protocol
 ###########################################################################################
+# 29  #     # C CryptoPAN anonymized # 0/1   # 1 = anonymized Client IP address
+# 30  #     # S CryptoPAN anonymized # 0/1   # 1 = anonymized Server IP address
+###########################################################################################
 
 
 Chat Flow Type - col. 23 

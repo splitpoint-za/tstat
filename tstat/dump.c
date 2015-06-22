@@ -85,14 +85,11 @@ static long tcp_maxbytes = 0;
 static long udp_maxpackets = 0;
 static long tcp_maxpackets = 0;
 static u_int32_t stop_dumping_mask = 0;
-u_int32_t http_full_url = 0;
 
-// monitor for writing access to dump files
-static pthread_mutex_t dump_mutex = PTHREAD_MUTEX_INITIALIZER;                            
-
+extern char *dns_namefilter_file;
+extern Bool dns_namefilter_specified;
 
 Bool dump_engine = FALSE;
-extern Bool threaded;
 extern Bool zlib_dump;
 
 int search_dump_file(char *protoname, struct dump_file *proto2dump) {
@@ -204,71 +201,87 @@ void dump_reset_dump_file(struct dump_file *proto2dump, int type, char *protonam
     proto2dump[type].seq_num = 0;
 }
 
-void dump_parse_ini_arg(char *param_name, int param_value) {
+void dump_parse_ini_arg(char *param_name, param_value param_value) {
     int pos;
 
+    if (param_value.type!=INTEGER) 
+     {
+       fprintf(fp_stderr, "dump engine: not integer value assigned to '%s'\n", 
+                param_name);
+       exit(1);
+     }
+        
     //check protocol name 
     pos = search_dump_file(param_name, proto2dump);
     if (pos != -1) {
         //syntax check
-        if (param_value != 0 && param_value != 1) {
+        if (param_value.value.ivalue != 0 && param_value.value.ivalue != 1) {
             fprintf(fp_stderr, "dump engine: '%s = %d' syntax error in config file\n", 
-                param_name, param_value);
+                param_name, param_value.value.ivalue);
             exit(1);
         }
 
         if (debug)
             fprintf(fp_stderr, "dump engine: %s dump for %s\n", 
-                (param_value == 1) ? "enabling" : "disabling",
+                (param_value.value.ivalue == 1) ? "enabling" : "disabling",
                 proto2dump[pos].protoname);
-        proto2dump[pos].enabled = (param_value == 0) ? FALSE : TRUE;
-        dump_engine |= param_value;
+        proto2dump[pos].enabled = (param_value.value.ivalue == 0) ? FALSE : TRUE;
+        dump_engine |= param_value.value.ivalue;
     }
     else if (strcmp(param_name, "snap_len") == 0) {
-        if (param_value < 0) {
+        if (param_value.value.ivalue < 0) {
             fprintf(fp_stderr, "dump engine: '%s = %d' syntax error in config file\n", 
-                param_name, param_value);
+                param_name, param_value.value.ivalue);
             exit(1);
         }
-        snap_len = param_value;
+        snap_len = param_value.value.ivalue;
     }
     else if (strcmp(param_name, "slice_win") == 0) {
-        if (param_value < 0) {
+        if (param_value.value.ivalue < 0) {
             fprintf(fp_stderr, "dump_engine: '%s = %d' syntax error in config file\n",
-                param_name, param_value);
+                param_name, param_value.value.ivalue);
             exit(1);
         }
-        slice_win = param_value;
+        slice_win = param_value.value.ivalue;
     }
     else if (strcmp(param_name, "tcp_maxpackets") == 0) {
-        if (param_value > 0) {
-            tcp_maxpackets = param_value;
+        if (param_value.value.ivalue > 0) {
+            tcp_maxpackets = param_value.value.ivalue;
         }
     }
     else if (strcmp(param_name, "tcp_maxbytes") == 0) {
-        if (param_value > 0) {
-            tcp_maxbytes = param_value;
+        if (param_value.value.ivalue > 0) {
+            tcp_maxbytes = param_value.value.ivalue;
         }
     }
     else if (strcmp(param_name, "udp_maxpackets") == 0) {
-        if (param_value > 0) {
-            udp_maxpackets = param_value;
+        if (param_value.value.ivalue > 0) {
+            udp_maxpackets = param_value.value.ivalue;
         }
     }
     else if (strcmp(param_name, "udp_maxbytes") == 0) {
-        if (param_value > 0) {
-            udp_maxbytes = param_value;
+        if (param_value.value.ivalue > 0) {
+            udp_maxbytes = param_value.value.ivalue;
         }
     }
     else if (strcmp(param_name, "stop_dumping_mask") == 0) {
-        if (param_value > 0) {
-            stop_dumping_mask = param_value;
+        if (param_value.value.ivalue > 0) {
+            stop_dumping_mask = param_value.value.ivalue;
         }
     }
-    else if (strcmp(param_name, "http_full_url") == 0) {
-        if (param_value > 0) {
-            http_full_url = param_value;
-        }
+    else if (strcmp(param_name, "dns_filter") == 0) {
+#ifdef DNS_CACHE_PROCESSOR
+        if (param_value.value.ivalue > 0) 
+         {
+           if (!dns_namefilter_specified)
+            {
+              fprintf(fp_stderr, "dump engine warning: no file provided for the DNS filter engine. Using the default values.\n");
+            }
+           enable_DNSfilter(TRUE);
+         }
+        else
+           enable_DNSfilter(FALSE);
+#endif
     }
     else {
         fprintf(fp_stderr, "dump engine err: '%s' - not valid command \n", param_name);
@@ -287,7 +300,20 @@ void dump_init(void) {
     tcp_maxbytes = 0;
     udp_maxbytes = 0;
     stop_dumping_mask = 0;
-    http_full_url = 0;
+#ifdef DNS_CACHE_PROCESSOR
+    if (dns_namefilter_specified)
+     {
+       if(!init_DNSfilter(dns_namefilter_file, TRUE)) 
+        {
+          fprintf(fp_stderr, "dump engine err: Problem in initializing the DNS filter engine\n");
+          exit(1);
+        }
+     }   
+    else
+#endif
+     {
+       init_DNSfilter("", FALSE);
+     }
     /* UDP dump protocols 
      * for semplicity we use a vector with as long as the number of classes
      * identified by the DPI. Among these there are some useless classes
@@ -317,6 +343,8 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, P2P_PPSTREAM, "udp_ppstream");
     dump_reset_dump_file(proto2dump, TEREDO, "udp_teredo");
     dump_reset_dump_file(proto2dump, UDP_SIP, "udp_sip");
+    dump_reset_dump_file(proto2dump, UDP_DTLS, "udp_dtls");
+    dump_reset_dump_file(proto2dump, UDP_QUIC, "udp_quic");
     dump_reset_dump_file(proto2dump, DUMP_IP_COMPLETE, "ip_complete");
     dump_reset_dump_file(proto2dump, DUMP_UDP_COMPLETE, "udp_complete");
     dump_reset_dump_file(proto2dump, DUMP_TCP_VIDEOSTREAMING, "tcp_videostreaming");
@@ -464,9 +492,6 @@ void dump_flow_stat (struct ip *pip,
     if (!dump_engine)
         return;
 
-    if (threaded)
-        pthread_mutex_lock(&dump_mutex);
-
     /***** TCP packets *****/
     if (tproto == PROTOCOL_TCP)
     /* It's TCP, there is still a flow associated to this, and we are not already discarding it */
@@ -561,6 +586,7 @@ void dump_flow_stat (struct ip *pip,
     else 
      {
         ucb *mydir = (ucb*)pdir;
+        ucb *otherdir = (dir == C2S) ? &(mydir->pup->s2c) : &(mydir->pup->c2s);
 
         //specific controls to find kad obfuscated...
         ucb_type = UDP_p2p_to_logtype(mydir);
@@ -580,6 +606,20 @@ void dump_flow_stat (struct ip *pip,
                  )
                )
              dump_to_file(&proto2dump[P2P_UTP], pip, plast);
+         }
+        if (proto2dump[UDP_QUIC].enabled)
+         {
+            /* 
+               Since QUIC classification is behavioral, we dump both already classified datagrams,
+               and datagrams which are not classified, but that are already in a valid state of 
+               the identification state machine.
+            */
+            if ( ucb_type == UDP_QUIC || 
+                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP ) &&
+                   (mydir->QUIC_state > QUIC_UNKNOWN || otherdir->QUIC_state > QUIC_UNKNOWN)
+                 )
+               )
+             dump_to_file(&proto2dump[UDP_QUIC], pip, plast);
          }
     	else if (proto2dump[ucb_type].enabled) 
     	 {
@@ -616,8 +656,6 @@ void dump_flow_stat (struct ip *pip,
         }
     }
 
-    if (threaded)
-        pthread_mutex_unlock(&dump_mutex);
 }
 
 void dump_flush(Bool trace_completed) {
@@ -670,6 +708,20 @@ void dump_flush(Bool trace_completed) {
             if (proto2dump[i].enabled)
                 fprintf(fp_log, "%s\n", proto2dump[i].protoname);
         }
+        fprintf(fp_log, 
+            "---\n"
+            "additional option:\n"
+            "---\n"); 
+        if (udp_maxpackets!=0)
+          fprintf(fp_log,"udp_maxpackets = %d\n",udp_maxpackets);
+        if (udp_maxbytes!=0)
+          fprintf(fp_log,"udp_maxbytes = %d\n",  udp_maxbytes);
+        if (tcp_maxpackets!=0)
+          fprintf(fp_log,"tcp_maxpackets = %d\n",tcp_maxpackets);
+        if (tcp_maxbytes!=0)
+          fprintf(fp_log,"tcp_maxbytes = %d\n",  tcp_maxbytes);
+        if (stop_dumping_mask!=0)
+          fprintf(fp_log,"stop_dumping_mask =  %d # (0x%X)\n",stop_dumping_mask,stop_dumping_mask);
         fclose(fp_log);
         fp_log = NULL;
     }
@@ -680,9 +732,6 @@ void dump_create_outdir(char * basedir) {
 
     if (!dump_engine)
         return;
-
-    if (threaded)
-        pthread_mutex_lock(&dump_mutex);
 
     // store basedir to check when a new output directory is created
     if (log_basedir && strcmp(log_basedir, basedir) != 0) {
@@ -719,12 +768,18 @@ void dump_create_outdir(char * basedir) {
 
     dir_counter++;
 
-    if (threaded)
-        pthread_mutex_unlock(&dump_mutex);
 }
 
 static Bool old_dump_engine;
 void dump_ini_start_section(void) {
+    extern int globals_set;
+
+    if (globals_set!=0)
+     {
+       fprintf(fp_stderr,"ini reader: [dump] section only valid in the runtime configuration context\n");
+       exit(1);
+     }
+
     if (current_time.tv_sec != 0) {
         dump_flush(FALSE);
     }
@@ -734,7 +789,7 @@ void dump_ini_start_section(void) {
 
 void dump_ini_end_section(void) {
     if (old_dump_engine != dump_engine || current_time.tv_sec == 0) {
-        fprintf(fp_stdout, "(%s) %s dump engine\n", 
+        fprintf(fp_stdout, "[%s] %s dump engine\n", 
             Timestamp(), (dump_engine) ? "Enabling" : "Disabling");
     }
 }

@@ -872,6 +872,63 @@ udp_search_teredo (unsigned char *haystack, const int packet_len,
 }
 
 int
+udp_search_dtls (unsigned char *haystack, const int packet_len,
+		   int payload_len)
+{
+  unsigned char *t = haystack;
+  t += 8;
+
+  if (  t[0]==0x16 && // Client Handshake
+        t[1]==0xFE && // 255-1 (TLS 1.x)
+      ( t[2]<=0xFF && t[2]>=0xFB ) && // 255-x (TLS 1.x)
+      ( t[11]>=0x00 && t[11]<=0x39 ) )
+  {
+    if  ( t[13] == 0x01 )  // Client Hello
+     {
+       return (IPP2P_DTLS * 100 + 1 );
+     }
+    else if ( t[13] == 0x02 )  // Server Hello
+     {
+       return (IPP2P_DTLS * 100 + 2 );
+     }
+    else
+      return (IPP2P_DTLS * 100 + 0 );
+  } 
+  else
+   return 0;
+}
+
+int
+udp_search_quic (unsigned char *haystack, const int packet_len,
+		   int payload_len)
+{
+  unsigned char *t = haystack;
+  t += 8;
+
+  if (  t[0]==0x0d && // Client 1st packet with 8 byte ID and version indication
+        t[9]==0x51 && // 'Q' (as of Qxxx QUIC version)
+        t[13]==0x01 ) // 1st packet
+  {
+    /*
+    A better test would be like uTP, matching the 8 bytes ID in both directions,
+    with 0d+ID+'Q'+01 followed by 0c+ID+'01' 
+    */
+       return (IPP2P_QUIC * 100 + 1 );
+  }
+  else if (  t[0]==0x0c && // Server 1st packet with 8 byte ID 
+        t[9]==0x01 ) // 1st packet
+  {
+    /*
+    A better test would be like uTP, matching the 8 bytes ID in both directions,
+    with 0d+ID+'Q'+01 followed by 0c+ID+'01' 
+    */
+       return (IPP2P_QUIC * 100 + 2 );
+  }
+  else
+   return 0;
+}
+
+int
 udp_search_sip (unsigned char *haystack, const int packet_len,
 		   int payload_len)
 {
@@ -1683,6 +1740,9 @@ search_waste (const unsigned char *payload, const int plen, int payload_len)
   return 0;
 }
 
+#ifdef P2P_OLDPROTO
+/* Full P2P matching, even if it includes obsolete protocols */
+
 struct tcpmatch matchlist[] = {
   {IPP2P_EDK, SHORT_HAND_IPP2P, 20, &search_all_edk},
 //    {IPP2P_DATA_KAZAA,SHORT_HAND_DATA,200, &search_kazaa},
@@ -1716,5 +1776,33 @@ struct udpmatch udp_list[] = {
   {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
   {IPP2P_PPSTREAM, SHORT_HAND_IPP2P, 12, &udp_search_ppstream},
   {IPP2P_TEREDO, SHORT_HAND_IPP2P, 21, &udp_search_teredo},
+  {IPP2P_DTLS, SHORT_HAND_IPP2P, 25, &udp_search_dtls},
+//  {IPP2P_QUIC, SHORT_HAND_IPP2P, 30, &udp_search_quic}, // Disabled, since there is new code for it
   {0, 0, 0, NULL}
 };
+
+#else
+/* Only include current protocols (BitTorrent and eMule/ED2K/KAD) */
+
+struct tcpmatch matchlist[] = {
+  {IPP2P_EDK, SHORT_HAND_IPP2P, 20, &search_all_edk},
+  {IPP2P_BIT, SHORT_HAND_IPP2P, 20, &search_bittorrent},
+  {0, 0, 0, NULL}
+};
+
+struct udpmatch udp_list[] = {
+  {IPP2P_DNS, SHORT_HAND_IPP2P, 22, &udp_search_dns},
+  {IPP2P_BIT, SHORT_HAND_IPP2P, 23, &udp_search_bit},
+  {IPP2P_EDK, SHORT_HAND_IPP2P, 9, &udp_search_edk},
+  {IPP2P_SIP, SHORT_HAND_IPP2P, 22, &udp_search_sip},
+  {IPP2P_PPLIVE, SHORT_HAND_IPP2P, 22, &udp_search_pplive},
+  {IPP2P_SOPCAST, SHORT_HAND_IPP2P, 22, &udp_search_sopcast},
+  {IPP2P_TVANTS, SHORT_HAND_IPP2P, 22, &udp_search_tvants},
+  {IPP2P_PPSTREAM, SHORT_HAND_IPP2P, 12, &udp_search_ppstream},
+  {IPP2P_TEREDO, SHORT_HAND_IPP2P, 21, &udp_search_teredo},
+  {IPP2P_DTLS, SHORT_HAND_IPP2P, 25, &udp_search_dtls},
+//  {IPP2P_QUIC, SHORT_HAND_IPP2P, 30, &udp_search_quic}, // Disabled, since there is new code for it
+  {0, 0, 0, NULL}
+};
+
+#endif

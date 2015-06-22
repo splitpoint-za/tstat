@@ -45,10 +45,10 @@ void
 alloc_adx (int idx)
 {
   adx_index_first[idx] =
-    (struct adx **) MMmalloc (sizeof (struct adx *) * MAX_ADX_SLOTS,
+    (struct adx **) MMmalloc (sizeof (struct adx *) * GLOBALS.Max_ADX_Slots,
 			      "alloc_adx");
   adx_index_second[idx] =
-    (struct adx **) MMmalloc (sizeof (struct adx *) * MAX_ADX_SLOTS,
+    (struct adx **) MMmalloc (sizeof (struct adx *) * GLOBALS.Max_ADX_Slots,
 			      "alloc_adx");
   adx_index_current[idx] = adx_index_first[idx];
 }
@@ -65,7 +65,7 @@ add_adx (int idx, struct in_addr *adx, int dest, int bytes)
 
   seed = (adx->s_addr & adx_addr_mask[idx]);
   adx_search_hash_count[idx]++;
-  pos = (seed % MAX_ADX_SLOTS);
+  pos = (seed % GLOBALS.Max_ADX_Slots);
 
   if (adx_index_current[idx][pos] == NULL)
     {
@@ -205,7 +205,7 @@ print_adx (int idx, double delta)
      fprintf (fp, "#Sampling rate: Average %lu [s] - Max %lu [s]\n",adx2_bitrate_delta/1000000,adx3_bitrate_delta/1000000);
      fprintf (fp, "#Subnet IP \tTime \tsrc_hits \tdst_hits \tsrc_bytes \tdst_bytes \tUp Rate [kbps] \tDown Rate [kbps] \tMax Up Rate [kbps] \tMax Down Rate [kbps]\n");
    }
-  for (i = 0; i < MAX_ADX_SLOTS; i++)
+  for (i = 0; i < GLOBALS.Max_ADX_Slots; i++)
     {
       tmp_adx = adx_index[i];
       if (tmp_adx != NULL)
@@ -268,7 +268,7 @@ void max_adx(int idx1, int idx2, double delta)
   adx_index = adx_index_current[idx1];
   adx2_index = (adx_index_first[idx2]==adx_index_current[idx2]?adx_index_second[idx2]:adx_index_first[idx2]);
 
-  for (i = 0; i < MAX_ADX_SLOTS; i++)
+  for (i = 0; i < GLOBALS.Max_ADX_Slots; i++)
     {
       tmp_adx2 = adx2_index[i];
       if (tmp_adx2 !=NULL)

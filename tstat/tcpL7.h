@@ -41,6 +41,10 @@
 #define MAX_UDP_UTP 40
 
 /* Maximum number of UDP packets to analyze per flow (c2s+s2c) */
+/* trying to identify QUIC           traffic                   */
+#define MAX_UDP_QUIC 60
+
+/* Maximum number of UDP packets to analyze per flow (c2s+s2c) */
 /* trying to identify MPEG2 over UDP traffic (VOD)             */
 #define MAX_UDP_VOD 40
 
@@ -56,7 +60,7 @@
 #define DESCRIBE 0x4445534352494245ULL
 #define GET  0x47455420UL
 #define POST 0x504F5354UL
-#define HEAD 0x48454044UL
+#define HEAD 0x48454144UL
 #define HTTP 0x48545450UL
 #define RTSP 0x52545350UL
 #define ICY  0x49435920UL
@@ -94,7 +98,7 @@
 #define DESCRIBE 0x4542495243534544ULL
 #define GET  0x20544547UL
 #define POST 0x54534F50UL
-#define HEAD 0x44404548UL
+#define HEAD 0x44414548UL
 #define HTTP 0x50545448UL
 #define RTSP 0x50535452UL
 #define ICY  0x20594349UL

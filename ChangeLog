@@ -1,3 +1,35 @@
+30/05/14 - MMM
+- Main changes since 2.4
+  * Changed the log file organization:
+    - Modular structure controlled by runtime.conf 
+    - Merged log_video_complete and log_streaming_complete in a single
+      log_video_complete file, sharing modules from log_tcp_complete
+  * Included YouTube SSL connections in log_video_complete
+  * Added -Y option for CryptoPAN-based encryption for specific sets of addresses
+  * Added options to provide a CryptoPAn key
+  * Added NDS File Format/Cisco Videoscape (used by Sky+ boxes for VOD) video 
+    classification
+  * Implemented the CryptoPAn key storage as a LRU cache. Size controlled in param.h
+  * Disabled most old and obsolete P2P protocols in the DPI. Can be enabled defining
+    P2P_OLDPROTO in Makefile.conf
+  * Added -W option to exclude (whitelist) addresses from the -Y encryption procedure
+  * Bugfix: added HTTP response code sanity check
+  * Added indicator of truncated URL, Referer and UA fields in log_http_complete
+  * Included features from the DPDK/libtstat branch:
+    - Changed the flow garbage collection timing to improve performace at high speed
+    - Conditional compilation (via RRD_THREADED) to have the RRD writing on a separate thread
+      (currently only working on Debian 7.x)
+  * Configurability revolution:
+    - Global constants defined at compilation time in param.h can now be modified at runtime 
+      before Tstat starts
+    - Added -G option to provide a file with new values for the global constants
+    - Updated the internal workings of ini_reader to support both integer and floating point
+      values
+  * Reworked QUIC classification (from Pure DPI to FSM DPI)
+  * Substituted simplistic SPDY identification with specific NPN/ALPN identification
+  * Added -0 option to enable the strict(er) privacy mode
+  * Removed -p option and thread usage, since it was buggy and never used in production
+
 09/03/12 - MMM
 - Main changes since 2.3:
   * Defined new RRD/histos for RTT and overall throughtput of 'cloud' 

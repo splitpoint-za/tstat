@@ -83,6 +83,8 @@
 #define L7_FLOW_PPSTREAM	41
 #define L7_FLOW_TEREDO		42
 #define L7_FLOW_SIP		43
+#define L7_FLOW_DTLS		44
+#define L7_FLOW_QUIC		45
 
 #define L7_FLOW_UNKNOWN         49    /* Unknown is set to the largest ID */
 #define L7_FLOW_TOT             50    /* Large to leave space for future  */

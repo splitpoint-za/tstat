@@ -45,7 +45,7 @@ void
 memory_debug ()
 {
   fprintf (fp_stdout, "Using %ld over %ld TP\t(%ldK) (%ld MAX)\n", 
-      IN_USE_TP, TOT_TP, MAX_TCP_PAIRS, TOT_TP * sizeof (tcp_pair) >> 10);
+      IN_USE_TP, TOT_TP, GLOBALS.Max_TCP_Pairs, TOT_TP * sizeof (tcp_pair) >> 10);
   fprintf (fp_stdout, "Using %ld over %ld SEGMENT\t(%ldK)\n", 
       IN_USE_SEGMENT, TOT_SEGMENT, TOT_SEGMENT * sizeof (segment) >> 10);
   fprintf (fp_stdout, "Using %ld over %ld QUADRANT\t(%ldK)\n", 
@@ -155,6 +155,12 @@ tp_release (tcp_pair * released_tcp_pair)
    {
      free(released_tcp_pair->ssl_server_subject);
      released_tcp_pair->ssl_server_subject=NULL;
+   }
+
+  if (released_tcp_pair->dns_name!=NULL)
+   {
+     free(released_tcp_pair->dns_name);
+     released_tcp_pair->dns_name=NULL;
    }
   
   memset (released_tcp_pair->c2s.ss, 0, sizeof (seqspace));
@@ -464,6 +470,12 @@ utp_release (udp_pair * rel_udp_pair)
 #ifdef MEMDEBUG
   IN_USE_UDP_PAIR--;
 #endif
+
+  if (rel_udp_pair->dns_name!=NULL)
+   {
+     free(rel_udp_pair->dns_name);
+     rel_udp_pair->dns_name=NULL;
+   }
 
   if (rel_udp_pair->c2s.skype!=NULL)
    {

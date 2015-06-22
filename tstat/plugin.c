@@ -38,6 +38,9 @@
 #define PROTO_DEBUG (PROTO_DEBUG_LEVEL>0 && debug>=PROTO_DEBUG_LEVEL)
 extern int debug;
 extern Bool runtime_engine,bayes_engine;
+#ifdef DNS_CACHE_PROCESSOR
+extern Bool dns_enabled;
+#endif
 
 /* chain of protocol analyzer */
 struct proto *proto_list_head;
@@ -97,7 +100,17 @@ proto_init ()
 		  (void *) make_videoL7_conn_stats);
 #endif
 
-  
+#ifdef DNS_CACHE_PROCESSOR
+   if (dns_enabled)
+    {
+      proto_register (PROTOCOL_UDP, "DNS", "DNS Cache Processor",
+		  (void *) check_dns_response,
+		  (void *) dns_process_response,
+		  (void *) dns_cache_init,
+          (void *) dns_cache_status);
+    }
+#endif
+
   proto_register (PROTOCOL_TCP, "TCPL7", "Layer 7 TCP Protocols",
 		  (void *) gettcpL7,
 		  (void *) tcpL7_flow_stat,
@@ -203,12 +216,6 @@ proto_analyzer (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
   struct proto *protocol = proto_list_head;
   void *phdr = NULL;
   void *ret = NULL;
-
-  /* avoid digging into multicast videostreams */
-  uint32_t ip_addr =  ntohl (pip->ip_dst.s_addr);
-  if (ip_addr >= LB_MULTICAST && ip_addr < UB_MULTICAST) {
-    return;
-  }
 
   while (protocol != NULL)
     {

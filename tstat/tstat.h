@@ -75,9 +75,6 @@
    #include "TargetConditionals.h"
 #endif
 
-#ifdef __ANDROID__
- //  #include "tstat_android.h"
-#endif
 /* #include "memwatch.h" */
 /* #include <mpatrol.h> */
 
@@ -103,7 +100,9 @@
 #include "protocol.h"
 #include "dump.h"
 #include "inireader.h"
+#include "dns_namefilter.h"
 #include "names.h"
+#include "crypto.h"
 #include "../include/libtstat.h"
 
 #include "ipp2p_tstat.h"
@@ -139,8 +138,8 @@ typedef long tt_int32;
 typedef unsigned int tt_uint32;
 typedef int tt_int32;
 #else
-OOPS:Please insert an appropriate 32 - bit unsigned type here !
-  OOPS:Please insert an appropriate 32 - bit signed type here !
+//OOPS:Please insert an appropriate 32 - bit unsigned type here !
+//OOPS:Please insert an appropriate 32 - bit signed type here !
 #endif				/* SIZEOF_UNSIGNED_INT == 4 */
 #endif				/* SIZEOF_UNSIGNED_LONG_INT == 4 */
 /* first, do the 16 bit ones */
@@ -153,8 +152,8 @@ typedef unsigned short tt_uint16;
 typedef short tt_int16;
 #else
  
-  OOPS:Please insert an appropriate 16 - bit unsigned type here !
-  OOPS:Please insert an appropriate 16 - bit signed type here !
+//OOPS:Please insert an appropriate 16 - bit unsigned type here !
+//OOPS:Please insert an appropriate 16 - bit signed type here !
 #endif				/* SIZEOF_UNSIGNED_INT == 4 */
 #endif				/* SIZEOF_UNSIGNED_LONG_INT == 4 */
 typedef unsigned char tt_uint8;
@@ -174,6 +173,9 @@ extern Bool internal_dst;
 extern Bool cloud_src;
 extern Bool cloud_dst;
 
+extern Bool crypto_src;
+extern Bool crypto_dst;
+
 extern Bool warn_ooo;
 extern Bool warn_IN_OUT;
 extern Bool warn_printtrunc;
@@ -192,9 +194,6 @@ extern timeval first_packet;
 extern timeval last_packet;
 
 /* global routine decls */
-
-void *time_out_flow_closing ();	/* thread flow_close */
-void *stats_dumping ();		/* thread Stat_dump */
 
 void *MallocZ (int);
 void *ReallocZ (void *oldptr, int obytes, int nbytes);
@@ -740,6 +739,14 @@ void id16to11(char *id11, char *id16);
 
 /* generic UDP */
 
+/* DNS Plugin */
+
+void dns_cache_init();
+void *check_dns_response(struct udphdr *pudp, int tproto, void *pdir, void *plast);
+void dns_process_response(struct ip *pip, void *pproto, int tproto, void *pdir, 
+                          int dir, void *hdr, void *plast);
+void dns_cache_status(void *thisdir, int tproto);
+
 /* Video Streaming Plugin */
 
 void videoL7_init ();
@@ -790,7 +797,7 @@ enum web_category map_http_to_web(tcp_pair *);
 
 tstat_report * get_stats_report(tstat_report *report);
 
-void log_parse_ini_arg(char *param_name, int param_value);
+void log_parse_ini_arg(char *param_name, param_value param_value);
 void log_parse_end_section(void);
 void log_parse_start_section(void);
 
@@ -814,10 +821,29 @@ extern  long log_bitmask;
 #define LOG_CHAT_COMPLETE       0x0020
 #define LOG_CHAT_MESSAGES       0x0040
 #define LOG_VIDEO_COMPLETE      0x0080
-#define LOG_STREAMING_COMPLETE  0x0100
+#define LOG_STREAMING_COMPLETE  0x0100  // Obsolete
 // other logs disabled by default
 #define LOG_HTTP_COMPLETE       0x0200
 #define LOG_CHAT_MSNOTHER       0x1000  
 #define LOG_L3_BITRATE          0x2000  // -3 command line option (disabled by default)
 // overall mask
 #define LOG_ALL                 (((1<<9)-1))
+
+#define TCP_LOG_CORE		0x0000
+#define TCP_LOG_END_TO_END	0x0001
+#define TCP_LOG_LAYER7		0x0002
+#define TCP_LOG_P2P		0x0004
+#define TCP_LOG_OPTIONS		0x0008
+#define TCP_LOG_ADVANCED	0x0010
+#define TCP_LOG_ALL		(TCP_LOG_END_TO_END|TCP_LOG_LAYER7|TCP_LOG_P2P|TCP_LOG_OPTIONS)
+
+#define VIDEO_LOG_CORE		0x0000
+#define VIDEO_LOG_END_TO_END	0x0001
+#define VIDEO_LOG_LAYER7	0x0002
+#define VIDEO_LOG_OPTIONS	0x0004
+#define VIDEO_LOG_VIDEOINFO	0x0008
+#define VIDEO_LOG_YOUTUBE	0x0010
+#define VIDEO_LOG_ADVANCED	0x0020
+#define VIDEO_LOG_ALL		(VIDEO_LOG_CORE|VIDEO_LOG_END_TO_END|VIDEO_LOG_LAYER7|VIDEO_LOG_OPTIONS|VIDEO_LOG_VIDEOINFO|VIDEO_LOG_YOUTUBE)
+
+extern struct global_parameters GLOBALS;

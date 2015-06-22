@@ -20,6 +20,12 @@
 #include "tstat.h"
 #include "tcpL7.h"
 #include "videoL7.h"
+#include <regex.h>
+
+/* DNS cache piece */
+#include "dns_cache.h"
+long int tcp_cleaned = 0;
+long int udp_cleaned = 0;
 
 /* provided globals  */
 extern FILE *fp_logc;
@@ -37,21 +43,22 @@ extern unsigned long int f_RTP_tunneled_TCP_count;
 extern struct L4_bitrates L4_bitrate;
 /* end TOPIX */
 extern int log_version;
+extern int log_level;
+extern int video_level;
 
-/* thread mutex and conditional variables  */
-extern pthread_mutex_t ttp_lock_mutex;
-extern pthread_mutex_t utp_lock_mutex;
-extern pthread_mutex_t flow_close_cond_mutex;
-extern pthread_mutex_t flow_close_started_mutex;
-extern pthread_cond_t flow_close_cond;
-extern pthread_mutex_t stat_dump_mutex;
-extern pthread_mutex_t stat_dump_cond_mutex;
-extern pthread_cond_t stat_dump_cond;
-extern Bool threaded;
 extern long int tcp_packet_count;
+extern Bool strict_privacy;
+
+#ifdef DNS_CACHE_PROCESSOR
+extern Bool dns_enabled;
+#endif
 
 Bool thread_stats_flag = FALSE;	/* parameter used to make not possible that two
 				   istances of the same thread can run at the same time */
+
+/* garbage offloading vars */
+int tcp_index = 0;
+int udp_index = 0;
 
 /* tcp database stats */
 long not_id_p;
@@ -81,15 +88,21 @@ static u_int FinCount (tcp_pair * ptp);
 void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
-#ifdef VIDEO_DETAILS
+#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
 Bool is_video(tcp_pair *ptp_save);
 void update_video_log (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 #endif
 
-#ifdef STREAMING_CLASSIFIER
+#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
 Bool is_streaming(tcp_pair *ptp_save);
 void update_streaming_log(tcp_pair *tcp_save, tcb *pab, tcb *pba);
 #endif
+
+/* Patterns for SSL_youtube*/
+regex_t yt_re[3];
+
+void init_ssl_youtube_patterns();
+Bool is_ssl_youtube(tcp_pair *ptp_save);
 
 #ifdef CHECK_TCP_DUP
 Bool
@@ -99,7 +112,7 @@ dup_tcp_check (struct ip *pip, struct tcphdr *ptcp, tcb * thisdir)
   double delta_t = elapsed (thisdir->last_time, current_time);
   if (thisdir->last_ip_id == pip->ip_id &&
       thisdir->last_checksum == ntohs(ptcp->th_sum) && 
-      delta_t < MIN_DELTA_T_TCP_DUP_PKT && thisdir->last_len == pip->ip_len)
+      delta_t < GLOBALS.Min_Delta_T_TCP_Dup_Pkt && thisdir->last_len == pip->ip_len)
     {
  //      fprintf (fp_stdout, "dup tcp %d , id = %u ",tot++, pip->ip_id);
  //      fprintf (fp_stdout, "TTL: %d ID: %d Checksum: %d Delta_t: %g\n", 
@@ -325,16 +338,16 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   /* look for the next eventually available free block */
   num_tcp_pairs++;
-  num_tcp_pairs = num_tcp_pairs % MAX_TCP_PAIRS;
+  num_tcp_pairs = num_tcp_pairs % GLOBALS.Max_TCP_Pairs;
   /* make a new one, if possible */
   while ((num_tcp_pairs != old_new_tcp_pairs) && (ttp[num_tcp_pairs] != NULL)
-	 && (steps < LIST_SEARCH_DEPT))
+	 && (steps < GLOBALS.List_Search_Dept))
     {
       steps++;
       /* look for the next one */
 //         fprintf (fp_stdout, "%d %d\n", num_tcp_pairs, old_new_tcp_pairs);
       num_tcp_pairs++;
-      num_tcp_pairs = num_tcp_pairs % MAX_TCP_PAIRS;
+      num_tcp_pairs = num_tcp_pairs % GLOBALS.Max_TCP_Pairs;
     }
   if (ttp[num_tcp_pairs] != NULL)
     {
@@ -374,6 +387,19 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->cloud_src = cloud_src;
   ptp->cloud_dst = cloud_dst;
 
+  if (crypto_src)
+   {
+     store_crypto_ip(&(ptp->addr_pair.a_address.un.ip4));
+   }
+
+  if (crypto_dst)
+   {
+     store_crypto_ip(&(ptp->addr_pair.b_address.un.ip4));
+   }
+
+  ptp->crypto_src = crypto_src;
+  ptp->crypto_dst = crypto_dst;
+  
   /* Initialize the state */
   ptp->con_type = 0;
   ptp->state = UNKNOWN_TYPE;
@@ -383,17 +409,56 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   /* Assume all packets must be dumped */
   ptp->stop_dumping_tcp = FALSE;
+/* DNS cache piece */
+  /* Do reverse Lookup */
+#ifdef DNS_CACHE_PROCESSOR
+ if (dns_enabled)
+  {
+    struct DNS_data* dns_data =  get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+    if(dns_data!=NULL){
+	 ptp->dns_name = dns_data->hostname;
+	 ptp->dns_server = dns_data->dns_server;
+	 ptp->request_time = dns_data->request_time;
+	 ptp->response_time = dns_data->response_time;
+     }
+    if(debug >1)
+     {
+       fprintf (fp_stdout, "got DNS reverse %s %s ", ptp->dns_name, HostName (ptp->addr_pair.a_address));
+       fprintf (fp_stdout, "from DNS server %s\n", inet_ntoa(ptp->dns_server));
+     }
+  /* check if we are interested into dumping this flow packets accoring to the DNS name */
+  ptp->stop_dumping_tcp = !check_DNSname(ptp->dns_name);
+  }
+ else
+  ptp->dns_name = NULL;
+#else
+  ptp->dns_name = NULL;
+  /*
+  ptp->dns_server = NULL;
+  ptp->request_time = NULL;
+  ptp->response_time = NULL;
+  */
+#endif
 
 #ifdef VIDEO_DETAILS
   memset(&ptp->http_meta,0,sizeof(struct flv_metadata));
 #endif
 
+  ptp->http_request_count  = 0;
+  ptp->http_response_count = 0;
+
   ptp->ssl_client_subject = NULL;
   ptp->ssl_server_subject = NULL;
 
-  ptp->ssl_client_spdy = 0;
-  ptp->ssl_server_spdy = 0;
+  ptp->ssl_client_npnalpn = TLS_EMPTY;
+  ptp->ssl_server_npnalpn = TLS_EMPTY;
 
+  ptp->ssl_client_data_seen = FALSE;
+  ptp->ssl_server_data_seen = FALSE;
+
+  ptp->ssl_client_data_byte = 0;
+  ptp->ssl_server_data_byte = 0;
+  
   return (&ttp[num_tcp_pairs]);
 }
 
@@ -404,38 +469,12 @@ NewPTPH_2 (void)
 }
 
 
-void *
-time_out_flow_closing ()
-{
-  if (debug > 0)
-    fprintf (fp_stdout, "Created thread time_out_flow_closing()\n");
-  pthread_mutex_lock (&flow_close_started_mutex);
-  pthread_mutex_lock (&flow_close_cond_mutex);
-  while (1)
-    {
-      pthread_cond_wait (&flow_close_cond, &flow_close_cond_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nSvegliato thread FLOW CLOSE\n");
-#endif
-      pthread_mutex_unlock (&flow_close_started_mutex);
-
-      usleep (200);
-      trace_done_periodic ();
-
-      pthread_mutex_lock (&flow_close_started_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nTerminato thread FLOW CLOSE\n");
-#endif
-    }
-  pthread_exit (NULL);
-}
-
-
 
 /* connection records are stored in a hash table.  Buckets are linked	*/
 /* lists sorted by most recent access.					*/
 
-ptp_snap *ptp_hashtable[HASH_TABLE_SIZE] = { NULL };
+// ptp_snap *ptp_hashtable[HASH_TABLE_SIZE] = { NULL };
+ptp_snap **ptp_hashtable;
 
 static ptp_snap **
 FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
@@ -460,7 +499,7 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
   CopyAddr (&tp_in, pip, ntohs (ptcp->th_sport), ntohs (ptcp->th_dport));
 
   /* grab the hash value (already computed by CopyAddr) */
-  hval = tp_in.hash % HASH_TABLE_SIZE;
+  hval = tp_in.hash % GLOBALS.Hash_Table_Size;
 
   ptph_last = NULL;
   pptph_head = &ptp_hashtable[hval];
@@ -555,32 +594,11 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
     
 
   // we fire it at DOUBLE rate, but actually clean only those > TCP_IDLE_TIME
-#ifdef WIPE_TCP_SINGLETONS
-  if (elapsed (last_cleaned, current_time) > TCP_SINGLETON_TIME / 2)
-#else
-  if (elapsed (last_cleaned, current_time) > TCP_IDLE_TIME / 2)
-#endif
+  if (elapsed (last_cleaned, current_time) > GLOBALS.GC_Fire_Time)
     {
-      if (threaded)
-	{
-	  pthread_mutex_unlock (&ttp_lock_mutex);
-	  pthread_mutex_lock (&flow_close_cond_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "TCP_IDLE_TIME fired: Signaling thread FLOW CLOSE\n");
-#endif
-	  pthread_cond_signal (&flow_close_cond);
-	  pthread_mutex_unlock (&flow_close_cond_mutex);
-
-	  pthread_mutex_lock (&flow_close_started_mutex);
-	  pthread_mutex_unlock (&flow_close_started_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nlocked thread FLOW CLOSE\n");
-#endif
-	  pthread_mutex_lock (&ttp_lock_mutex);
-	}
-      else
-	trace_done_periodic ();
-
+      int i;
+      for (i=0; i< elapsed (last_cleaned, current_time) / GLOBALS.GC_Fire_Time; i++ )
+        trace_done_periodic ();
       last_cleaned = current_time;
     }
 
@@ -588,17 +606,6 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
   add_histo (L4_flow_number, L4_FLOW_TCP);
   fcount++;
   f_TCP_count++;
-
-  if (threaded)
-    {
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nTry to lock thread TTP\n");
-#endif
-      pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nGot lock thread TTP\n");
-#endif
-    }
 
   temp_ttp = NewTTP_2 (pip, ptcp);
   if (temp_ttp == NULL)		/* not enough memory to store the new flow */
@@ -634,14 +641,6 @@ FindTTP (struct ip *pip, struct tcphdr *ptcp, int *pdir)
 
   *pdir = C2S;
 
-
-  if (threaded)
-    {
-      pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-      fprintf (fp_stdout, "\n\nUnlocked thread TTP\n");
-#endif
-    }
 
   /* return the new ptph */
   return (pptph_head);
@@ -811,16 +810,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       /* free up memory for this flow */
 
-      if (threaded)
-	{
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
-#endif
-	  pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
-#endif
-	}
       free_tp (ptp_save);
 
       /* free up the first element of the list pointer by the hash */
@@ -828,16 +817,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
       *(ptph_save->ttp_ptr) = NULL;
       *ptph_ptr = ptph_save->next;
       ptph_release (ptph_tmp);
-      if (threaded)
-	{
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
-#endif
-	  pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
-#endif
-	}
 
       return (FLOW_STAT_OK);
     }
@@ -1048,7 +1027,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
        {
 	 thisdir->rate_last_sample = current_time;
 	 thisdir->rate_left_edge = time2double(current_time);
-	 thisdir->rate_right_edge = thisdir->rate_left_edge+RATE_SAMPLING;
+	 thisdir->rate_right_edge = thisdir->rate_left_edge+GLOBALS.Rate_Sampling;
 	 thisdir->rate_min=MAXFLOAT;
 	 thisdir->rate_max=0.0;
 	 thisdir->rate_bytes=0;
@@ -1064,7 +1043,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
          double sample;
 	 int streak=0;
 
-	 sample = thisdir->rate_bytes *1e6 / RATE_SAMPLING;
+	 sample = thisdir->rate_bytes *1e6 / GLOBALS.Rate_Sampling;
 
 	 if (thisdir->rate_min>sample) 
 	   thisdir->rate_min = sample;
@@ -1085,13 +1064,13 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	     streak++;
 	   }
 
-	 thisdir->rate_left_edge +=  RATE_SAMPLING;
-	 thisdir->rate_right_edge +=  RATE_SAMPLING;
+	 thisdir->rate_left_edge +=  GLOBALS.Rate_Sampling;
+	 thisdir->rate_right_edge +=  GLOBALS.Rate_Sampling;
 
          while (time2double(current_time) >= thisdir->rate_right_edge)
 	  {
- 	    thisdir->rate_left_edge +=  RATE_SAMPLING;
-	    thisdir->rate_right_edge +=  RATE_SAMPLING;
+ 	    thisdir->rate_left_edge +=  GLOBALS.Rate_Sampling;
+	    thisdir->rate_right_edge +=  GLOBALS.Rate_Sampling;
  	    if (thisdir->rate_samples<10)
 	     {
 	      thisdir->rate_begin_bytes[thisdir->rate_samples] = 0;
@@ -1249,16 +1228,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
 	  /* free up memory for this flow */
 
-	  if (threaded)
-	    {
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
-#endif
-	      pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
-#endif
-	    }
 	  free_tp (ptp_save);
 
 	  /* free up the first element of the list pointer by the hash */
@@ -1266,16 +1235,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	  *(ptph_save->ttp_ptr) = NULL;
 	  *ptph_ptr = ptph_save->next;
 	  ptph_release (ptph_tmp);
-	  if (threaded)
-	    {
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nRichiesto sblocco thread TTP\n");
-#endif
-	      pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nOttenuto sblocco thread TTP\n");
-#endif
-	    }
 	}
 
       return (FLOW_STAT_OK);
@@ -1417,16 +1376,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       /* free up memory for this flow */
 
-      if (threaded)
-	{
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nRichiesto blocco thread TTP\n");
-#endif
-	  pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nOttenuto blocco thread TTP\n");
-#endif
-	}
       free_tp (ptp_save);
 
       /* free up the first element of the list pointedby the hash */
@@ -1438,16 +1387,6 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
          FindTTP() */
       *ptph_ptr = ptph_save->next;
       ptph_release (ptph_tmp);
-      if (threaded)
-	{
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\ngoing to Unlock of the TTP thread\n");
-#endif
-	  pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	  fprintf (fp_stdout, "\n\nthread TTP unlocked\n");
-#endif
-	}
     }
   return (FLOW_STAT_OK);
 }
@@ -1457,7 +1396,7 @@ print_ttp ()
 {
   int p;
 
-  for (p = 0; p < MAX_TCP_PAIRS; p++)
+  for (p = 0; p < GLOBALS.Max_TCP_Pairs; p++)
     {
       fprintf (fp_stdout, "[%2d]", p);
       if (ttp[p] != NULL)
@@ -1473,7 +1412,49 @@ trace_done (void)
   tcp_pair *ptp;
   int ix;
 
-  for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
+
+  for (ix = 0; ix < GLOBALS.Max_TCP_Pairs; ++ix)
+    {
+      ptp = ttp[ix];
+
+      if ((ptp == NULL))
+	continue;
+
+#ifdef WIPE_TCP_SINGLETONS
+      if (( (
+             (
+	      (ptp->c2s.syn_count>0 && ptp->s2c.syn_count==0)
+              ||
+	      (ptp->c2s.syn_count==0 && ptp->s2c.syn_count>0)
+	     ) 
+	     &&
+	     (
+	      ptp->packets == (ptp->c2s.syn_count+ptp->s2c.syn_count)
+	     )
+	    )
+            && 
+	    (elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Singleton_Time)
+	  )
+	  ||
+          (elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Idle_Time))
+#else
+      if ((elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Idle_Time))
+#endif
+	{
+	  
+	  make_conn_stats (ptp, (ptp->s2c.syn_count > 0)
+			   && (ptp->c2s.syn_count > 0));
+
+	  tot_conn_TCP--;
+
+	  ttp[ix] = NULL;
+
+	}
+
+    }
+
+
+  for (ix = 0; ix < GLOBALS.Max_TCP_Pairs; ++ix)
     {
       ptp = ttp[ix];
       if (ptp == NULL)		// already analyzed
@@ -1485,15 +1466,17 @@ trace_done (void)
     }
 }
 
+long int counter = 0;
+
 void
 trace_done_periodic ()
 {
   tcp_pair *ptp;
   udp_pair *pup;
   int ix, dir, j;
-  unsigned int cleaned = 0;
+  //unsigned int cleaned = 0;
   unsigned long init_tot_conn = tot_conn_TCP;
-  extern ptp_snap *ptp_hashtable[];
+  extern ptp_snap **ptp_hashtable;
 
   hash hval;
   ptp_snap *ptph_tmp, *ptph, *ptph_prev;
@@ -1502,7 +1485,7 @@ trace_done_periodic ()
  /* complete the "idle time" calculations using NOW */
   if (printticks && debug > 1)
     fprintf (fp_stdout, "\nStart cleaning TCP flows\n");
-  for (ix = 0; ix < MAX_TCP_PAIRS; ++ix)
+  for (ix = tcp_index; ix < GLOBALS.Max_TCP_Pairs; ix += GLOBALS.GC_Split_Ratio )
     {
       ptp = ttp[ix];
 
@@ -1524,58 +1507,26 @@ trace_done_periodic ()
 	     )
 	    )
             && 
-	    (elapsed (ptp->last_time, current_time) > TCP_SINGLETON_TIME)
+	    (elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Singleton_Time)
 	  )
 	  ||
-          (elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
+          (elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Idle_Time))
 #else
-      if ((elapsed (ptp->last_time, current_time) > TCP_IDLE_TIME))
+      if ((elapsed (ptp->last_time, current_time) > GLOBALS.TCP_Idle_Time))
 #endif
 	{
-	  if (threaded)
-	    {
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nTrace_done_periodic trying lock thread TTP\n");
-#endif
-	      pthread_mutex_lock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nTrace_done_periodic got lock thread TTP\n");
-#endif
-	      if ((ptp == NULL))
-		/* someonelse already cleaned this ptp */
-		{
-		  pthread_mutex_unlock (&ttp_lock_mutex);
-		  continue;
-		}
-#ifdef WIPE_TCP_SINGLETONS
-             /* Not sure this is the correct test when managing
-	        singletons and normal times together
-	     */
-	      if ((elapsed (ptp->last_time, current_time) <= TCP_SINGLETON_TIME)
-		  || (ptp->last_time.tv_sec == 0
-		      && ptp->last_time.tv_usec == 0))
-#else
-	      if ((elapsed (ptp->last_time, current_time) <= TCP_IDLE_TIME)
-		  || (ptp->last_time.tv_sec == 0
-		      && ptp->last_time.tv_usec == 0))
-#endif
-		{
-		  /* someonelse already cleaned this ptp */
-		  pthread_mutex_unlock (&ttp_lock_mutex);
-		  continue;
-		}
-	    }
 	  /* must be cleaned */
-	  cleaned++;
+	  //tcp_cleaned++;
 
 	  make_conn_stats (ptp, (ptp->s2c.syn_count > 0)
 			   && (ptp->c2s.syn_count > 0));
+
       if (profile_flows->flag == HISTO_ON)
         AVE_departure(current_time, &active_flows_win_TCP);
 	  tot_conn_TCP--;
 
 	  /* free up hash element->.. */
-	  hval = ptp->addr_pair.hash % HASH_TABLE_SIZE;
+	  hval = ptp->addr_pair.hash % GLOBALS.Hash_Table_Size;
 
 	  pptph_head = &ptp_hashtable[hval];
 	  j = 0;
@@ -1605,20 +1556,16 @@ trace_done_periodic ()
 	  /* ... and free up the TP. */
 	  free_tp (ptp);
 	  ttp[ix] = NULL;
-	  if (threaded)
-	    {
-	      pthread_mutex_unlock (&ttp_lock_mutex);
-#ifdef DEBUG_THREAD
-	      fprintf (fp_stdout, "\n\nTrace_done_periodic released lock thread TTP\n");
-#endif
-	    }
 	}
 
     }
 
+  /* Increasing starting index for the next function call */
+  tcp_index = (tcp_index + 1) % GLOBALS.GC_Split_Ratio ;
+
   if (printticks && debug > 1)
     fprintf (fp_stdout,
-	     "\rCleaned %d/(%ld) TCP flows\n", cleaned, init_tot_conn);
+	     "\rCleaned %d/(%ld) TCP flows\n", tcp_cleaned, init_tot_conn);
 
   if (do_udp == FALSE)
     return;
@@ -1628,9 +1575,9 @@ trace_done_periodic ()
   if (printticks && debug > 1)
     fprintf (fp_stdout, "Start cleaning UDP flows\n");
 
-  cleaned = 0;
+  //cleaned = 0;
   init_tot_conn = tot_conn_UDP;
-  for (ix = 0; ix < MAX_UDP_PAIRS; ++ix)
+  for (ix = udp_index; ix < GLOBALS.Max_UDP_Pairs; ix += GLOBALS.GC_Split_Ratio )
     {
       pup = utp[ix];
 
@@ -1641,34 +1588,53 @@ trace_done_periodic ()
          close the flow */
 #ifdef WIPE_UDP_SINGLETONS
       if (( (pup->packets == 1) && 
-	    (elapsed (pup->last_time, current_time) > UDP_SINGLETON_TIME)
+	    (elapsed (pup->last_time, current_time) > GLOBALS.UDP_Singleton_Time)
 	  )
 	  ||
-          (elapsed (pup->last_time, current_time) > UDP_IDLE_TIME))
-	close_udp_flow (pup, ix, dir);
+          (elapsed (pup->last_time, current_time) > GLOBALS.UDP_Idle_Time))
+	{
+	   close_udp_flow (pup, ix, dir);
+           udp_cleaned++;
+	}
 #else
-      if ((elapsed (pup->last_time, current_time) > UDP_IDLE_TIME))
-	close_udp_flow (pup, ix, dir);
+      if ((elapsed (pup->last_time, current_time) > GLOBALS.UDP_Idle_Time))
+	{
+	   close_udp_flow (pup, ix, dir);
+           udp_cleaned++;
+	}
 #endif
 
     }
+
+  /* Increasing starting index for the next function call */
+  udp_index = (udp_index + 1) % GLOBALS.GC_Split_Ratio ;
+
+	//if (counter++%500 == 0)printf("Cleaned %d flows\n", cleaned);
+
   if (printticks && debug > 1)
     fprintf (fp_stdout,
-	     "\rCleaned %d/(%ld) UDP flows\n", cleaned, init_tot_conn);
+	     "\rCleaned %d/(%ld) UDP flows\n", udp_cleaned, init_tot_conn);
 }
 
 void
 trace_init (void)
 {
   static Bool initted = FALSE;
+  extern ptp_snap **ptp_hashtable;
 
   if (initted)
     return;
 
   initted = TRUE;
 
+  /* initialize the hash table */
+
+  ptp_hashtable = (ptp_snap **) MallocZ (GLOBALS.Hash_Table_Size * sizeof (ptp_snap *));
+
   /* create an array to hold any pairs that we might create */
-  ttp = (tcp_pair **) MallocZ (MAX_TCP_PAIRS * sizeof (tcp_pair *));
+  ttp = (tcp_pair **) MallocZ (GLOBALS.Max_TCP_Pairs * sizeof (tcp_pair *));
+
+  init_ssl_youtube_patterns();
 
   Minit ();
 }
@@ -2161,6 +2127,590 @@ udp_cksum_valid (struct ip * pip, struct udphdr * pudp, void *plast)
   return (udp_cksum (pip, pudp, plast) == 0);
 }
 
+/*
+** Functions to print selected groups of TCP measurements
+*/
+
+void print_tcp_stats_core(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  double etime;
+
+  /* connection time and throughput */
+  /* from microseconds to ms */
+  etime = elapsed (ptp_save->first_time, ptp_save->last_time);
+  etime = etime / 1000;
+
+  /* Core Tstat TCP measurements */
+  if (ptp_save->crypto_src==FALSE)
+   {
+     wfprintf (fp, "%s", HostName (ptp_save->addr_pair.a_address));
+   }   
+  else
+   {
+     wfprintf (fp, "%s", HostNameEncrypted (ptp_save->addr_pair.a_address));
+   }
+  wfprintf (fp, 
+    	   " %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d",
+    	   ServiceName (ptp_save->addr_pair.a_port),
+    	   pab->packets,
+    	   pab->reset_count,
+    	   pab->ack_pkts,
+    	   pab->pureack_pkts,
+    	   pab->unique_bytes,
+    	   pab->data_pkts,
+    	   pab->data_bytes,
+    	   pab->rexmit_pkts,
+    	   pab->rexmit_bytes,
+    	   pab->out_order_pkts,
+    	   pab->syn_count,
+    	   pab->fin_count);
+  if (ptp_save->crypto_dst==FALSE)
+   {
+     wfprintf (fp, " %s", HostName (ptp_save->addr_pair.b_address));
+   }   
+  else
+   {
+     wfprintf (fp, " %s", HostNameEncrypted (ptp_save->addr_pair.b_address));
+   }
+  wfprintf (fp,
+    	   " %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d",
+    	   ServiceName (ptp_save->addr_pair.b_port),
+    	   pba->packets,
+    	   pba->reset_count,
+    	   pba->ack_pkts,
+    	   pba->pureack_pkts,
+    	   pba->unique_bytes,
+    	   pba->data_pkts,
+    	   pba->data_bytes,
+    	   pba->rexmit_pkts,
+    	   pba->rexmit_bytes,
+    	   pba->out_order_pkts,
+    	   pba->syn_count,
+    	   pba->fin_count);
+
+  /* first pkt time */
+  wfprintf (fp, " %f",time2double(ptp_save->first_time) / 1000.0);
+  /* last pkt time */
+  wfprintf (fp, " %f",time2double(ptp_save->last_time) / 1000.0);
+
+  /* elapsed time */
+  wfprintf (fp, " %f", etime);
+
+  /* first DATA pkt time */
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->payload_start_time) / 1000.0);
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->payload_start_time) / 1000.0);
+
+  /* last DATA pkt time */
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->payload_end_time) / 1000.0);
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->payload_end_time) / 1000.0);
+  /* first ACK pkt time */
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pab->ack_start_time) / 1000.0);
+  wfprintf (fp, " %f",
+	       elapsed (ptp_save->first_time,
+			pba->ack_start_time) / 1000.0);
+
+  /* printing boolean flag if source is considered internal or not */
+  wfprintf (fp, " %d", ptp_save->internal_src);
+  /* printing boolean flag if destination is considered internal or not */
+  wfprintf (fp, " %d", ptp_save->internal_dst);
+
+  /* printing boolean flag if source is considered internal or not */
+  wfprintf (fp, " %d", ptp_save->crypto_src);
+  /* printing boolean flag if destination is considered internal or not */
+  wfprintf (fp, " %d", ptp_save->crypto_dst);
+
+  /* TOPIX: added 97th column: connection type */
+  wfprintf (fp, " %d", ptp_save->con_type);
+
+  /* P2P: added 98-99th column: p2p protocol / p2p message type /  */
+  wfprintf (fp, " %d", ptp_save->p2p_type / 100);
+
+  /* Web2.0: added 105th column: HTTP content type */
+  /* 
+     Using http_data+1 so that valid values are > 0, i.e. GET is 1,
+     POST is 2, etc.
+  */
+  wfprintf (fp, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
+  		       ptp_save->http_data + 1 : 0 );
+
+/* End of the Core TCP set */
+}
+
+void print_tcp_stats_e2e(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  /* End to End flow measures (RTT and TTL) */
+
+ wfprintf (fp, " %f %f %f %f %u %u %u",
+   	  (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
+   	   1000.0),
+   	  (ptp_save->c2s.rtt_min / 1000.0),
+ 	  (ptp_save->c2s.rtt_max / 1000.0),
+   	  (Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
+   		 ptp_save->c2s.rtt_count) / 1000.0),
+   	   ptp_save->c2s.rtt_count,
+ 	   ptp_save->c2s.ttl_min,
+ 	   ptp_save->c2s.ttl_max);
+
+ wfprintf (fp, " %f %f %f %f %u %u %u",
+   	  (Average (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) /
+   	   1000.0),
+   	  (ptp_save->s2c.rtt_min / 1000.0),
+ 	  (ptp_save->s2c.rtt_max / 1000.0),
+   	  (Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
+   		 ptp_save->s2c.rtt_count) / 1000.0),
+   	   ptp_save->s2c.rtt_count,
+ 	   ptp_save->s2c.ttl_min,
+ 	   ptp_save->s2c.ttl_max);
+}
+
+void print_tcp_stats_p2p(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  /* P2P: added 98-99th column: p2p protocol / p2p message type /  */
+  wfprintf (fp, " %d", ptp_save->p2p_type % 100);
+
+  /* P2P: added 100-103th column: p2p data mesg. / p2p signalling msg.   */
+  /*	  currently only for ED2K-TCP - MMM 7/3/08*/
+  wfprintf (fp, " %d %d %d %d", ptp_save->p2p_data_count,
+    	   ptp_save->p2p_sig_count,ptp_save->p2p_c2s_count,ptp_save->p2p_c2c_count);
+
+  /* P2P: added 104th column: p2p chat mesg. count */
+  /*	  currently only for ED2K-TCP - MMM 5/6/08*/
+  wfprintf (fp, " %d", ptp_save->p2p_msg_count);
+}
+
+void print_tcp_stats_options(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  wfprintf (fp, 
+    	   " %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
+    	   pab->f1323_ws,
+    	   pab->f1323_ts,
+    	   pab->window_scale,
+    	   pab->fsack_req,
+    	   pab->sacks_sent,
+    	   pab->mss,
+    	   pab->max_seg_size,
+    	   pab->min_seg_size,
+    	   pab->win_max,
+    	   pab->win_min,
+    	   pab->win_zero_ct,
+    	   pab->cwin_max,
+    	   pab->cwin_min,
+    	   pab->initialwin_bytes);
+
+  wfprintf (fp, " %u %u %u %u %u %u %u %u",
+    	   ptp_save->c2s.rtx_RTO,
+    	   ptp_save->c2s.rtx_FR,
+    	   ptp_save->c2s.reordering,
+    	   ptp_save->c2s.net_dup,
+    	   ptp_save->c2s.unknown,
+    	   ptp_save->c2s.flow_control,
+    	   ptp_save->c2s.unnecessary_rtx_RTO,
+    	   ptp_save->c2s.unnecessary_rtx_FR);
+  /* Bad behaviour */
+  wfprintf (fp, " %d", ptp_save->c2s.bad_behavior);
+
+  wfprintf (fp,
+    	   " %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
+    	   pba->f1323_ws,
+    	   pba->f1323_ts,
+    	   pba->window_scale,
+    	   pba->fsack_req,
+    	   pba->sacks_sent,
+    	   pba->mss,
+    	   pba->max_seg_size,
+    	   pba->min_seg_size,
+    	   pba->win_max,
+    	   pba->win_min,
+    	   pba->win_zero_ct,
+    	   pba->cwin_max, pba->cwin_min, pba->initialwin_bytes);
+
+  wfprintf (fp, " %u %u %u %u %u %u %u %u",
+    	   ptp_save->s2c.rtx_RTO,
+    	   ptp_save->s2c.rtx_FR,
+    	   ptp_save->s2c.reordering,
+    	   ptp_save->s2c.net_dup,
+    	   ptp_save->s2c.unknown,
+    	   ptp_save->s2c.flow_control,
+    	   ptp_save->s2c.unnecessary_rtx_RTO,
+    	   ptp_save->s2c.unnecessary_rtx_FR);
+  /* Bad behaviour */
+  wfprintf (fp, " %d", ptp_save->s2c.bad_behavior);
+}
+
+void print_tcp_stats_advanced(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba,
+                              u_long pab_expected, u_long pba_expected)
+{
+  /* write to log file */
+  /* printing boolean flag if this is considered internal or not */
+  // wfprintf (fp, " %d", ptp_save->cloud_src);
+  // wfprintf (fp, " %d", ptp_save->cloud_dst);
+
+#ifdef LOST_PACKET_STAT
+/* Expected unique bytes (from sequence numbers) used to detect missing packets */
+  wfprintf (fp, " %u %u", pab_expected, pba_expected);
+#endif
+
+#ifdef PACKET_STATS
+  {
+    int i;
+
+     /* PSH-delimited Message sizes */
+    wfprintf (fp, " %d",ptp_save->c2s.msg_count);
+    for (i=0;i<MAX_COUNT_MESSAGES;i++) {
+    	wfprintf (fp, " %d",ptp_save->c2s.msg_size[i]);
+     }
+
+    wfprintf (fp, " %d",ptp_save->s2c.msg_count);
+    for (i=0;i<MAX_COUNT_MESSAGES;i++) {
+    	wfprintf (fp, " %d",ptp_save->s2c.msg_size[i]);
+     }
+
+     /* Segment sizes */
+    wfprintf (fp, " %d",ptp_save->c2s.seg_count);
+    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
+    	wfprintf (fp, " %d",ptp_save->c2s.seg_size[i]);
+     }
+
+    wfprintf (fp, " %d",ptp_save->s2c.seg_count);
+    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
+    	wfprintf (fp, " %d",ptp_save->s2c.seg_size[i]);
+     }
+
+     /* Segment intertimes */
+    for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
+    	wfprintf (fp, " %f",ptp_save->c2s.seg_intertime[i]/1000.);
+     }
+
+    for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
+    	wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
+     }
+
+     /* TLS handshake segment sizes */
+    wfprintf (fp, " %d",ptp_save->c2s.ssl_handshake_seg_count);
+    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
+        wfprintf (fp, " %d",ptp_save->c2s.ssl_handshake_seg_size[i]);
+     }
+
+    wfprintf (fp, " %d",ptp_save->s2c.ssl_handshake_seg_count);
+    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
+        wfprintf (fp, " %d",ptp_save->s2c.ssl_handshake_seg_size[i]);
+     }
+
+#define MEAN(SUM,ENNE) (((ENNE)>0)?((SUM)*1.0/(ENNE)):0.0)
+#define VAR(ME,SQ,ENNE) (((ENNE)>1)?((SQ)-(ENNE)*(ME)*(ME))/((ENNE)-1):0.0)
+
+    /* Averages */
+     {
+       double mval,varval;
+       mval = MEAN(ptp_save->c2s.data_bytes,ptp_save->c2s.data_pkts);
+       varval = VAR(mval,ptp_save->c2s.data_pkts_sum2,ptp_save->c2s.data_pkts);
+       wfprintf (fp, " %d %f %f",ptp_save->c2s.data_pkts,mval,sqrt(varval));
+
+       mval = MEAN(ptp_save->s2c.data_bytes,ptp_save->s2c.data_pkts);
+       varval = VAR(mval,ptp_save->s2c.data_pkts_sum2,ptp_save->s2c.data_pkts);
+       wfprintf (fp, " %d %f %f",ptp_save->s2c.data_pkts,mval,sqrt(varval));
+
+       mval = MEAN(ptp_save->c2s.seg_intertime_sum,ptp_save->c2s.seg_count-1);
+       varval = VAR(mval,ptp_save->c2s.seg_intertime_sum2,ptp_save->c2s.seg_count-1);
+       wfprintf (fp, " %d",(ptp_save->c2s.seg_count>1)?ptp_save->c2s.seg_count:0);
+       wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
+
+       mval = MEAN(ptp_save->s2c.seg_intertime_sum,ptp_save->s2c.seg_count-1);
+       varval = VAR(mval,ptp_save->s2c.seg_intertime_sum2,ptp_save->s2c.seg_count-1);
+       wfprintf (fp, " %d",(ptp_save->s2c.seg_count>1)?ptp_save->s2c.seg_count:0);
+       wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
+
+     }
+
+    /* PSH */
+    wfprintf (fp, " %d %d",ptp_save->c2s.data_pkts_push,
+     			   ptp_save->s2c.data_pkts_push);
+  }
+#endif
+
+#ifdef ENABLE_LOG_MPTCP
+  /* MPTCP usage */
+  wfprintf (fp," %d %d",ptp_save->c2s.mptcp_req, ptp_save->s2c.mptcp_req);
+#endif
+
+}
+
+void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+
+  /* Number of (potential) HTTP Requests and Responses  */
+  wfprintf(fp, " %d %d", ptp_save->http_request_count, 
+                         ptp_save->http_response_count);
+
+  /* First HTTP response code, if HTTP */
+  wfprintf(fp, " %s", (ptp_save->con_type & HTTP_PROTOCOL) ?
+                            ptp_save->http_response : "---" );
+
+  /* Number of PSH-separated messages */
+  wfprintf(fp," %d %d",ptp_save->c2s.msg_count,ptp_save->s2c.msg_count);
+
+  /* TLS SNI required by the client, if any */
+  wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
+
+  /* TLS Server Certificate Name SCN, if any */   
+  wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
+
+  /* TLS NPN / ALPN bitmask recording the usage of SPDY and HTTP2 */
+  wfprintf(fp," %d %d",ptp_save->ssl_client_npnalpn, ptp_save->ssl_server_npnalpn);
+
+  /* Record if the TLS Client Hello carries an old Session ID */
+  wfprintf(fp," %d",ptp_save->ssl_sessionid_reuse);
+
+/* Record time of the end of the SSL handshake */
+  
+  wfprintf(fp," %f",(ptp_save->con_type & SSL_PROTOCOL?
+                     elapsed (ptp_save->first_time,
+			      ptp_save->ssl_client_before_data_time) / 1000.0 : 0.0));
+  wfprintf(fp," %f",(ptp_save->con_type & SSL_PROTOCOL?
+                     elapsed (ptp_save->first_time,
+			      ptp_save->ssl_server_before_data_time) / 1000.0 : 0.0));
+
+/* Record time and data before first Application Data in TLS connections */
+
+  wfprintf(fp," %f",(ptp_save->ssl_client_data_seen?
+                     elapsed (ptp_save->first_time,
+			      ptp_save->ssl_client_data_time) / 1000.0 : 0.0));
+  wfprintf(fp," %f",(ptp_save->ssl_server_data_seen?
+                     elapsed (ptp_save->first_time,
+			      ptp_save->ssl_server_data_time) / 1000.0 : 0.0));
+
+
+  wfprintf(fp," %lu",(ptp_save->ssl_client_data_seen?
+                     (ptp_save->ssl_client_data_byte) : 0L));
+  wfprintf(fp," %lu",(ptp_save->ssl_server_data_seen?
+                     (ptp_save->ssl_server_data_byte) : 0L));
+
+  #ifdef SNOOP_DROPBOX
+  wfprintf(fp," %s",(ptp_save->con_type & HTTP_PROTOCOL) && 
+                    (ptp_save->http_data==HTTP_DROPBOX) ? (strict_privacy ? "XXX" : ptp_save->http_ytid) :"-");
+#endif
+#ifdef DNS_CACHE_PROCESSOR
+  if (ptp_save->dns_name!=NULL)
+   {
+     wfprintf(fp, " %s",ptp_save->dns_name);
+     /* DNS server */
+     wfprintf(fp, " %s",inet_ntoa(ptp_save->dns_server));
+      /* Absolute Request time */
+     wfprintf(fp, " %f", time2double(ptp_save->request_time) / 1000.);
+      /* Absolute Response time */
+     wfprintf(fp, " %f", time2double(ptp_save->response_time) / 1000.);
+   }
+  else
+   {
+     wfprintf(fp, " - - 0.0 0.0");
+   }
+#endif
+
+}
+
+void print_video_stats_core(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  char id_string[20];
+
+  /* Streaming : 75th column : Classification based on Content Type */
+
+  wfprintf(fp, " %d", ptp_save->streaming.video_content_type);
+
+  /* Streaming : 76th column : Classification based on Payload signature */
+  wfprintf(fp, " %d", ptp_save->streaming.video_payload_type);
+
+  /* Video ID16/46 */
+
+  if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     	     ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_204 ))
+   {
+     if (strlen(ptp_save->http_ytid)==11)
+      {
+	/* Some YouTube HLS flows use the ID11 in the request */
+	id11to16(id_string, ptp_save->http_ytid);
+	wfprintf(fp, " %s", (strict_privacy ? "XXX" : id_string));
+      }
+     else
+      {
+        /* This is both good for ID16 and ID46 */
+        wfprintf(fp, " %s", (strict_privacy ? "XXX" : ptp_save->http_ytid));
+      }
+   }
+  else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     	     ( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
+   {
+     id11to16(id_string,ptp_save->http_ytid);
+     wfprintf (fp, " %s", (strict_privacy ? "XXX" : id_string));
+   }
+  else			 
+   {
+     wfprintf (fp, " --");
+   }
+
+   /* YouTube Format */
+
+  if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+             ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+               ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+               ptp_save->http_data==HTTP_YOUTUBE_204  )
+	 )
+   {
+     wfprintf (fp, " %s", ptp_save->http_ytitag);
+   }
+  else
+   {
+     wfprintf (fp, " --");
+   }
+
+}
+
+void print_video_stats_info(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  /* Streaming : 77th column : Video Duration*/
+  wfprintf(fp, " %f", ptp_save->streaming.metadata.duration);
+
+  /* Streaming : 78th column : Overall Video Bitrate*/
+  wfprintf(fp, " %f", ptp_save->streaming.metadata.videodatarate);
+
+  /* Streaming : 79th column : Video Width*/
+  wfprintf(fp, " %d", ptp_save->streaming.metadata.width);
+
+  /* Streaming : 80th column : Video Height*/
+  wfprintf(fp, " %d", ptp_save->streaming.metadata.height);
+
+}
+
+void print_video_stats_youtube(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  char id_string[20];
+
+  /* ID11 */
+  if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     	     ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+     	       ptp_save->http_data==HTTP_YOUTUBE_204 ))
+   {
+     if (strlen(ptp_save->http_ytid)==11)
+      {
+	/* Some YouTube HLS flows use the ID11 in the request */
+	wfprintf(fp, " %s", (strict_privacy ? "XXX" : ptp_save->http_ytid));
+      }
+     else
+      {
+        /* This is both good for ID16 and ID46 */
+        id16to11(id_string, ptp_save->http_ytid);
+        wfprintf(fp, " %s", (strict_privacy ? "XXX" : id_string));
+      }
+   }
+  else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+     	       ( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
+     		 ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
+     		 ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
+   {
+     wfprintf (fp, " %s", (strict_privacy ? "XXX" : ptp_save->http_ytid));
+   }
+  else			 
+   {
+     wfprintf (fp, " --");
+   }
+
+  /* Other YouTube info */
+
+  if ((ptp_save->con_type & HTTP_PROTOCOL) && 
+             ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
+               ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
+               ptp_save->http_data==HTTP_YOUTUBE_204  ))
+   {
+     wfprintf (fp, " %d %d %d %d %d", 
+				 ptp_save->http_ytseek,
+				 ptp_save->http_ytredir_mode,
+				 ptp_save->http_ytredir_count,
+				 ptp_save->http_ytmobile,
+				 ptp_save->http_ytstream );
+   }
+  else
+   {
+     wfprintf (fp, " 0 0 0 0 0");
+   }
+
+}
+
+void print_video_stats_advanced(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
+  int i;
+
+  /* Rate c2s */
+  if (ptp_save->c2s.rate_samples > 1)
+   {
+     wfprintf (fp, " %d %d %d %.3f %.3f %.3f %.3f",
+  		    ptp_save->c2s.rate_samples, 				   
+  		    ptp_save->c2s.rate_empty_samples,				   
+    		    ptp_save->c2s.rate_empty_streak,
+  		    8e-3*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples,	   
+  		    8e-3*sqrt((ptp_save->c2s.rate_sum2 - 
+  			       ptp_save->c2s.rate_sum*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples)/
+  			       (ptp_save->c2s.rate_samples-1)),
+  		    8e-3*ptp_save->c2s.rate_min,
+  		    8e-3*ptp_save->c2s.rate_max);
+   }
+  else
+   {
+     wfprintf (fp, " 0 0 0 0.000 0.000 0.000 0.000");
+   }
+
+  /* Rate s2c */
+  if (ptp_save->s2c.rate_samples > 1 )
+   {
+     wfprintf (fp, " %d %d %d %.3f %.3f %.3f %.3f",
+  		    ptp_save->s2c.rate_samples, 				   
+  		    ptp_save->s2c.rate_empty_samples,
+    		    ptp_save->s2c.rate_empty_streak,
+  		    8e-3*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples,	   
+  		    8e-3*sqrt((ptp_save->s2c.rate_sum2 - 
+  			       ptp_save->s2c.rate_sum*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples)/
+  			       (ptp_save->s2c.rate_samples-1)),
+  		    8e-3*ptp_save->s2c.rate_min,
+  		    8e-3*ptp_save->s2c.rate_max);
+   }
+  else
+   {
+     wfprintf (fp, " 0 0 0 0.000 0.000 0.000 0.000");
+   }
+
+  /* write to log file */
+
+  for (i=0;i<10;i++)
+   {
+     wfprintf (fp, " %d",ptp_save->c2s.rate_begin_bytes[i]);
+   }
+
+  for (i=0;i<10;i++)
+   {
+     wfprintf (fp, " %d",ptp_save->s2c.rate_begin_bytes[i]);
+   }
+
+  wfprintf (fp, " %d",ptp_save->s2c.msg_count);
+  for (i=0;i<MAX_COUNT_MESSAGES;i++)
+   {
+     wfprintf (fp, " %d",ptp_save->s2c.msg_size[i]);
+   }
+
+}
+
 
 void
 make_conn_stats (tcp_pair * ptp_save, Bool complete)
@@ -2171,6 +2721,9 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
   FILE *fp;
   tcb *pab, *pba;
   u_long pab_expected, pba_expected;
+
+   /* Statistichs about CHAT flows */
+   tcp_cleaned ++;
 
   /* Statistichs about CHAT flows */
 #ifdef MSN_CLASSIFIER
@@ -2191,10 +2744,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     int streak=0;
 
     delta = time2double(current_time)-ptp_save->c2s.rate_left_edge;
-    if (delta < RATE_SAMPLING )
+    if (delta < GLOBALS.Rate_Sampling )
        sample = ptp_save->c2s.rate_bytes * 1e6 / delta;
     else
-       sample = ptp_save->c2s.rate_bytes * 1e6 / RATE_SAMPLING;
+       sample = ptp_save->c2s.rate_bytes * 1e6 / GLOBALS.Rate_Sampling;
 
     if (ptp_save->c2s.rate_min>sample) 
       ptp_save->c2s.rate_min = sample;
@@ -2214,13 +2767,13 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
        streak++;
      }
 
-    ptp_save->c2s.rate_left_edge +=  RATE_SAMPLING;
-    ptp_save->c2s.rate_right_edge +=  RATE_SAMPLING;
+    ptp_save->c2s.rate_left_edge +=  GLOBALS.Rate_Sampling;
+    ptp_save->c2s.rate_right_edge +=  GLOBALS.Rate_Sampling;
 
     while (time2double(current_time) >= ptp_save->c2s.rate_right_edge)
      {
-       ptp_save->c2s.rate_left_edge +=  RATE_SAMPLING;
-       ptp_save->c2s.rate_right_edge +=  RATE_SAMPLING;
+       ptp_save->c2s.rate_left_edge +=  GLOBALS.Rate_Sampling;
+       ptp_save->c2s.rate_right_edge +=  GLOBALS.Rate_Sampling;
        if (ptp_save->c2s.rate_samples<10)
         {
           ptp_save->c2s.rate_begin_bytes[ptp_save->c2s.rate_samples] = 0;
@@ -2240,10 +2793,10 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     int streak=0;
 
     delta = time2double(current_time)-ptp_save->s2c.rate_left_edge;
-    if (delta < RATE_SAMPLING )
+    if (delta < GLOBALS.Rate_Sampling )
        sample = ptp_save->s2c.rate_bytes * 1e6 / delta;
     else
-       sample = ptp_save->s2c.rate_bytes * 1e6 / RATE_SAMPLING;
+       sample = ptp_save->s2c.rate_bytes * 1e6 / GLOBALS.Rate_Sampling;
 
     if (ptp_save->s2c.rate_min>sample) 
       ptp_save->s2c.rate_min = sample;
@@ -2263,13 +2816,13 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
        streak++;
      }
 
-    ptp_save->s2c.rate_left_edge +=  RATE_SAMPLING;
-    ptp_save->s2c.rate_right_edge +=  RATE_SAMPLING;
+    ptp_save->s2c.rate_left_edge +=  GLOBALS.Rate_Sampling;
+    ptp_save->s2c.rate_right_edge +=  GLOBALS.Rate_Sampling;
 
     while (time2double(current_time) >= ptp_save->s2c.rate_right_edge)
      {
-       ptp_save->s2c.rate_left_edge +=  RATE_SAMPLING;
-       ptp_save->s2c.rate_right_edge +=  RATE_SAMPLING;
+       ptp_save->s2c.rate_left_edge +=  GLOBALS.Rate_Sampling;
+       ptp_save->s2c.rate_right_edge +=  GLOBALS.Rate_Sampling;
        if (ptp_save->s2c.rate_samples<10)
         {
           ptp_save->s2c.rate_begin_bytes[ptp_save->s2c.rate_samples] = 0;
@@ -2732,13 +3285,17 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 
   if (complete)
     {
-      double thru = ((double) ptp_save->c2s.unique_bytes /
-		     elapsed (ptp_save->first_time,
-			      pab->payload_end_time) * 8000.0);
+      double transfer_time, thru;
+      
       add_histo (tcp_tot_time, etime);
-      /* throughput in kbps */
-      if (my_finite (thru))
+
+      transfer_time = elapsed (ptp_save->first_time, pab->payload_end_time);
+      
+      if (transfer_time > 0.0)
        {
+         thru = ((double) ptp_save->c2s.unique_bytes / transfer_time * 8000.0);
+        /* throughput in kbps */
+
 	 add_histo (tcp_thru_c2s, thru);
          /* Large flow stats */
 	 if ( ptp_save->c2s.unique_bytes >= 1000000)
@@ -2755,10 +3312,13 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
 	  }
        }
 
-      thru = ((double) ptp_save->s2c.unique_bytes /
-	      elapsed (ptp_save->first_time, pba->payload_end_time) * 8000.0);
-      if (my_finite (thru))
+      transfer_time = elapsed (ptp_save->first_time, pba->payload_end_time);
+
+      if (transfer_time > 0.0)
        {
+
+         thru = ((double) ptp_save->s2c.unique_bytes / transfer_time * 8000.0);
+
 	 add_histo (tcp_thru_s2c, thru);
          /* Large flow stats */
 	 if ( ptp_save->s2c.unique_bytes >= 1000000)
@@ -2992,288 +3552,43 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
     } else {
         fp = LOG_IS_ENABLED(LOG_TCP_NOCOMPLETE) ? fp_lognc : NULL;
     }
-#if defined(VIDEO_DETAILS) && defined(VIDEO_LOG_ONLY)
-  if (fp != NULL && is_video(ptp_save))
-#else
   if (fp != NULL)
-#endif
-    {
-      wfprintf (fp, 
-	       "%s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
-	       HostName (ptp_save->addr_pair.a_address),
-	       ServiceName (ptp_save->addr_pair.a_port),
-	       pab->packets,
-	       pab->reset_count, pab->ack_pkts, pab->pureack_pkts,
-	       pab->unique_bytes, pab->data_pkts, pab->data_bytes,
-	       pab->rexmit_pkts, pab->rexmit_bytes, pab->out_order_pkts,
-	       pab->syn_count, pab->fin_count, pab->f1323_ws, pab->f1323_ts,
-	       pab->window_scale, pab->fsack_req, pab->sacks_sent, pab->mss,
-	       pab->max_seg_size, pab->min_seg_size, pab->win_max,
-	       pab->win_min, pab->win_zero_ct, pab->cwin_max, pab->cwin_min,
-	       pab->initialwin_bytes);
+   {
+     /* Core Tstat TCP measurements */
+     print_tcp_stats_core(fp, ptp_save, pab, pba);
 
-      wfprintf (fp, " %f %f %f %f %u %u %u",
-	       (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
-		1000.0),
-	       (ptp_save->c2s.rtt_min / 1000.0),
-               (ptp_save->c2s.rtt_max / 1000.0),
-	       (Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
-		      ptp_save->c2s.rtt_count) / 1000.0),
-		ptp_save->c2s.rtt_count,
-                ptp_save->c2s.ttl_min,
-                ptp_save->c2s.ttl_max);
+     /* End to End flow measures (RTT and TTL) */
+     if ((log_level & TCP_LOG_END_TO_END) && (complete))
+       print_tcp_stats_e2e(fp, ptp_save, pab, pba);
 
-      wfprintf (fp, " %u %u %u %u %u %u %u %u",
-	       ptp_save->c2s.rtx_RTO,
-	       ptp_save->c2s.rtx_FR,
-	       ptp_save->c2s.reordering,
-	       ptp_save->c2s.net_dup,
-	       ptp_save->c2s.unknown,
-	       ptp_save->c2s.flow_control,
-	       ptp_save->c2s.unnecessary_rtx_RTO,
-	       ptp_save->c2s.unnecessary_rtx_FR);
-      /* Bad behaviour */
-      wfprintf (fp, " %d", ptp_save->c2s.bad_behavior);
+     /* P2P specific information */
+     if ((log_level & TCP_LOG_P2P) && (complete))
+       print_tcp_stats_p2p(fp, ptp_save, pab, pba);
 
-      wfprintf (fp,
-	       " %s %s %lu %u %lu %lu %lu %lu %lu %u %u %u %d %d %d %d %d %d %d %d %u %u %u %u %d %lu %lu %u",
-	       HostName (ptp_save->addr_pair.b_address),
-	       ServiceName (ptp_save->addr_pair.b_port),
-	       pba->packets,
-	       pba->reset_count,
-	       pba->ack_pkts,
-	       pba->pureack_pkts,
-	       pba->unique_bytes,
-	       pba->data_pkts,
-	       pba->data_bytes,
-	       pba->rexmit_pkts,
-	       pba->rexmit_bytes,
-	       pba->out_order_pkts,
-	       pba->syn_count,
-	       pba->fin_count,
-	       pba->f1323_ws,
-	       pba->f1323_ts,
-	       pba->window_scale,
-	       pba->fsack_req,
-	       pba->sacks_sent,
-	       pba->mss,
-	       pba->max_seg_size,
-	       pba->min_seg_size,
-	       pba->win_max,
-	       pba->win_min,
-	       pba->win_zero_ct,
-	       pba->cwin_max, pba->cwin_min, pba->initialwin_bytes);
+     /* TCP protocol specific information */
+     if ((log_level & TCP_LOG_OPTIONS) && (complete))
+       print_tcp_stats_options(fp, ptp_save, pab, pba);
 
-      wfprintf (fp, " %f %f %f %f %u %u %u",
-	       (Average (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) /
-		1000.0),
-	       (ptp_save->s2c.rtt_min / 1000.0),
-               (ptp_save->s2c.rtt_max / 1000.0),
-	       (Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
-		      ptp_save->s2c.rtt_count) / 1000.0),
-		ptp_save->s2c.rtt_count,
-                ptp_save->s2c.ttl_min,
-                ptp_save->s2c.ttl_max);
+     /* TCP flow advanced measurements */
+     if ((log_level & TCP_LOG_ADVANCED) && (complete))
+       print_tcp_stats_advanced(fp, ptp_save, pab, pba, pab_expected, pba_expected);
 
-      wfprintf (fp, " %u %u %u %u %u %u %u %u",
-	       ptp_save->s2c.rtx_RTO,
-	       ptp_save->s2c.rtx_FR,
-	       ptp_save->s2c.reordering,
-	       ptp_save->s2c.net_dup,
-	       ptp_save->s2c.unknown,
-	       ptp_save->s2c.flow_control,
-	       ptp_save->s2c.unnecessary_rtx_RTO,
-	       ptp_save->s2c.unnecessary_rtx_FR);
-      /* Bad behaviour */
-      wfprintf (fp, " %d", ptp_save->s2c.bad_behavior);
+     /* TCP Layer7 specific information */
+     if ((log_level & TCP_LOG_LAYER7) && (complete))
+       print_tcp_stats_layer7(fp, ptp_save, pab, pba);
 
-/* elapsed time */
-      wfprintf (fp, " %f", etime);
-
-/* first pkt time */
-      wfprintf (fp, " %f",
-	       elapsed (first_packet, ptp_save->first_time) / 1000.0);
-/* last pkt time */
-      wfprintf (fp, " %f",
-	       elapsed (first_packet, ptp_save->last_time) / 1000.0);
-
-/* first DATA pkt time */
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->payload_start_time) / 1000.0);
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->payload_start_time) / 1000.0);
-
-/* last DATA pkt time */
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->payload_end_time) / 1000.0);
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->payload_end_time) / 1000.0);
-
-/* first ACK pkt time */
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->ack_start_time) / 1000.0);
-      wfprintf (fp, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->ack_start_time) / 1000.0);
-
-/* Absolute time of first packet */
-      wfprintf (fp, " %f", time2double(ptp_save->first_time) / 1000.);
-
-      /* printing boolean flag if source is considered internal or not */
-      wfprintf (fp, " %d", ptp_save->internal_src);
-      /* printing boolean flag if destination is considered internal or not */
-      wfprintf (fp, " %d", ptp_save->internal_dst);
-
-      /* TOPIX: added 97th column: connection type */
-      wfprintf (fp, " %d", ptp_save->con_type);
-
-      /* P2P: added 98-99th column: p2p protocol / p2p message type /  */
-      wfprintf (fp, " %d %d", ptp_save->p2p_type / 100,
-	       ptp_save->p2p_type % 100);
-
-      /* P2P: added 100-103th column: p2p data mesg. / p2p signalling msg.   */
-      /*      currently only for ED2K-TCP - MMM 7/3/08*/
-      wfprintf (fp, " %d %d %d %d", ptp_save->p2p_data_count,
-	       ptp_save->p2p_sig_count,ptp_save->p2p_c2s_count,ptp_save->p2p_c2c_count);
-
-      /* P2P: added 104th column: p2p chat mesg. count */
-      /*      currently only for ED2K-TCP - MMM 5/6/08*/
-      wfprintf (fp, " %d", ptp_save->p2p_msg_count);
-
-      /* Web2.0: added 105th column: HTTP content type */
-      /* 
-         Using http_data+1 so that valid values are > 0, i.e. GET is 1,
-         POST is 2, etc.
-      */
-      wfprintf (fp, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
-                          ptp_save->http_data + 1 : 0 );
-
-      /* write to log file */
-      /* printing boolean flag if this is considered internal or not */
-//      wfprintf (fp, " %d", ptp_save->cloud_src);
-//      wfprintf (fp, " %d", ptp_save->cloud_dst);
-
-
-#ifdef LOST_PACKET_STAT
-/* Expected unique bytes (from sequence numbers) used to detect missing packets */
-      wfprintf (fp, " %u %u", pab_expected, pba_expected);
-#endif
-
-
-#ifndef PACKET_STATS
-  /* Number of PSH-separated messages */
-
-  wfprintf(fp," %d %d",ptp_save->c2s.msg_count,ptp_save->s2c.msg_count);
-#endif
-
-  wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
-  wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
-
-#ifdef ENABLE_SPDY
-/* Record the usage of the SPDY Protocol */
-
-  wfprintf(fp," %d %d",ptp_save->ssl_client_spdy,ptp_save->ssl_server_spdy);
-#endif
-
-#ifdef SNOOP_DROPBOX
-  wfprintf(fp," %s",(ptp_save->con_type & HTTP_PROTOCOL) && 
-                    (ptp_save->http_data==HTTP_DROPBOX) ? ptp_save->http_ytid:"-");
-#endif
-
-#ifdef PACKET_STATS
-  {
-    int i;
-
-       /* PSH-delimited Message sizes */
-      wfprintf (fp, " %d",ptp_save->c2s.msg_count);
-      for (i=0;i<MAX_COUNT_MESSAGES;i++) {
-          wfprintf (fp, " %d",ptp_save->c2s.msg_size[i]);
-       }
-
-      wfprintf (fp, " %d",ptp_save->s2c.msg_count);
-      for (i=0;i<MAX_COUNT_MESSAGES;i++) {
-          wfprintf (fp, " %d",ptp_save->s2c.msg_size[i]);
-       }
-
-       /* Segment sizes */
-      wfprintf (fp, " %d",ptp_save->c2s.seg_count);
-      for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
-          wfprintf (fp, " %d",ptp_save->c2s.seg_size[i]);
-       }
-
-      wfprintf (fp, " %d",ptp_save->s2c.seg_count);
-      for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
-          wfprintf (fp, " %d",ptp_save->s2c.seg_size[i]);
-       }
-
-       /* Segment intertimes */
-      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
-          wfprintf (fp, " %f",ptp_save->c2s.seg_intertime[i]/1000.);
-       }
-
-      for (i=0;i<MAX_COUNT_SEGMENTS-1;i++) {
-          wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
-       }
-
-#define MEAN(SUM,ENNE) (((ENNE)>0)?((SUM)*1.0/(ENNE)):0.0)
-#define VAR(ME,SQ,ENNE) (((ENNE)>1)?((SQ)-(ENNE)*(ME)*(ME))/((ENNE)-1):0.0)
-
-       /* Averages */
-        {
-	  double mval,varval;
-	  mval = MEAN(ptp_save->c2s.data_bytes,ptp_save->c2s.data_pkts);
-	  varval = VAR(mval,ptp_save->c2s.data_pkts_sum2,ptp_save->c2s.data_pkts);
-          wfprintf (fp, " %d %f %f",ptp_save->c2s.data_pkts,mval,sqrt(varval));
-
-	  mval = MEAN(ptp_save->s2c.data_bytes,ptp_save->s2c.data_pkts);
-	  varval = VAR(mval,ptp_save->s2c.data_pkts_sum2,ptp_save->s2c.data_pkts);
-          wfprintf (fp, " %d %f %f",ptp_save->s2c.data_pkts,mval,sqrt(varval));
-
-	  mval = MEAN(ptp_save->c2s.seg_intertime_sum,ptp_save->c2s.seg_count-1);
-	  varval = VAR(mval,ptp_save->c2s.seg_intertime_sum2,ptp_save->c2s.seg_count-1);
-          wfprintf (fp, " %d",(ptp_save->c2s.seg_count>1)?ptp_save->c2s.seg_count:0);
-          wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
-
-	  mval = MEAN(ptp_save->s2c.seg_intertime_sum,ptp_save->s2c.seg_count-1);
-	  varval = VAR(mval,ptp_save->s2c.seg_intertime_sum2,ptp_save->s2c.seg_count-1);
-          wfprintf (fp, " %d",(ptp_save->s2c.seg_count>1)?ptp_save->s2c.seg_count:0);
-          wfprintf (fp, " %f %f",mval/1e3,sqrt(varval)/1e3);
-
-        }
-
-       /* PSH */
-          wfprintf (fp, " %d %d",ptp_save->c2s.data_pkts_push,
-	                           ptp_save->s2c.data_pkts_push);
-         
-  }
-#endif
-
-#ifdef ENABLE_LOG_MPTCP
-  /* MPTCP usage */
-  wfprintf (fp," %d %d",ptp_save->c2s.mptcp_req, ptp_save->s2c.mptcp_req);
-#endif
-
-      wfprintf (fp, "\n");
-
+     wfprintf (fp, "\n");
    }
    
-#ifdef VIDEO_DETAILS
-   if (fp_video_logc && LOG_IS_ENABLED(LOG_VIDEO_COMPLETE) && is_video(ptp_save) && complete )
-    {
-      update_video_log(ptp_save,pab,pba);
-    }
+#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
+  if (fp_video_logc && LOG_IS_ENABLED(LOG_VIDEO_COMPLETE) 
+                    && ( is_video(ptp_save) || is_streaming(ptp_save) || is_ssl_youtube(ptp_save) ) 
+                    && complete )
+   {
+     update_video_log(ptp_save,pab,pba);
+   }
 #endif
    
-#ifdef STREAMING_CLASSIFIER
-	if (fp_streaming_logc && LOG_IS_ENABLED(LOG_STREAMING_COMPLETE) && is_streaming(ptp_save) && complete)
-		update_streaming_log(ptp_save, pab, pba);
-#endif
-
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))
       return;
@@ -3282,8 +3597,6 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
    else
       update_conn_log_mm_v2(ptp_save,pab,pba);
 }
-
-#ifdef VIDEO_DETAILS
 
 Bool is_video(tcp_pair *ptp_save)
 {
@@ -3311,292 +3624,73 @@ Bool is_video(tcp_pair *ptp_save)
    }
 }
 
-void
-update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
+void init_ssl_youtube_patterns()
 {
-  double etime;
-  int i;
-  char id_string[20];
+  regcomp(&yt_re[0],"\\.youtube\\.com$",REG_NOSUB);
+  regcomp(&yt_re[1],"\\.youtube-nocookie\\.com$",REG_NOSUB);
+  regcomp(&yt_re[2],"\\googlevideo\\.com$",REG_NOSUB);
+}
 
-  etime = elapsed (ptp_save->first_time, ptp_save->last_time);
-  etime = etime / 1000;
+Bool is_ssl_youtube(tcp_pair *ptp_save)
+{
 
+  if (!(ptp_save->con_type & SSL_PROTOCOL))
+    return FALSE;
+
+  if (ptp_save->ssl_client_subject!=NULL)
+   {
+     if  ( regexec(&yt_re[0],ptp_save->ssl_client_subject,0,NULL,0)==0 ||
+           regexec(&yt_re[1],ptp_save->ssl_client_subject,0,NULL,0)==0 ||
+           regexec(&yt_re[2],ptp_save->ssl_client_subject,0,NULL,0)==0 )
+       return TRUE;
+     else
+       return FALSE;
+   }
+  else
+    return FALSE;
+}
+
+#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
+void update_video_log(tcp_pair *ptp_save, tcb *pab, tcb *pba)
+{
   if (fp_video_logc != NULL)
-    {
-      wfprintf (fp_video_logc, 
-	       "%s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu",
-	       HostName (ptp_save->addr_pair.a_address),
-	       ServiceName (ptp_save->addr_pair.a_port),
-	       pab->packets,
-	       pab->reset_count,
-	       pab->unique_bytes, pab->data_pkts, pab->data_bytes,
-	       pab->rexmit_pkts, pab->rexmit_bytes, pab->out_order_pkts,
-	       pab->fin_count,
-	       pab->max_seg_size,
-	       pab->cwin_max, pab->cwin_min);
+   {
+    /* Core Tstat TCP measurements */
+    print_tcp_stats_core(fp_video_logc, ptp_save, pab, pba);
 
-      wfprintf (fp_video_logc, " %f %f %f %f %u %u %u",
-	       (Average (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) /
-		1000.0),
-	       (ptp_save->c2s.rtt_min / 1000.0),
-               (ptp_save->c2s.rtt_max / 1000.0),
-	       (Stdev (ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_sum2,
-		      ptp_save->c2s.rtt_count) / 1000.0),
-		ptp_save->c2s.rtt_count,
-                ptp_save->c2s.ttl_min,
-                ptp_save->c2s.ttl_max);
+    /* End to End flow measures (RTT and TTL) */
+    if ( video_level & VIDEO_LOG_END_TO_END )
+      print_tcp_stats_e2e(fp_video_logc, ptp_save, pab, pba);
 
-      /* Rate c2s */
-      if (ptp_save->c2s.rate_samples > 1)
-       {
-          wfprintf (fp_video_logc, " %d %d %d %.3f %.3f %.3f %.3f",
-        		ptp_save->c2s.rate_samples,				       
-        		ptp_save->c2s.rate_empty_samples,			       
-			ptp_save->c2s.rate_empty_streak,
-        		8e-3*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples,        
-        		8e-3*sqrt((ptp_save->c2s.rate_sum2 - 
-        			   ptp_save->c2s.rate_sum*ptp_save->c2s.rate_sum/ptp_save->c2s.rate_samples)/
-        			   (ptp_save->c2s.rate_samples-1)),
-        		8e-3*ptp_save->c2s.rate_min,
-        		8e-3*ptp_save->c2s.rate_max);
-       }
-      else
-       {
-          wfprintf (fp_video_logc, " 0 0 0 0.000 0.000 0.000 0.000");
-       }
-      
-      /* printing boolean flag if this is considered internal or not */
-      wfprintf (fp_video_logc, " %d", ptp_save->internal_src);
+    /* Core video information */
+    print_video_stats_core(fp_video_logc, ptp_save, pab, pba);
 
-      wfprintf (fp_video_logc,
-	       " %s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu",
-	       HostName (ptp_save->addr_pair.b_address),
-	       ServiceName (ptp_save->addr_pair.b_port),
-	       pba->packets,
-	       pba->reset_count,
-	       pba->unique_bytes, pba->data_pkts, pba->data_bytes,
-	       pba->rexmit_pkts, pba->rexmit_bytes, pba->out_order_pkts,
-	       pba->fin_count,
-	       pba->max_seg_size,
-	       pba->cwin_max, pba->cwin_min);
+    /* Video additional information */
+    if ( video_level & VIDEO_LOG_VIDEOINFO )
+      print_video_stats_info(fp_video_logc, ptp_save, pab, pba);
 
-      wfprintf (fp_video_logc, " %f %f %f %f %u %u %u",
-	       (Average (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) /
-		1000.0),
-	       (ptp_save->s2c.rtt_min / 1000.0),
-               (ptp_save->s2c.rtt_max / 1000.0),
-	       (Stdev (ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_sum2,
-		      ptp_save->s2c.rtt_count) / 1000.0),
-		ptp_save->s2c.rtt_count,
-                ptp_save->s2c.ttl_min,
-                ptp_save->s2c.ttl_max);
+    /* Video YouTube information */
+    if ( video_level & VIDEO_LOG_YOUTUBE )
+      print_video_stats_youtube(fp_video_logc, ptp_save, pab, pba);
 
-      /* Rate s2c */
-      if (ptp_save->s2c.rate_samples > 1 )
-       {
-          wfprintf (fp_video_logc, " %d %d %d %.3f %.3f %.3f %.3f",
-        		ptp_save->s2c.rate_samples,				       
-        		ptp_save->s2c.rate_empty_samples,
-			ptp_save->s2c.rate_empty_streak,
-        		8e-3*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples,        
-        		8e-3*sqrt((ptp_save->s2c.rate_sum2 - 
-        			   ptp_save->s2c.rate_sum*ptp_save->s2c.rate_sum/ptp_save->s2c.rate_samples)/
-        			   (ptp_save->s2c.rate_samples-1)),
-        		8e-3*ptp_save->s2c.rate_min,
-        		8e-3*ptp_save->s2c.rate_max);
-       }
-      else
-       {
-          wfprintf (fp_video_logc, " 0 0 0 0.000 0.000 0.000 0.000");
-       }
+    /* Video advanced rate measurements */
+    if ( video_level & VIDEO_LOG_ADVANCED )
+      print_video_stats_advanced(fp_video_logc, ptp_save, pab, pba);
 
-      /* printing boolean flag if this is considered internal or not */
-      wfprintf (fp_video_logc, " %d", ptp_save->internal_dst);
+    /* TCP protocol specific information */
+    if ( video_level & VIDEO_LOG_OPTIONS )
+      print_tcp_stats_options(fp_video_logc, ptp_save, pab, pba);
 
-/* elapsed time */
-      wfprintf (fp_video_logc, " %f", etime);
+    /* TCP Layer7 specific information */
+    if ( video_level & VIDEO_LOG_LAYER7 )
+      print_tcp_stats_layer7(fp_video_logc, ptp_save, pab, pba);
 
-/* first pkt time */
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (first_packet, ptp_save->first_time) / 1000.0);
-/* last pkt time */
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (first_packet, ptp_save->last_time) / 1000.0);
-
-/* first DATA pkt time */
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->payload_start_time) / 1000.0);
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->payload_start_time) / 1000.0);
-
-/* last DATA pkt time */
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->payload_end_time) / 1000.0);
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->payload_end_time) / 1000.0);
-
-/* first ACK pkt time */
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pab->ack_start_time) / 1000.0);
-      wfprintf (fp_video_logc, " %f",
-	       elapsed (ptp_save->first_time,
-			pba->ack_start_time) / 1000.0);
-
-/* Absolute time of first packet */
-      wfprintf (fp_video_logc, " %f", time2double(ptp_save->first_time) / 1000.);
-
-      /* TOPIX: 67th column: connection type */
-      wfprintf (fp_video_logc, " %d", ptp_save->con_type);
-
-      /* P2P: 68th column: p2p protocol   */
-      wfprintf (fp_video_logc, " %d", ptp_save->p2p_type / 100);
-
-      /* Web2.0: 69th column: HTTP content type */
-      /* 
-         Using http_data+1 so that valid values are > 0, i.e. GET is 1,
-         POST is 2, etc.
-      */
-      wfprintf (fp_video_logc, " %d", ptp_save->con_type & HTTP_PROTOCOL ?
-                          ptp_save->http_data + 1 : 0 );
-
-      wfprintf (fp_video_logc, " %s", (ptp_save->con_type & HTTP_PROTOCOL) ?
-                            ptp_save->http_response : "---" );
-
-     /* Web 2.0 and YouTube video identification:
-         Column 71: Request ID (16 char) - '--' if missing or not relevant
-         Column 72: Video ID (11 char) - '--' if missing or not relevant
-         Column 73: YouTube itag ('fmt' video quality) 
-         Column 74: YouTube seek flag
-         Column 75-84: FLV Metadata
-	 Column 85: Redirection mode
-	 Column 86: Redirection counter
-	 Column 87: Mobile Media
-     */
-#ifndef HIDE_YOUTUBE_REQUEST_ID
-     if ((ptp_save->con_type & HTTP_PROTOCOL) && 
-     	     ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-     	       ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-     	       ptp_save->http_data==HTTP_YOUTUBE_204 ))
-       {
-          if (strlen(ptp_save->http_ytid)==11)
-	   {
-	     /* Some YouTube HLS flows use the ID11 in the request */
-	     id11to16(id_string, ptp_save->http_ytid);
-	     wfprintf(fp_video_logc, " %s %s", id_string,
-	  		  ptp_save->http_ytid);
-	   }
-	  else
-	   {
-	     /* This is both good for ID16 and ID46 */
-	     id16to11(id_string, ptp_save->http_ytid);
-	     wfprintf(fp_video_logc, " %s %s", ptp_save->http_ytid,
-	  		  id_string);
-	   }
-       }
-     else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
-     			       ( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
-     				 ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
-     				 ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
-       {
-     	   id11to16(id_string,ptp_save->http_ytid);
-     	   wfprintf (fp_video_logc, " %s %s", id_string, ptp_save->http_ytid);
-       }
-     else			 
-       {
-     	   wfprintf (fp_video_logc, " -- --");
-       }
-#else
-      if ((ptp_save->con_type & HTTP_PROTOCOL) && 
-              ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-        	ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-        	ptp_save->http_data==HTTP_YOUTUBE_204 ))
-        {
-          if (strlen(ptp_save->http_ytid)==11)
-	   {
-	     /* Some YouTube HLS flows use the ID11 in the request */
-	     id11to16(id_string, ptp_save->http_ytid);
-	     wfprintf(fp_video_logc, " %s --", id_string);
-	   }
-	  else
-	   {
-	     /* This is both good for ID16 and ID46 */
-             wfprintf (fp_video_logc, " %s --", ptp_save->http_ytid);
-	   }
-        }
-      else if ((ptp_save->con_type & HTTP_PROTOCOL) && 
-        			( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
-        			  ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
-        			  ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
-        {
-            id11to16(id_string,ptp_save->http_ytid);
-            wfprintf (fp_video_logc, " %s --", id_string);
-        }
-      else			  
-        {
-            wfprintf (fp_video_logc, " -- --");
-        }
-#endif
-
-      if ((ptp_save->con_type & HTTP_PROTOCOL) && 
-                 ( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-                   ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-                   ptp_save->http_data==HTTP_YOUTUBE_204  )
-	 )
-       {
-         wfprintf (fp_video_logc, " %s %d %.3f %.3f %.3f %d %d %.3f %.3f %.3f %.3f %d %d %d %d %d", 
-                                 ptp_save->http_ytitag,
-				 ptp_save->http_ytseek,
-				 ptp_save->http_meta.duration,
-				 ptp_save->http_meta.starttime,
-				 ptp_save->http_meta.totalduration,
-				 ptp_save->http_meta.width,
-				 ptp_save->http_meta.height,
-				 ptp_save->http_meta.videodatarate,
-				 ptp_save->http_meta.audiodatarate,
-				 ptp_save->http_meta.totaldatarate,
-				 ptp_save->http_meta.framerate,
-				 ptp_save->http_meta.bytelength,
-				 ptp_save->http_ytredir_mode,
-				 ptp_save->http_ytredir_count,
-				 ptp_save->http_ytmobile,
-				 ptp_save->http_ytstream );
-       }
-      else
-       {
-         wfprintf (fp_video_logc, " -- 0 0.000 0.000 0.000 0 0 0.000 0.000 0.000 0.000 0 0 0 0 0");
-       }
-
-      /* write to log file */
-
-      for (i=0;i<10;i++)
-       {
-          wfprintf (fp_video_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
-       }
-
-      for (i=0;i<10;i++)
-       {
-          wfprintf (fp_video_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
-       }
-
-      wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_count);
-      for (i=0;i<MAX_COUNT_MESSAGES;i++)
-       {
-          wfprintf (fp_video_logc, " %d",ptp_save->s2c.msg_size[i]);
-       }
-
-      wfprintf (fp_video_logc, "\n");
+    wfprintf (fp_video_logc, "\n");
 
    }
-
 }
 #endif
 
-#ifdef STREAMING_CLASSIFIER
 Bool is_streaming(tcp_pair *ptp_save) {
 	if (!(ptp_save->con_type & HTTP_PROTOCOL))
 		return FALSE;
@@ -3608,287 +3702,6 @@ Bool is_streaming(tcp_pair *ptp_save) {
 		return FALSE;
 }
 
-void update_streaming_log(tcp_pair *ptp_save, tcb *pab, tcb *pba) {
-	double etime;
-	//int i;
-	char id_string[20];
-
-	etime = elapsed(ptp_save->first_time, ptp_save->last_time);
-	etime = etime / 1000;
-
-	if (fp_streaming_logc != NULL) {
-		wfprintf(fp_streaming_logc,
-				"%s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu", HostName(
-						ptp_save->addr_pair.a_address), ServiceName(
-						ptp_save->addr_pair.a_port), pab->packets,
-				pab->reset_count, pab->unique_bytes, pab->data_pkts,
-				pab->data_bytes, pab->rexmit_pkts, pab->rexmit_bytes,
-				pab->out_order_pkts, pab->fin_count, pab->max_seg_size,
-				pab->cwin_max, pab->cwin_min);
-
-		wfprintf(fp_streaming_logc, " %f %f %f %f %u %u %u", (Average(
-				ptp_save->c2s.rtt_sum, ptp_save->c2s.rtt_count) / 1000.0),
-				(ptp_save->c2s.rtt_min / 1000.0), (ptp_save->c2s.rtt_max
-						/ 1000.0), (Stdev(ptp_save->c2s.rtt_sum,
-						ptp_save->c2s.rtt_sum2, ptp_save->c2s.rtt_count)
-						/ 1000.0), ptp_save->c2s.rtt_count,
-				ptp_save->c2s.ttl_min, ptp_save->c2s.ttl_max);
-
-		/* Rate c2s */
-		if (ptp_save->c2s.rate_samples > 1) {
-			wfprintf(fp_streaming_logc, " %d %d %d %.3f %.3f %.3f %.3f",
-					ptp_save->c2s.rate_samples,
-					ptp_save->c2s.rate_empty_samples,
-					ptp_save->c2s.rate_empty_streak, 8e-3
-							* ptp_save->c2s.rate_sum
-							/ ptp_save->c2s.rate_samples, 8e-3 * sqrt(
-							(ptp_save->c2s.rate_sum2 - ptp_save->c2s.rate_sum
-									* ptp_save->c2s.rate_sum
-									/ ptp_save->c2s.rate_samples)
-									/ (ptp_save->c2s.rate_samples - 1)), 8e-3
-							* ptp_save->c2s.rate_min, 8e-3
-							* ptp_save->c2s.rate_max);
-		} else {
-			wfprintf(fp_streaming_logc, " 0 0 0 0.000 0.000 0.000 0.000");
-		}
-
-		/* printing boolean flag if this is considered internal or not */
-		wfprintf(fp_streaming_logc, " %d", ptp_save->internal_src);
-
-		wfprintf(fp_streaming_logc,
-				" %s %s %lu %u %lu %lu %lu %u %u %u %d %u %lu %lu", HostName(
-						ptp_save->addr_pair.b_address), ServiceName(
-						ptp_save->addr_pair.b_port), pba->packets,
-				pba->reset_count, pba->unique_bytes, pba->data_pkts,
-				pba->data_bytes, pba->rexmit_pkts, pba->rexmit_bytes,
-				pba->out_order_pkts, pba->fin_count, pba->max_seg_size,
-				pba->cwin_max, pba->cwin_min);
-
-		wfprintf(fp_streaming_logc, " %f %f %f %f %u %u %u", (Average(
-				ptp_save->s2c.rtt_sum, ptp_save->s2c.rtt_count) / 1000.0),
-				(ptp_save->s2c.rtt_min / 1000.0), (ptp_save->s2c.rtt_max
-						/ 1000.0), (Stdev(ptp_save->s2c.rtt_sum,
-						ptp_save->s2c.rtt_sum2, ptp_save->s2c.rtt_count)
-						/ 1000.0), ptp_save->s2c.rtt_count,
-				ptp_save->s2c.ttl_min, ptp_save->s2c.ttl_max);
-
-		/* Rate s2c */
-		if (ptp_save->s2c.rate_samples > 1) {
-			wfprintf(fp_streaming_logc, " %d %d %d %.3f %.3f %.3f %.3f",
-					ptp_save->s2c.rate_samples,
-					ptp_save->s2c.rate_empty_samples,
-					ptp_save->s2c.rate_empty_streak, 8e-3
-							* ptp_save->s2c.rate_sum
-							/ ptp_save->s2c.rate_samples, 8e-3 * sqrt(
-							(ptp_save->s2c.rate_sum2 - ptp_save->s2c.rate_sum
-									* ptp_save->s2c.rate_sum
-									/ ptp_save->s2c.rate_samples)
-									/ (ptp_save->s2c.rate_samples - 1)), 8e-3
-							* ptp_save->s2c.rate_min, 8e-3
-							* ptp_save->s2c.rate_max);
-		} else {
-			wfprintf(fp_streaming_logc, " 0 0 0 0.000 0.000 0.000 0.000");
-		}
-
-		/* printing boolean flag if this is considered internal or not */
-		wfprintf(fp_streaming_logc, " %d", ptp_save->internal_dst);
-
-		/* elapsed time */
-		wfprintf(fp_streaming_logc, " %f", etime);
-
-		/* first pkt time */
-		wfprintf(fp_streaming_logc, " %f", elapsed(first_packet,
-				ptp_save->first_time) / 1000.0);
-		/* last pkt time */
-		wfprintf(fp_streaming_logc, " %f", elapsed(first_packet,
-				ptp_save->last_time) / 1000.0);
-
-		/* first DATA pkt time */
-		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
-				pab->payload_start_time) / 1000.0);
-		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
-				pba->payload_start_time) / 1000.0);
-
-		/* last DATA pkt time */
-		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
-				pab->payload_end_time) / 1000.0);
-		wfprintf(fp_streaming_logc, " %f", elapsed(ptp_save->first_time,
-				pba->payload_end_time) / 1000.0);
-
-               /* first ACK pkt time */
-                wfprintf (fp_streaming_logc, " %f",
-	                 elapsed (ptp_save->first_time,
-			          pab->ack_start_time) / 1000.0);
-                wfprintf (fp_streaming_logc, " %f",
-	                 elapsed (ptp_save->first_time,
-			          pba->ack_start_time) / 1000.0);
-
-		/* Absolute time of first packet */
-		wfprintf(fp_streaming_logc, " %f", time2double(ptp_save->first_time)
-				/ 1000.);
-
-		/* TOPIX: 67th column: connection type */
-		wfprintf(fp_streaming_logc, " %d", ptp_save->con_type);
-
-		/* P2P: 68th column: p2p protocol   */
-		wfprintf(fp_streaming_logc, " %d", ptp_save->p2p_type / 100);
-
-		/* Web2.0: 69th column: HTTP content type */
-		/*
-		 Using http_data+1 so that valid values are > 0, i.e. GET is 1,
-		 POST is 2, etc.
-		 */
-		wfprintf(fp_streaming_logc, " %d",
-				ptp_save->con_type & HTTP_PROTOCOL ? ptp_save->http_data + 1
-						: 0);
-
-		wfprintf(fp_streaming_logc, " %s",
-				(ptp_save->con_type & HTTP_PROTOCOL) ? ptp_save->http_response
-						: "---");
-
-		/* Web 2.0 and YouTube video identification:
-		 Column 71: Request ID (16 char) - '--' if missing or not relevant
-		 Column 72: Video ID (11 char) - '--' if missing or not relevant
-		 Column 73: YouTube itag ('fmt' video quality)
-		 Column 74: YouTube seek flag
-		 */
-
-#ifndef HIDE_YOUTUBE_REQUEST_ID
-		if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
-				== HTTP_YOUTUBE_VIDEO || ptp_save->http_data
-				== HTTP_YOUTUBE_VIDEO204 || ptp_save->http_data
-				== HTTP_YOUTUBE_204)) {
-                        if (strlen(ptp_save->http_ytid)==11)
-			 {
-	                   /* Some YouTube HLS flows use the ID11 in the request */
-			   id11to16(id_string, ptp_save->http_ytid);
-			   wfprintf(fp_streaming_logc, " %s %s", id_string,
-			                ptp_save->http_ytid);
-			 }
-			else
-			 {
-	                   /* This is both good for ID16 and ID46 */
-			   id16to11(id_string, ptp_save->http_ytid);
-			   wfprintf(fp_streaming_logc, " %s %s", ptp_save->http_ytid,
-					id_string);
-			 }
-		} else if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
-				== HTTP_YOUTUBE_SITE || ptp_save->http_data
-				== HTTP_YOUTUBE_SITE_DIRECT || ptp_save->http_data
-				== HTTP_YOUTUBE_SITE_EMBED)) {
-			id11to16(id_string, ptp_save->http_ytid);
-			wfprintf(fp_streaming_logc, " %s %s", id_string,
-					ptp_save->http_ytid);
-		} else {
-			wfprintf(fp_streaming_logc, " -- --");
-		}
-#else
-		if ((ptp_save->con_type & HTTP_PROTOCOL) &&
-				( ptp_save->http_data==HTTP_YOUTUBE_VIDEO ||
-						ptp_save->http_data==HTTP_YOUTUBE_VIDEO204 ||
-						ptp_save->http_data==HTTP_YOUTUBE_204 ))
-		{
-                        if (strlen(ptp_save->http_ytid)==11)
-			 {
-	                   /* Some YouTube HLS flows use the ID11 in the request */
-			   id11to16(id_string, ptp_save->http_ytid);
-			   wfprintf(fp_streaming_logc, " %s --", id_string);
-			 }
-			else
-			 {
-	                   /* This is both good for ID16 and ID46 */
-			   wfprintf (fp_streaming_logc, " %s --", ptp_save->http_ytid);
-			 }
-		}
-		else if ((ptp_save->con_type & HTTP_PROTOCOL) &&
-				( ptp_save->http_data==HTTP_YOUTUBE_SITE ||
-						ptp_save->http_data==HTTP_YOUTUBE_SITE_DIRECT ||
-						ptp_save->http_data==HTTP_YOUTUBE_SITE_EMBED ))
-		{
-			id11to16(id_string,ptp_save->http_ytid);
-			wfprintf (fp_streaming_logc, " %s --", id_string);
-		}
-		else
-		{
-			wfprintf (fp_streaming_logc, " -- --");
-		}
-#endif
-
-		if ((ptp_save->con_type & HTTP_PROTOCOL) && (ptp_save->http_data
-				== HTTP_YOUTUBE_VIDEO || ptp_save->http_data
-				== HTTP_YOUTUBE_VIDEO204 || ptp_save->http_data
-				== HTTP_YOUTUBE_204)) {
-			wfprintf(
-					fp_streaming_logc,
-					" %s %d",
-					ptp_save->http_ytitag, ptp_save->http_ytseek);
-		} else {
-			wfprintf(fp_streaming_logc,
-					" -- 0");
-		}
-		/*
-		 Column 75: Content Type
-		 Column 76: Payload
-
-		 Column 77: Duration
-		 Column 78: Bitrate
-		 Column 79: Width
-		 Column 80: Height
-
-  	 */
-		/* Streaming : 75th column : Classification based on Content Type */
-
-		wfprintf(fp_streaming_logc, " %d",
-				ptp_save->streaming.video_content_type);
-
-		/* Streaming : 76th column : Classification based on Payload signature */
-		wfprintf(fp_streaming_logc, " %d",
-				ptp_save->streaming.video_payload_type);
-
-		/* Streaming : 77th column : Video Duration*/
-		wfprintf(fp_streaming_logc, " %f",
-				ptp_save->streaming.metadata.duration);
-
-		/* Streaming : 78th column : Overall Video Bitrate*/
-		wfprintf(fp_streaming_logc, " %f",
-				ptp_save->streaming.metadata.videodatarate);
-
-		/* Streaming : 79th column : Video Width*/
-		wfprintf(fp_streaming_logc, " %d",
-				ptp_save->streaming.metadata.width);
-
-		/* Streaming : 80th column : Video Height*/
-		wfprintf(fp_streaming_logc, " %d",
-				ptp_save->streaming.metadata.height);
-
-
-
-		//	      /* write to log file */
-		//
-		//	      for (i=0;i<10;i++)
-		//	       {
-		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->c2s.rate_begin_bytes[i]);
-		//	       }
-		//
-		//	      for (i=0;i<10;i++)
-		//	       {
-		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.rate_begin_bytes[i]);
-		//	       }
-		//
-		//	      wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.msg_count);
-		//	      for (i=0;i<MAX_COUNT_MESSAGES;i++)
-		//	       {
-		//	          wfprintf (fp_streaming_logc, " %d",ptp_save->s2c.msg_size[i]);
-		//	       }
-
-		wfprintf(fp_streaming_logc, "\n");
-
-	}
-
-}
-#endif
-
-
 void
 update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 {
@@ -3897,14 +3710,27 @@ update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
   etime = elapsed (ptp_save->first_time, ptp_save->last_time);
 
 /* A --> B */
-  wfprintf (fp_rtp_logc, "%d %d %s %s",
+  if (ptp_save->crypto_src==FALSE)
+     wfprintf (fp_rtp_logc, "%d %d %s %s",
 	   PROTOCOL_TCP,
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.a_address),
 	   ServiceName (ptp_save->addr_pair.a_port));
+  else
+     wfprintf (fp_rtp_logc, "%d %d %s %s",
+	   PROTOCOL_TCP,
+	   ptp_save->con_type,
+	   HostNameEncrypted (ptp_save->addr_pair.a_address),
+	   ServiceName (ptp_save->addr_pair.a_port));
 
-  wfprintf (fp_rtp_logc, " %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
-           HostName (ptp_save->addr_pair.b_address), 
+  if (ptp_save->crypto_dst==FALSE)
+     wfprintf (fp_rtp_logc, " %s",
+           HostName (ptp_save->addr_pair.b_address));
+  else
+     wfprintf (fp_rtp_logc, " %s",
+           HostNameEncrypted (ptp_save->addr_pair.b_address));
+	   
+  wfprintf (fp_rtp_logc, " %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
 	   ServiceName (ptp_save->addr_pair.b_port), 
 	   pab->packets,
 	   (pab->sum_delta_t / (pab->n_delta_t - 1)),
@@ -3937,14 +3763,27 @@ update_conn_log_mm_v1(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 		    pab->u_protocols.f_icy) / 1000.0);
 
 /* B --> A */
-  wfprintf (fp_rtp_logc, " %d %d %s %s",
+  if (ptp_save->crypto_dst==FALSE)
+     wfprintf (fp_rtp_logc, " %d %d %s %s",
 	   PROTOCOL_TCP,
 	   ptp_save->con_type,
 	   HostName (ptp_save->addr_pair.b_address),
 	   ServiceName (ptp_save->addr_pair.b_port));
+  else
+     wfprintf (fp_rtp_logc, " %d %d %s %s",
+	   PROTOCOL_TCP,
+	   ptp_save->con_type,
+	   HostNameEncrypted (ptp_save->addr_pair.b_address),
+	   ServiceName (ptp_save->addr_pair.b_port));
 
-  wfprintf (fp_rtp_logc, " %s %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
-           HostName (ptp_save->addr_pair.a_address), 
+  if (ptp_save->crypto_src==FALSE)
+     wfprintf (fp_rtp_logc, " %s",
+           HostName (ptp_save->addr_pair.a_address));
+  else
+     wfprintf (fp_rtp_logc, " %s",
+           HostNameEncrypted (ptp_save->addr_pair.a_address));
+	   
+  wfprintf (fp_rtp_logc, " %s %lu %g %g %g %g %d %d %g %u %u %f %f %lu %g %g %g %u %u %g %g %g %g %u %g %g",
 	   ServiceName (ptp_save->addr_pair.a_port), 
 	   pba->packets,
 	   (pba->sum_delta_t / (pba->n_delta_t - 1)),
@@ -3987,10 +3826,16 @@ update_conn_log_mm_v2(tcp_pair *ptp_save, tcb *pab, tcb *pba)
   etime = elapsed (ptp_save->first_time, ptp_save->last_time);
 
 /* A --> B */
-  wfprintf (fp_rtp_logc, "%d %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
+  wfprintf (fp_rtp_logc, "%d %d",
 	   PROTOCOL_TCP,
-	   ptp_save->con_type,
-	   HostName (ptp_save->addr_pair.a_address),
+	   ptp_save->con_type);
+
+  if (ptp_save->crypto_src==FALSE)
+     wfprintf (fp_rtp_logc, " %s", HostName (ptp_save->addr_pair.a_address));
+  else
+     wfprintf (fp_rtp_logc, " %s", HostNameEncrypted (ptp_save->addr_pair.a_address));
+
+  wfprintf (fp_rtp_logc, " %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
 	   ServiceName (ptp_save->addr_pair.a_port),
 	   ptp_save->internal_src,
 	   pab->packets,
@@ -4021,9 +3866,16 @@ update_conn_log_mm_v2(tcp_pair *ptp_save, tcb *pab, tcb *pba)
 		    pab->u_protocols.f_icy) / 1000.0);
 
 /* B --> A */
-  wfprintf (fp_rtp_logc, " %d %s %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
+  if (ptp_save->crypto_dst==FALSE)
+     wfprintf (fp_rtp_logc, " %d %s",
 	   ptp_save->con_type,
-	   HostName (ptp_save->addr_pair.b_address),
+	   HostName (ptp_save->addr_pair.b_address));
+  else
+     wfprintf (fp_rtp_logc, " %d %s",
+	   ptp_save->con_type,
+	   HostNameEncrypted (ptp_save->addr_pair.b_address));
+
+  wfprintf (fp_rtp_logc, " %s %d %lu %g %g %g %g %g %u %u %f %f %lu %g 0 0 %u %u 0 0 0 0 0 0 0 %g %g %g %u 0 %g %g %g %g",
 	   ServiceName (ptp_save->addr_pair.b_port),
 	   ptp_save->internal_dst,
 	   pba->packets,

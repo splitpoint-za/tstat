@@ -4,11 +4,11 @@
 #AC_PREREQ(2.61)
 
 # define variables for version numbers
-m4_define([_version_major], [2])
-m4_define([_version_minor], [4])
+m4_define([_version_major], [3])
+m4_define([_version_minor], [0])
 m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Tue May  6 10:00:14 CEST 2014"])
-m4_define([_version_flavor], ["Almdudler"])
+m4_define([_version_date], ["Mon Jun 22 18:22:37 CEST 2015"])
+m4_define([_version_flavor], ["Spirit of St. Louis"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
@@ -38,6 +38,7 @@ m4_pattern_allow([AC_LBL_C_INIT (V_CCOPT, V_INCLS)])
 
 ## Checks for programs.
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_LIBTOOL
 AC_PROG_MAKE_SET
 
