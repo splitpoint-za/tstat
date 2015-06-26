@@ -69,13 +69,15 @@ L<http://tstat.tlc.polito.it>
 =head3 Operating System
 
 
+Tstat is tested on C<Linux> systems (currently C<Ubuntu>, C<Debian>, C<RedHat>, 
+and C<CentOS>, using C<2.x> and C<3.x> kernels), and on C<Mac OS X> (starting 
+from 10.6 C<Snow Leopard> to the current 10.10 C<Yosemite>). 
+It includes support for compilation for C<Android>, and has been reported working on 
+C<OpenWRT>. 
+It should work under C<FreeBSD>, C<NetBSD>, and other C<unix-like> systems, 
+(although we don't have any of those platforms for testing purposes). 
+If you are able to run Tstat on other OSes, we'll be happy to include them in the list.
 
-Tstat has been tested tested on C<Linux 2.2.x>, C<2.4.x> and C<2.6.x> kernels, 
-using C<RedHat 6.x-9.x>, and C<Fedora Core x> systems. 
-It should work under other C<UNIX> dialects, such as 
-C<FreeBSD>, C<NetBSD 1.3> and C<MAC OS X> (although we do not have any of 
-those platforms for testing purposes). If you able to run Tstat on other OSs, we
-will be happy to include them in the list. 
 
 =head3 System Libraries
 
@@ -101,11 +103,11 @@ installation of RRDtool (available from L<http://oss.oetiker.ch/rrdtool/>).
 
 =head2 Quick Install
 
-Assuming that you want version C<2.x.y>:
+Assuming that you want version C<3.x.y>:
 
-	 wget http://tstat.polito.it/download/tstat-2.x.y.tar.gz
-         tar -xzvf tstat-2.x.y.tar.gz
-         cd tstat-2.x.y
+	 wget http://tstat.polito.it/download/tstat-3.x.y.tar.gz
+         tar -xzvf tstat-3.x.y.tar.gz
+         cd tstat-3.x.y
          ./autogen.sh
          ./configure [--enable-libtstat] [--enable-zlib]
          make
@@ -149,7 +151,7 @@ direct creation of zlib compressed logs and dump files.
 At the end of C<configure> is printed a small report:
 
     -------------------------------------------------
-      tstat Version 2.4
+      tstat Version 3.0
       -lpcap -lpthread -lm  -lrrd -lz
 
       Prefix: '/usr/local'
@@ -1259,14 +1261,14 @@ The configuration file has an C<ini> file syntax:
     # log options
     [options]
     tcplog_end_to_end = 0	# End_to_End set of measures (RTT, TTL)
-    tcplog_layer7 = 0		# Layer7 set of measures (SSL cert., message counts)
+    tcplog_layer7 = 0		# Layer7 set of measures (TLS cert., message counts)
     tcplog_p2p = 0		# P2P set of measures (P2P subtype and ED2K data)
     tcplog_options = 0		# TCP Options set of measures
     tcplog_advanced = 0		# Advanced set of measures
     httplog_full_url = 0 	# Partial (=1) or full (=2) URLs in log_http_complete
 
     videolog_end_to_end = 0	# TCP End_to_End set of measures (RTT, TTL)
-    videolog_layer7 = 0		# Layer7 set of measures (SSL cert., message counts)
+    videolog_layer7 = 0		# Layer7 set of measures (TLS cert., message counts)
     videolog_videoinfo = 0	# Additional video info (resolution, bitrate)
     videolog_youtube = 0	# YouTube specific information
     videolog_options = 0	# TCP Options set of measures
@@ -1834,25 +1836,27 @@ using tstat_report data.
 =item Active authors:
 
 
-    Maurizio Munafo'    <munafo@polito.it>
-    Alessandro Finamore <finamore@mail.tlc.polito.it>
+    Maurizio Munafo'    <maurizio.munafo@polito.it>
+    Alessandro Finamore <alessandro.finamore@telefonica.com>
 
 =item Other active authors:
 
 
-    Marco Mellia <mellia@mail.tlc.polito.it>
-    Dario Rossi  <dario.rossi@enst.fr> 
-    Vinicius Gehleb <vinicius@gehlen.us>
+    Marco Mellia <marco.mellia@polito.it>
+    Dario Rossi  <dario.rossi@telecom-paristech.fr> 
+    Martino Trevisan <martino.trevisan@studenti.polito.it>
 
 =item Other authors:
 
 
-    Andrea Carpani, Luca Muscariello, Dario Bonfiglio, Robert Birke
+    Andrea Carpani, Luca Muscariello, Dario Bonfiglio, Robert Birke, 
+    Vinicius Gehlen, Ignacio Bermudez
+
 
 =item Other links:
 
     Telecommunication Networks Group (TNG)
-    DELEN, Politecnico di Torino
+    DET, Politecnico di Torino
     http://www.tlc-networks.polito.it
 
 =back
@@ -1878,7 +1882,7 @@ continue investing in Tstat.
 
 
 
-Copyright (c) 2001-2014 Politecnico di Torino.  All rights reserved.
+Copyright (c) 2001-2015 Politecnico di Torino.  All rights reserved.
 
  
 This program is free software; you can redistribute it and/or modify

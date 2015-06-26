@@ -1,6 +1,26 @@
 News in @PACKAGE_VERSION@
 -------------
 * New features
+    - New modular organization for the log files
+        + Modular structure controlled by runtime.conf
+        + Merged log_video_complete and log_streaming_complete in a single 
+          log_video_complete file, sharing modules from log_tcp_complete 
+    - Improved configurability
+        + Most of the constant parameters that used to be defined at 
+          compilation time in param.h can now provided at startup with the new -G option 
+    - Usage of the CryptoPAn-based encryption for address anonymization
+    - Inclusion of the DN-Hunter feature, to associate DNS information to the traffic flows
+* Improved performances for its usage with the DPDKStat framework
+* Updated DPI classification
+    - Improved QUIC classification
+    - Richer TLS information: NPN/ALPN negotiation for SPDY and HTTP2, TLS handshake timings
+    - Disabled old or rare P2P protocols 
+* Removed multi-threading support (not compatible with the new features)
+* General improvements and bugfixes
+
+News in 2.4
+-------------
+* New features
   - log files are created with a header at the beginning specifing their format
   - logs can be enabled/disable individually using runtime.conf
   - improved the reactivity of enabling/disabling logs using runtime.conf (no need to wait the creation o the new directory before to see a new file)
