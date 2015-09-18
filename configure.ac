@@ -107,6 +107,16 @@ AM_CONDITIONAL([LIBTSTAT], [test "x$ENABLE_LIBTSTAT" = "xyes"])
 #fi
 #AM_CONDITIONAL([DEBUG], [test "x$ENABLE_DEBUG" = "xyes"])
 
+## --enable-rrdthread option
+ENABLE_RRDTHREAD=no
+AC_ARG_ENABLE(rrdthread,
+    AS_HELP_STRING([--enable-rrdthread], [RRD I/O on a separate thread (requires Linux>=2.6.35)]),
+    ENABLE_RRDTHREAD=$enableval)
+if test "x$ENABLE_RRDTHREAD" = "xyes"; then
+    V_DEFINES="$V_DEFINES -DRRD_THREADED"
+fi
+AM_CONDITIONAL([RRDTHREAD], [test "x$ENABLE_RRDTHREAD" = "xyes"])
+
 dnl look for pcap library
 dnl add ./configure option to specify libpcap path
 # AC_ARG_WITH(  pcap-root,
@@ -268,4 +278,5 @@ echo \
     - zlib      ${have_zlib}
     - rrd       ${have_rrd}
     - libtstat  ${ENABLE_LIBTSTAT}
+    - rrdthread ${ENABLE_RRDTHREAD}
 --------------------------------------------------"

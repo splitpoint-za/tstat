@@ -130,17 +130,11 @@ rrdtool_init ()
   for (i = 0; i < MAX_RRD_ARGV; i++)
     rrd.argv[i] = (char *) malloc (512);
 
-#ifdef RRD_THREADED 
-  /* Create files at beginning, no blocks later!!!          */
-  //rrdtool_create_all();     
+#ifdef RRD_THREADED    
 
-  /* Set current thread with high CPU and IO priority 
-  struct sched_param sc_par;
-  sc_par.sched_priority = 0;
-  pthread_setschedparam(pthread_self(), SCHED_OTHER, &sc_par);
-  setpriority(PRIO_PROCESS, 0, -20); */
-  //syscall(SYS_ioprio_set,1, 0,  (2<< 13)| 0); 
+  /* Create the thread which writes RRD on disk (the consumer) */
   pthread_create (&write_thread, NULL, (void *) &call_rrd_update, (void *) NULL);
+
 #else
 
   /* we rather want to create this now...    */
@@ -717,13 +711,13 @@ rrdtool_update_command (const char *name, const char *what, double val)
   if (rrd.time_update == 0)
     rrd.time_update = (unsigned long) current_time.tv_sec;
 
-#ifdef RRD_THREADED
+#ifdef RRD_THREADED    /* Write the RRD command in the pipe, execution and disk writing performed by secondary thread */
   sprintf (rrd.cmd, "update %s %ld:%f\n", rrd.file, rrd.time_update, val);
   if (RRD_DEBUG)
     fprintf (fp_stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
   
   write (command_pipe[1],rrd.cmd, strlen(rrd.cmd) );
-#else
+#else    /* Execute the RRD command immediately on database files */
   sprintf (rrd.cmd, "update %s %ld:%f", rrd.file, rrd.time_update, val);
   if (RRD_DEBUG)
     fprintf (fp_stderr, "rrdtool: rrd_update('%s')\n", rrd.cmd);
@@ -751,19 +745,15 @@ void * call_rrd_update(void*arg){
 	int i = 0;
 	time_t t;
 	srand((unsigned) time(&t));
-	
-	/* Set Cpu and I/O low priority 
-	struct sched_param sc_par;
-	sc_par.sched_priority = 0;
-	pthread_setschedparam(pthread_self(), SCHED_OTHER, &sc_par);
-	setpriority(PRIO_PROCESS, 0, 19);
-	syscall(SYS_ioprio_set,1, 0,  (2<< 13)| 7);*/
 
 	/* Open pipe as a stream */
 	FILE * buffer_pipe = fdopen(command_pipe[0], "r");
 	rrd_clear_error ();
+
 	/* Infinite loop on pipe */
 	while(1){
+
+		/* Sleep 10ms in order not to saturate the disk write capacity */
 		usleep(10000);
 		fgets(buffer,2000,buffer_pipe);
 
@@ -775,8 +765,6 @@ void * call_rrd_update(void*arg){
 		optind = 0; 
 		opterr = 0;
 		rrd_update (rrd.argc, rrd.argv);
-
-		//if (i++%1000 == 0)printf("RRD\n"); 
 	
 		/* Check errors */
 		if (rrd_test_error ())

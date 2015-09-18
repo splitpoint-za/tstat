@@ -792,13 +792,13 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   /* indeed, if no SYN+ACK has been seen, then this must be an */
   /* half flow... force a false RST message to close this flow */
 
-  if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
+  if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0) && tcp_data_length != 0 )
     {
        ptp_save->ignore_dpi = TRUE;
     }
 
 #ifndef LOG_HALFDUPLEX
-  if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0))
+  if ((*dir == C2S) && (!SYN_SET (ptcp)) && (otherdir->syn_count == 0) && tcp_data_length != 0 )
     {
       //fprintf (fp_stdout, "  Closing a half duplex flow\n");
       if (profile_flows->flag == HISTO_ON)
