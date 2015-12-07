@@ -3,6 +3,7 @@
   * Relaxed the test for HALFDUPLEX flows to be less strict on out-of-order SYN/SYNACKs
   * Added configure option --enable-rrdthread for compile with RRD_THREADED defined without
     having to edit tstat/Makefile.conf
+  * Fixed memory problem with InitGlobalArrays when reading interna;/cloud network addresses
 
 30/05/14 - MMM
 - Main changes since 2.4
