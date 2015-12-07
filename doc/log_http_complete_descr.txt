@@ -48,4 +48,4 @@ Here it follows a brief description of the columns.
 
 [*] Column 6 can be used to distinguish between S2C Responses (for which there is always the string "HTTP"), 
 and C2S Requests (identified by method GET/POST/HEAD)
-[^] The DN-Hunter FQDN is included only if DN-Hunter has been enabled at compilation time
+[^] The DN-Hunter FQDN is not included if DN-Hunter has been disabled at compilation time

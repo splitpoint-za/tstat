@@ -668,9 +668,6 @@ main (int argc, char *argv[]) {
   /* initialize globals */
   InitGlobals();
   
-  /* This should be go later, after reading the command line */
-  InitGlobalArrays();
-  
   /* parse the flags */
   CheckArguments (&argc, argv);
   
@@ -3189,7 +3186,7 @@ ParseArgs (int *pargc, char *argv[])
     } 
   }
 
-  /* This is probably the moment we can actually allocate Global arrays */
+  /* This is the moment we can actually allocate Global arrays */
   InitGlobalArrays();
   
   //Note: RESET argument so we can parse again command line arguments!!!
