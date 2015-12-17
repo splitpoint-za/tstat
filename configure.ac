@@ -6,13 +6,13 @@
 # define variables for version numbers
 m4_define([_version_major], [3])
 m4_define([_version_minor], [0])
-m4_define([_version_bugfix], [0])
-m4_define([_version_date], ["Mon Jun 22 18:22:37 CEST 2015"])
+m4_define([_version_bugfix], [2])
+m4_define([_version_date], ["Thu Dec 17 17:17:39 CET 2015"])
 m4_define([_version_flavor], ["Spirit of St. Louis"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
-        m4_esyscmd([echo _version_major._version_minor | tr -d '\n']),
+        m4_esyscmd([echo _version_major._version_minor._version_bugfix | tr -d '\n']),
         [mellia@polito.it, munafo@polito.it])
 
 AC_CONFIG_AUX_DIR(config)

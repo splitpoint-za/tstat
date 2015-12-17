@@ -302,7 +302,7 @@ HTTP Web2.0 type - Col 44 Core Set (see struct.h)
 # 12    # HTTP_ADV           # Site advertisement (GET)                  #
 # 13    # HTTP_FLICKR        # Flickr photo download (GET)               #
 # 14    # HTTP_GMAPS         # GoogleMaps images (GET)                   #
-# 15    # HTTP_VOD           # Video-on-Demand download (GET) [*]        #
+# 15    # HTTP_NETFLIX       # Netflix video streaming (GET)             #
 # 16    # HTTP_YOUTUBE_SITE  # YouTube site content download (GET)       #
 # 17    # HTTP_SOCIAL        # Localized social-networking (GET/POST) [+]#
 # 18    # HTTP_FLASHVIDEO    # Generic FLV video download (GET) [=]      #
@@ -320,8 +320,6 @@ HTTP Web2.0 type - Col 44 Core Set (see struct.h)
 These values are different from 0 only for identified HTTP connections 
 (column no. 42). These constants are also used in the RRD data and in 
 histograms (decreased by one so that HTTP_GET is 0 and HTTP_GMAPS is 13).
-[*] HTTP_VOD connection identification is experimental and not valid for
-usage outside Politecnico di Torino.
 [+] HTTP_SOCIAL is a set of matchings tailored for Nasza-Klasa (PL) and IWIW
 (HU). Since IWIW seems to be based on OpenSocial (http://www.opensocial.org/),
 it should match also generic OpenSocial traffic. Probably not useful outside

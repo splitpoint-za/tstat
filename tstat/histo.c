@@ -34,6 +34,7 @@ extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 extern struct WEB_bitrates WEB_bitrate;
+extern struct TLS_bitrates TLS_bitrate;
 
 
 extern struct VIDEO_rates VIDEO_rate;
@@ -2302,6 +2303,31 @@ create_all_histo (void)
 				   "Web 2.0 content bitrate [bit/s] - local segments", 0,
 				   WEB_LAST_TYPE, 1);
 
+  L7_TLS_num_out =
+    create_histo ("L7_TLS_num_out",
+		  "Number of tracked TLS flows - outgoing flows",
+                  0, TLS_LAST_TYPE, 1);
+
+  L7_TLS_num_in =
+    create_histo ("L7_TLS_num_in",
+		  "Number of tracked TLS flows - incoming flows ",
+                   0, TLS_LAST_TYPE, 1);
+
+  L7_TLS_num_loc =
+    create_histo ("L7_TLS_num_loc",
+		  "Number of tracked TLS flows - local flows",
+                   0, TLS_LAST_TYPE, 1);
+
+  tls_bitrate_in = create_histo ("tls_bitrate_in",
+				  "TLS content bitrate [bit/s] - incoming segments", 0,
+				  TLS_LAST_TYPE, 1);
+  tls_bitrate_out = create_histo ("tls_bitrate_out",
+				   "TLS content bitrate [bit/s] - outgoing segments", 0,
+				   TLS_LAST_TYPE, 1);
+  tls_bitrate_loc = create_histo ("tls_bitrate_loc",
+				   "TLS content bitrate [bit/s] - local segments", 0,
+				   TLS_LAST_TYPE, 1);
+
   /* Microsoft messenger  classification */
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
@@ -2418,6 +2444,10 @@ update_fake_histos ()
   fake_histo_bitrate_update (web_bitrate_in, elapsed_time, WEB_bitrate.in, WEB_LAST_TYPE);
   fake_histo_bitrate_update (web_bitrate_out, elapsed_time, WEB_bitrate.out, WEB_LAST_TYPE);
   fake_histo_bitrate_update (web_bitrate_loc, elapsed_time, WEB_bitrate.loc, WEB_LAST_TYPE);
+
+  fake_histo_bitrate_update (tls_bitrate_in, elapsed_time, TLS_bitrate.in, TLS_LAST_TYPE);
+  fake_histo_bitrate_update (tls_bitrate_out, elapsed_time, TLS_bitrate.out, TLS_LAST_TYPE);
+  fake_histo_bitrate_update (tls_bitrate_loc, elapsed_time, TLS_bitrate.loc, TLS_LAST_TYPE);
 
   fake_histo_bitrate_update (video_rate_in, elapsed_time, VIDEO_rate.in, VIDEO_LAST_TYPE);
   fake_histo_bitrate_update (video_rate_out, elapsed_time, VIDEO_rate.out, VIDEO_LAST_TYPE);

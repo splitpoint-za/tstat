@@ -607,7 +607,7 @@ enum http_content
   HTTP_ADV,		/* 11 - Site advertisement (GET) 		*/
   HTTP_FLICKR,		/* 12 - Flickr photo download (GET) 		*/
   HTTP_GMAPS,		/* 13 - GoogleMaps images (GET) 		*/
-  HTTP_VOD,             /* 14 - Video-On-Demand (GET) [internal use only] */
+  HTTP_NETFLIX,         /* 14 - Netflix (GET) 				*/
   HTTP_YOUTUBE_SITE,	/* 15 - YouTube site content download (GET) 	*/
   HTTP_SOCIAL,      	/* 16 - Localized social-networking connections */
                         /*      Nasza-Klasa (PL), IWIW (HU) (GET/POST) 	*/
@@ -632,8 +632,22 @@ enum web_category
   WEB_YOUTUBE,        /* 3 - YouTube only video 			*/
   WEB_VIDEO,          /* 4 - Other Video services 			*/
   WEB_SOCIAL,         /* 5 - Facebook, and other social networking 	*/ 
-  WEB_OTHER,          /* 6 - All other identified traffic 		*/             
+  WEB_OTHER,          /* 6 - All other identified traffic 		*/
+  WEB_NETFLIX,        /* 7 - Netflix video                              */
   WEB_LAST_TYPE
+};
+
+enum tls_category
+{
+  TLS_OTHER = 0,      /* 0 - Unclassified TLS site 			*/
+  TLS_GOOGLE,         /* 1 - Google services (excluded YouTube)		*/
+  TLS_YOUTUBE,        /* 2 - YouTube 					*/
+  TLS_FACEBOOK,       /* 3 - Facebook					*/
+  TLS_NETFLIX,        /* 4 - Netflix 					*/
+  TLS_DROPBOX,        /* 5 - Dropbox 					*/
+  TLS_MICROSOFT,      /* 6 - Microsoft services (Live.com) 		*/
+  TLS_APPLE,          /* 7 - Apple and iCloud 				*/
+  TLS_LAST_TYPE
 };
 
 struct flv_metadata {
@@ -742,6 +756,8 @@ struct stcp_pair
   Bool    ssl_client_data_seen;
   Bool    ssl_server_data_seen;
   Bool    ssl_sessionid_reuse;
+
+  enum tls_category tls_service;
 
   /* DNS reverse lookup */
   char* dns_name;
@@ -1095,15 +1111,15 @@ struct HTTP_bitrates
 };
 
 struct VIDEO_rates
-	{
-	  unsigned long long in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
-	  unsigned long long out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
-	  unsigned long long loc[VIDEO_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
-	  unsigned long long c_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
-	  unsigned long long c_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
-	  unsigned long long nc_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
-	  unsigned long long nc_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
-	};
+{
+  unsigned long long in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[VIDEO_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+  unsigned long long c_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long c_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long nc_in[VIDEO_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long nc_out[VIDEO_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+};
 
 
 struct WEB_bitrates
@@ -1113,6 +1129,12 @@ struct WEB_bitrates
   unsigned long long loc[WEB_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
 };
 
+struct TLS_bitrates
+{
+  unsigned long long in[TLS_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[TLS_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[TLS_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+};
 
 #ifdef HAVE_RRDTOOL
 /*-----------------------------------------------------------*/

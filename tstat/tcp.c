@@ -99,7 +99,7 @@ void update_streaming_log(tcp_pair *tcp_save, tcb *pab, tcb *pba);
 #endif
 
 /* Patterns for SSL_youtube*/
-regex_t yt_re[3];
+regex_t yt_re[4];
 
 void init_ssl_youtube_patterns();
 Bool is_ssl_youtube(tcp_pair *ptp_save);
@@ -458,6 +458,8 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   ptp->ssl_client_data_byte = 0;
   ptp->ssl_server_data_byte = 0;
+  
+  ptp->tls_service = TLS_OTHER;
   
   return (&ttp[num_tcp_pairs]);
 }
@@ -2516,6 +2518,9 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
    }
 #endif
 
+ /*  Uncomment if we need to trace which TLS connections are popular and not classified */
+//  wfprintf(fp," %d",(ptp_save->tls_service); 
+
 }
 
 void print_video_stats_core(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
@@ -3580,7 +3585,12 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
      wfprintf (fp, "\n");
    }
    
-#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
+#if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER)
+/*
+ We might substitute the call to is_ssl_youtube() to the check of tls_service.
+ Currently (15/12/15) they are not the same, since tls_service==TLS_YOUTUBE includes also
+ ytimg.com, that is excluded in is_ssl_youtube(). -MMM-
+*/
   if (fp_video_logc && LOG_IS_ENABLED(LOG_VIDEO_COMPLETE) 
                     && ( is_video(ptp_save) || is_streaming(ptp_save) || is_ssl_youtube(ptp_save) ) 
                     && complete )
@@ -3616,7 +3626,7 @@ Bool is_video(tcp_pair *ptp_save)
      case HTTP_YOUTUBE_SITE_EMBED:
      case HTTP_VIDEO_CONTENT:
      case HTTP_VIMEO:
-     case HTTP_VOD:
+     case HTTP_NETFLIX:
      case HTTP_FLASHVIDEO:
        return TRUE;
      default:
@@ -3629,6 +3639,7 @@ void init_ssl_youtube_patterns()
   regcomp(&yt_re[0],"\\.youtube\\.com$",REG_NOSUB);
   regcomp(&yt_re[1],"\\.youtube-nocookie\\.com$",REG_NOSUB);
   regcomp(&yt_re[2],"\\googlevideo\\.com$",REG_NOSUB);
+  regcomp(&yt_re[3],"\\gvt1\\.com$",REG_NOSUB);
 }
 
 Bool is_ssl_youtube(tcp_pair *ptp_save)
@@ -3641,7 +3652,8 @@ Bool is_ssl_youtube(tcp_pair *ptp_save)
    {
      if  ( regexec(&yt_re[0],ptp_save->ssl_client_subject,0,NULL,0)==0 ||
            regexec(&yt_re[1],ptp_save->ssl_client_subject,0,NULL,0)==0 ||
-           regexec(&yt_re[2],ptp_save->ssl_client_subject,0,NULL,0)==0 )
+           regexec(&yt_re[2],ptp_save->ssl_client_subject,0,NULL,0)==0 ||
+           regexec(&yt_re[3],ptp_save->ssl_client_subject,0,NULL,0)==0 )
        return TRUE;
      else
        return FALSE;

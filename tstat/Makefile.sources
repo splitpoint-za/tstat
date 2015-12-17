@@ -94,4 +94,5 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/rijndael.c\
        $(top_srcdir)/tstat/panon.c\
        $(top_srcdir)/tstat/crypto.c\
-       $(top_srcdir)/tstat/globals.c
+       $(top_srcdir)/tstat/globals.c\
+       $(top_srcdir)/tstat/tls_services.c

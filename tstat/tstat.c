@@ -176,6 +176,7 @@ struct L7_bitrates L7_bitrate;
 struct L7_bitrates L7_udp_bitrate;
 struct HTTP_bitrates HTTP_bitrate;
 struct WEB_bitrates WEB_bitrate;
+struct TLS_bitrates TLS_bitrate;
 
 struct VIDEO_rates VIDEO_rate;
 
@@ -741,6 +742,7 @@ main (int argc, char *argv[]) {
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
   memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
+  memset (&TLS_bitrate, 0, sizeof (struct TLS_bitrates));
   memset (&VIDEO_rate, 0, sizeof (struct VIDEO_rates));
 
   /* init profile variables */
@@ -4233,5 +4235,6 @@ void flush_histo_engine(void) {
     memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&HTTP_bitrate, 0, sizeof (struct HTTP_bitrates));
     memset (&WEB_bitrate, 0, sizeof (struct WEB_bitrates));
+    memset (&TLS_bitrate, 0, sizeof (struct TLS_bitrates));
     memset (&VIDEO_rate, 0, sizeof (struct VIDEO_rates));
 }

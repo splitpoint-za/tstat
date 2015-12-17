@@ -589,6 +589,13 @@ struct double_histo_list *web_bitrate_out;
 struct double_histo_list *web_bitrate_in;
 struct double_histo_list *web_bitrate_loc;
 
+struct double_histo_list *L7_TLS_num_out;
+struct double_histo_list *L7_TLS_num_in;
+struct double_histo_list *L7_TLS_num_loc;
+
+struct double_histo_list *tls_bitrate_out;
+struct double_histo_list *tls_bitrate_in;
+struct double_histo_list *tls_bitrate_loc;
 
 struct double_histo_list *L7_VIDEO_num_out;
 struct double_histo_list *L7_VIDEO_num_in;

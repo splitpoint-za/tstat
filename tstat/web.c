@@ -1409,12 +1409,6 @@ enum http_content classify_http_get(void *pdata,int data_length)
          return HTTP_SOCIAL;
        break;
        
-     case 'M':
-       if (memcmp(base, "/Movies/nexos/MPEG2/",
-               ( available_data < 20 ? available_data : 20)) == 0)
-         return HTTP_VOD;
-       break;
-
      case 'n':
        if (memcmp(base, "/notifications.php",
                ( available_data < 18 ? available_data : 18)) == 0)
@@ -1620,6 +1614,25 @@ enum http_content classify_http_get(void *pdata,int data_length)
        else if (memcmp(base, "/rest/person/",
         	    ( available_data < 13 ? available_data : 13)) == 0)
          return HTTP_SOCIAL;
+       else if (available_data > 44 &&  (memcmp(base, "/range/",7) == 0) )
+        {
+           status1=0;
+   	   i = 7;
+    	   while (i<40)
+   	    {
+   	      c = *(char *)(base + i );
+    	      if (!isdigit(c) && c!='-')
+   	       {
+   	 	 break;
+   	       }
+   	      i++;
+   	    }
+   	   if (i<40 && memcmp(base+i,"?o=A",4)==0)
+	    {
+             return HTTP_NETFLIX; /* Netflix */
+	    }
+	  
+        }
        break;
 
      case 's':
@@ -1732,6 +1745,13 @@ enum http_content classify_http_get(void *pdata,int data_length)
         {
 	  if (memcmp(base + 26, "watch_",6) == 0)
            return HTTP_YOUTUBE_SITE;
+	}
+       break;
+
+     case '?':
+       if (available_data > 5 && (memcmp(base, "/?o=A",5) == 0) )
+        {	      
+           return HTTP_NETFLIX; /* Netflix */
 	}
        break;
 
@@ -2859,10 +2879,12 @@ enum web_category map_http_to_web(tcp_pair *ptp)
 
    	case HTTP_VIDEO_CONTENT:
    	case HTTP_VIMEO:
-   	case HTTP_VOD:
    	case HTTP_FLASHVIDEO:
    	  return WEB_VIDEO;
 
+   	case HTTP_NETFLIX:
+   	  return WEB_NETFLIX;
+	  
    	case HTTP_RAPIDSHARE:
    	case HTTP_MEGAUPLOAD:
    	case HTTP_MEDIAFIRE:
@@ -2900,7 +2922,10 @@ enum web_category map_http_to_web(tcp_pair *ptp)
    	case HTTP_YOUTUBE_204:
    	  return WEB_YOUTUBE;
 
-   	default:
+   	case HTTP_NETFLIX:
+   	  return WEB_NETFLIX;
+
+	default:
    	  return WEB_VIDEO;
       }
    }

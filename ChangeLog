@@ -4,6 +4,10 @@
   * Added configure option --enable-rrdthread for compile with RRD_THREADED defined without
     having to edit tstat/Makefile.conf
   * Fixed memory problem with InitGlobalArrays when reading interna;/cloud network addresses
+  * Added Netflix classification (taking over the old unused HTTP_VOD ID), and added it
+    as a separate Web class in the RRDs
+  * Included the new Google gtv1.com domain in YouTube TLS identification
+  * Defined new RRD/histos for TLS classification based on SNI for the major services
 
 30/05/14 - MMM
 - Main changes since 2.4

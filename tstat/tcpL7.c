@@ -36,6 +36,10 @@ extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
 extern struct HTTP_bitrates HTTP_bitrate;
 extern struct WEB_bitrates WEB_bitrate;
+extern struct TLS_bitrates TLS_bitrate;
+
+extern void map_tls_service(tcp_pair *ptp);
+extern void init_tls_patterns();
 
 #ifdef VIDEO_DETAILS
 extern void init_web_patterns();
@@ -80,6 +84,8 @@ tcpL7_init ()
    init_web_patterns();
 #endif
    regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,4}\\.?$",REG_EXTENDED);
+   
+   init_tls_patterns();
 }
 
 void *
@@ -1557,6 +1563,8 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    ptp->con_type &= ~OBF_PROTOCOL;
 	    ptp->con_type &= ~MSE_PROTOCOL;
 	    ptp->state = SSL_DATA;
+	    
+	    map_tls_service(ptp);
 
 	  }
          else
@@ -1685,6 +1693,10 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
  	     add_histo (L7_HTTP_num_nc_out, YTMAP(ptp->http_data));
 	      }
 	   }
+	  else if (type==L7_FLOW_SSL)
+	   {
+ 	     add_histo (L7_TLS_num_out, ptp->tls_service);
+	   }
 	  break;
 	case IN_FLOW:
 	  add_histo (L7_TCP_num_in, type);
@@ -1709,6 +1721,10 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
  	     add_histo (L7_HTTP_num_nc_in, YTMAP(ptp->http_data));
 	      }
 	   }
+	  else if (type==L7_FLOW_SSL)
+	   {
+ 	     add_histo (L7_TLS_num_in, ptp->tls_service);
+	   }
 	  break;
 	case LOC_FLOW:
 	  add_histo (L7_TCP_num_loc, type);
@@ -1716,6 +1732,10 @@ make_tcpL7_conn_stats (void *thisflow, int tproto)
 	   {
  	     add_histo (L7_HTTP_num_loc, YTMAP(ptp->http_data));
  	     add_histo (L7_WEB_num_loc, map_http_to_web(ptp));
+	   }
+	  else if (type==L7_FLOW_SSL)
+	   {
+ 	     add_histo (L7_TLS_num_loc, ptp->tls_service);
 	   }
 	  break;
 	}
@@ -1891,6 +1911,10 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
 	 HTTP_bitrate.out[YTMAP(thisflow->http_data)] += len;
 	 WEB_bitrate.out[map_http_to_web(thisflow)] += len;
        }
+      else if (type==L7_FLOW_SSL)
+       {
+	 TLS_bitrate.out[thisflow->tls_service] += len;
+       }
       if (cloud_dst)
        {
          L7_bitrate.c_out[type] += len;
@@ -1915,6 +1939,10 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
        {
 	 HTTP_bitrate.in[YTMAP(thisflow->http_data)] += len;
 	 WEB_bitrate.in[map_http_to_web(thisflow)] += len;
+       }
+      else if (type==L7_FLOW_SSL)
+       {
+	 TLS_bitrate.in[thisflow->tls_service] += len;
        }
       if (cloud_src)
        {
@@ -1944,6 +1972,10 @@ make_tcpL7_rate_stats (tcp_pair *thisflow, int len)
        {
 	 HTTP_bitrate.loc[YTMAP(thisflow->http_data)] += len;
 	 WEB_bitrate.loc[map_http_to_web(thisflow)] += len;
+       }
+      else if (type==L7_FLOW_SSL)
+       {
+	 TLS_bitrate.loc[thisflow->tls_service] += len;
        }
     }
 
