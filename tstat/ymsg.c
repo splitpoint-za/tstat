@@ -82,17 +82,17 @@ FindConTypeYmsg (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	    {
 #if(BYTE_ORDER == BIG_ENDIAN)
 	      wfprintf (fp_chat_log_msg,
-		       "%ld MESSAGE %d %d %d '%s' %.3f %d\n", ptp->id_number,
+		       "%ld MESSAGE %d %d %d %f %.3f %d\n", ptp->id_number,
 		       dir, *((u_int16_t *) (pdata + 8)), payload_len,
-		       ts2ascii (&ptp->first_time),
+		       time2double(ptp->first_time) / 1000.0 / 1000.0,
 		       elapsed (ptp->first_time,
 				current_time) / 1000.0 / 1000.0,
 		       ptp->con_type);
 #else
 	      wfprintf (fp_chat_log_msg,
-		       "%ld MESSAGE %d %d %d '%s' %.3f %d\n", ptp->id_number,
+		       "%ld MESSAGE %d %d %d %f %.3f %d\n", ptp->id_number,
 		       dir, *((u_int16_t *) (pdata + 9)), payload_len,
-		       ts2ascii (&ptp->first_time),
+		       time2double(ptp->first_time) / 1000.0 / 1000.0,
 		       elapsed (ptp->first_time,
 				current_time) / 1000.0 / 1000.0,
 		       ptp->con_type);
@@ -223,7 +223,7 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //     5   No. of total messages
-  wfprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d 0 0 0 0 0", pymsg->YMSG_MESSAGE_count);
 
 
   /* S2C */
@@ -251,7 +251,7 @@ print_ymsg_conn_stats (tcp_pair *ptp)
   wfprintf (fp_chat_logc, " %ld", thisTdir->packets);
 
   //    10   No. of total messages
-  wfprintf (fp_chat_logc, " %d", pymsg->YMSG_MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d 0 0 0 0 0", pymsg->YMSG_MESSAGE_count);
 
   //    11   Flow Start Time
   //    12   Flow End Time

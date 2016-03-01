@@ -24,8 +24,27 @@
 #define HTTP_SMALL_BUFFER_SIZE  200
 #define HTTP_LARGE_BUFFER_SIZE 1600
 
-char *http_patterns[14];
-regex_t http_re[14];
+enum re_patterns {
+  RE_REQUEST = 0,
+  RE_HOST,
+  RE_REFERER,
+  RE_USER_AGENT,
+  RE_CONTENT_TYPE,
+  RE_CONTENT_LENGTH,
+  RE_CONTENT_RANGE,
+  RE_SERVER,
+  RE_LOCATION,
+  RE_REQUEST_LONG,
+  RE_URL_PARTIAL,
+  RE_URL_CLEAN,
+  RE_COOKIE,
+  RE_SET_COOKIE,
+  RE_DNT,
+  RE_LASTINDEX
+};
+
+char *http_patterns[RE_LASTINDEX];
+regex_t http_re[RE_LASTINDEX];
 regmatch_t re_res[3];
 char http_url[HTTP_LARGE_BUFFER_SIZE];
 char http_url_private[HTTP_LARGE_BUFFER_SIZE];
@@ -39,6 +58,8 @@ char http_referer_private[HTTP_LARGE_BUFFER_SIZE];
 char http_response[5];
 char http_range[HTTP_SMALL_BUFFER_SIZE];
 char http_server[HTTP_SMALL_BUFFER_SIZE];
+char http_cookie[HTTP_LARGE_BUFFER_SIZE];
+char http_dnt[HTTP_SMALL_BUFFER_SIZE];
 
 static char truncated_field[] = "[*]";
 static char full_field[] = "";
@@ -50,23 +71,27 @@ void init_http_patterns()
 {
   int i;
   
-  http_patterns[0] = "^([A-Z]+) ([^[:cntrl:][:space:]]+) ";
-  http_patterns[1] = "Host: ([^[:cntrl:][:space:]]+)";
-  http_patterns[2] = "Referer: ([^[:cntrl:][:space:]]+)";
-  http_patterns[3] = "User-Agent: ([^[:cntrl:]]+)";
-  http_patterns[4] = "Content-Type: ([^[:cntrl:]]+)";
-  http_patterns[5] = "Content-Length: ([^[:cntrl:]]+)";
-  http_patterns[6] = "Content-Range: ([^[:cntrl:]]+)";
-  http_patterns[7] = "Server: ([^[:cntrl:]]+)";
-  http_patterns[8] = "Location: ([^[:cntrl:][:space:]]+)";
+  http_patterns[RE_REQUEST]        = "^([A-Z]+) ([^[:cntrl:][:space:]]+) ";
+  http_patterns[RE_HOST]           = "Host: ([^[:cntrl:][:space:]]+)";
+  http_patterns[RE_REFERER]        = "Referer: ([^[:cntrl:][:space:]]+)";
+  http_patterns[RE_USER_AGENT]     = "User-Agent: ([^[:cntrl:]]+)";
+  http_patterns[RE_CONTENT_TYPE]   = "Content-Type: ([^[:cntrl:]]+)";
+  http_patterns[RE_CONTENT_LENGTH] = "Content-Length: ([^[:cntrl:]]+)";
+  http_patterns[RE_CONTENT_RANGE]  = "Content-Range: ([^[:cntrl:]]+)";
+  http_patterns[RE_SERVER]         = "Server: ([^[:cntrl:]]+)";
+  http_patterns[RE_LOCATION]       = "Location: ([^[:cntrl:][:space:]]+)";
   /* Very long path in truncated packet */
-  http_patterns[9] = "^([A-Z]+) ([^[:cntrl:][:space:]]+)"; 
+  http_patterns[RE_REQUEST_LONG]   = "^([A-Z]+) ([^[:cntrl:][:space:]]+)"; 
 
   /* Remove any parameter information to limit privacy issues */
-  http_patterns[10] = "^([^?]+)"; /* To be used with path, Referer and Location when http_full_url==1 */
-  http_patterns[11] = "^(https?://[^/]+/?)"; /* To be used with Referer and Location when http_full_url==0 */
-  
-  for (i=0;i<12;i++)
+  http_patterns[RE_URL_PARTIAL]    = "^([^?]+)"; /* To be used with path, Referer and Location when http_full_url==1 */
+  http_patterns[RE_URL_CLEAN]      = "^(https?://[^/]+/?)"; /* To be used with Referer and Location when http_full_url==0 */
+   
+  http_patterns[RE_COOKIE]         = "Cookie: ([^[:cntrl:]]+)";  // Cookie in request
+  http_patterns[RE_SET_COOKIE]     = "Set-Cookie: ([^[:cntrl:]]+)";   // Cookie in response
+  http_patterns[RE_DNT]            = "DNT: ([^[:cntrl:]]+)";   // Do Not Track in request
+
+  for (i=0;i<RE_LASTINDEX;i++)
    {
      regcomp(&http_re[i],http_patterns[i],REG_EXTENDED);
    }
@@ -174,11 +199,12 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
           char *http_referer_tail=full_field;
           char *http_url_tail=full_field;
           char *http_ua_tail=full_field;
+          char *http_cookie_tail=full_field;
 
   	  last_payload_char =  *((char *)(pdata + data_length));
   	  *(char *)(pdata + data_length) = '\0';
 
-	  if (regexec(&http_re[0],base,(size_t) 3,re_res,0)==0)
+	  if (regexec(&http_re[RE_REQUEST],base,(size_t) 3,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -194,7 +220,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	       
 	     base += re_res[2].rm_eo;
 	    }
-	  else if (regexec(&http_re[9],base,(size_t) 3,re_res,0)==0)
+	  else if (regexec(&http_re[RE_REQUEST_LONG],base,(size_t) 3,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -219,7 +245,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_url,"-");
 	   }
 
-	  if (regexec(&http_re[1],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_HOST],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -232,7 +258,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_host,"-");
 	   }
 
-	  if (regexec(&http_re[2],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_REFERER],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -249,7 +275,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_referer,"-");
 	   }
 
-	  if (regexec(&http_re[3],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_USER_AGENT],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -266,12 +292,46 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_ua,"-");
 	   }
 
+          // Check cookie in requests ONLY IF http_full_url is 2 (i.e. minimum privacy level)
+	  if ( (http_full_url==2) && regexec(&http_re[RE_COOKIE],base,(size_t) 2,re_res,0)==0)
+            {
+              int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+              memcpy(http_cookie,base+re_res[1].rm_so,
+               (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_cookie[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
+	      if (base+re_res[1].rm_eo>=(char*)plast)
+	       {
+		 http_cookie_tail = truncated_field;
+	       } 
+	    }
+          else
+	   {
+	     strcpy(http_cookie,"-");
+	   }
+
+
+          // Check DoNotTrack in requests
+	  if (regexec(&http_re[RE_DNT],base,(size_t) 2,re_res,0)==0)
+            {
+              int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+              memcpy(http_dnt,base+re_res[1].rm_so,
+               (msize<(HTTP_SMALL_BUFFER_SIZE-1)?msize:(HTTP_SMALL_BUFFER_SIZE-1)));
+               http_dnt[msize<(HTTP_SMALL_BUFFER_SIZE-1)?msize:(HTTP_SMALL_BUFFER_SIZE-1)]='\0';
+ 
+	    }
+          else
+	   {
+	     strcpy(http_dnt,"-");
+	   }
+
          switch (http_full_url)
 	   {
 	      case 0:
 	        strcpy(http_url_private,"-");
 
-		if (regexec(&http_re[11],http_referer,(size_t) 2,re_res,0)==0)
+		if (regexec(&http_re[RE_URL_CLEAN],http_referer,(size_t) 2,re_res,0)==0)
 		{
 		  int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -289,7 +349,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
 		break;
 	      case 1:
-		if (regexec(&http_re[10],http_url,(size_t) 2,re_res,0)==0)
+		if (regexec(&http_re[RE_URL_PARTIAL],http_url,(size_t) 2,re_res,0)==0)
 		{
 		  int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -302,7 +362,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 		  strcpy(http_url_private,http_url);
 		}   
 
-		if (regexec(&http_re[10],http_referer,(size_t) 2,re_res,0)==0)
+		if (regexec(&http_re[RE_URL_PARTIAL],http_referer,(size_t) 2,re_res,0)==0)
 		{
 		  int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -358,6 +418,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 #endif
 
             wfprintf (fp_http_logc,"\t%s%s\t%s%s\t%s%s",http_url_private,http_url_tail,http_referer_private,http_referer_tail,http_ua,http_ua_tail);
+            wfprintf (fp_http_logc, "\t%s%s\t%s", http_cookie, http_cookie_tail,http_dnt);
 
             wfprintf (fp_http_logc,"\n");
 	  }
@@ -367,6 +428,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
        if (dir == S2C)
         { 
 	  char *http_url_tail=full_field;
+          char *http_cookie_tail=full_field;
 	  
           if ((*(char *)(pdata+4))!='/')
 	   {
@@ -403,7 +465,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
               strcpy(http_response,"-");
 	    }
 
-	  if (regexec(&http_re[4],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_CONTENT_TYPE],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -416,7 +478,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_ctype,"-");
 	   }
 
-	  if (regexec(&http_re[5],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_CONTENT_LENGTH],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -429,7 +491,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_clen,"-");
 	   }
 
-	  if (regexec(&http_re[6],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_CONTENT_RANGE],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -442,7 +504,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_range,"-");
 	   }
 
-	  if (regexec(&http_re[7],base,(size_t) 2,re_res,0)==0)
+	  if (regexec(&http_re[RE_SERVER],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -455,7 +517,25 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	     strcpy(http_server,"-");
 	   }
 
-	  if (regexec(&http_re[8],base,(size_t) 2,re_res,0)==0)
+          // Check cookie in response ONLY IF http_full_url is 2 (i.e. minimum privacy level)
+	  if ( (http_full_url==2) && regexec(&http_re[RE_SET_COOKIE],base,(size_t) 2,re_res,0)==0)
+            {
+              int msize = re_res[1].rm_eo-re_res[1].rm_so;
+
+              memcpy(http_cookie,base+re_res[1].rm_so,
+               (msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)));
+               http_cookie[msize<(HTTP_LARGE_BUFFER_SIZE-1)?msize:(HTTP_LARGE_BUFFER_SIZE-1)]='\0';
+	      if (base+re_res[1].rm_eo>=(char*)plast)
+	       {
+		 http_cookie_tail = truncated_field;
+	       } 
+	    }
+          else
+	   {
+	     strcpy(http_cookie,"-");
+	   }
+
+	  if (regexec(&http_re[RE_LOCATION],base,(size_t) 2,re_res,0)==0)
             {
              int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -475,7 +555,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
           switch (http_full_url)
 	   {
 	      case 0:
-		if (regexec(&http_re[11],http_url,(size_t) 2,re_res,0)==0)
+		if (regexec(&http_re[RE_URL_CLEAN],http_url,(size_t) 2,re_res,0)==0)
 		{
 		  int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -491,7 +571,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 	        http_url_tail=full_field;
 		break;
 	      case 1:
-		if (regexec(&http_re[10],http_url,(size_t) 2,re_res,0)==0)
+		if (regexec(&http_re[RE_URL_PARTIAL],http_url,(size_t) 2,re_res,0)==0)
 		{
 		  int msize = re_res[1].rm_eo-re_res[1].rm_so;
 
@@ -537,6 +617,7 @@ void http_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
              wfprintf (fp_http_logc,"\t%s\t%s\t%s\t%s","HTTP",http_response,http_clen,http_ctype);
              wfprintf (fp_http_logc,"\t%s\t%s\t%s%s",http_server,http_range,http_url_private,http_url_tail);
 
+             wfprintf (fp_http_logc, "\t%s%s", http_cookie, http_cookie_tail);
              wfprintf (fp_http_logc,"\n");
 	   }
 	 }

@@ -463,8 +463,6 @@ typedef struct tcb
 #ifdef PACKET_STATS
  u_int seg_count;
  u_int seg_size[MAX_COUNT_SEGMENTS];
- u_int ssl_handshake_seg_count;
- u_int ssl_handshake_seg_size[MAX_COUNT_SEGMENTS];
  double last_seg_time;
  double seg_intertime[MAX_COUNT_SEGMENTS];
  double data_pkts_sum2;

@@ -11,7 +11,7 @@ Values are separated by spaces.
 #  3    # Dir           # TCP Flow Direction (1=C2S, -1=S2C)
 #  4    # Message size  # Message Payload Size [Bytes] (? if not available) 
 #  5    # Payload size  # TCP Payload Size [Bytes]
-#  6    # Start Time    # Flow Start Time [in Unix Epoch Time]
+#  6    # Start Time    # Flow Start Time (in epoch) [s]
 #  7    # Arrival Time  # Message Arrival Time [s]
 #  8    # Conn Type     # see TCP connection type
 ###########################################################################

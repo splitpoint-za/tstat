@@ -155,13 +155,13 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	{
 
 	  wfprintf (fp_chat_log_msg,
-		   "%ld MSG_%c %d %d %d '%s' %.3f %d\n",
+		   "%ld MSG_%c %d %d %d %f %.3f %d\n",
 		   ptp->id_number,
 		   type,
 		   dir,
 		   msg_len,
 		   payload_len,
-		   ts2ascii (&ptp->first_time),
+		   time2double(ptp->first_time) / 1000.0 / 1000.0,
 		   elapsed (ptp->first_time, current_time) / 1000.0 / 1000.0,
 		   ptp->con_type);
 	}
@@ -176,11 +176,11 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	{
 
 	  wfprintf (fp_chat_log_msg,
-		   "%ld MSG_Y %d ? %d '%s' %.3f %d\n",
+		   "%ld MSG_Y %d ? %d %f %.3f %d\n",
 		   ptp->id_number,
 		   dir,
 		   payload_len,
-		   ts2ascii (&ptp->first_time),
+		   time2double(ptp->first_time) / 1000.0 / 1000.0,
 		   elapsed (ptp->first_time, current_time) / 1000.0 / 1000.0,
 		   ptp->con_type);
 	}
@@ -193,11 +193,11 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
       if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL)
 	{
 	  wfprintf (fp_chat_log_msg,
-		   "%ld MSG_Y %d ? %d '%s' %.3f %d\n",
+		   "%ld MSG_Y %d ? %d %f %.3f %d\n",
 		   ptp->id_number,
 		   dir,
 		   payload_len,
-		   ts2ascii (&ptp->first_time),
+		   time2double(ptp->first_time) / 1000.0 / 1000.0,
 		   elapsed (ptp->first_time, current_time) / 1000.0 / 1000.0,
 		   ptp->con_type);
 	}
@@ -248,12 +248,12 @@ FindConTypeMsn (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  if (LOG_IS_ENABLED(LOG_CHAT_MSNOTHER) && fp_msn_log_othercomm != NULL)
 	    {
 	      wfprintf (fp_msn_log_othercomm,
-		       "%ld %s %d %d '%s' %.3f\n",
+		       "%ld %s %d %d %f %.3f\n",
 		       ptp->id_number,
 		       new_comm,
 		       dir,
 		       payload_len,
-		       ts2ascii (&ptp->first_time),
+		       time2double(ptp->first_time) / 1000.0 / 1000.0,
 		       elapsed (ptp->first_time,
 				current_time) / 1000.0 / 1000.0);
 	    }

@@ -1584,19 +1584,7 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	     {
 	       ptp->ssl_client_data_time = current_time;
 	       ptp->ssl_client_data_seen = TRUE;
-           ptp->ssl_client_data_byte = ptp->c2s.max_seq - ptp->c2s.syn - payload_len;
-#ifdef PACKET_STATS
-           if (thisdir->seg_count > 0) {
-               // copy values
-               memcpy(&(thisdir->ssl_handshake_seg_size[0]), &(thisdir->seg_size[0]), sizeof(u_int) * MAX_COUNT_SEGMENTS);
-               thisdir->ssl_handshake_seg_count = thisdir->seg_count - 1;
-               // reset segment size values
-               u_int last_value = thisdir->seg_size[thisdir->seg_count - 1];
-               memset(&(thisdir->seg_size[0]), 0, sizeof(u_int) * MAX_COUNT_SEGMENTS);
-               thisdir->seg_size[0] = last_value;
-               thisdir->seg_count = 1;
-           }
-#endif
+               ptp->ssl_client_data_byte = ptp->c2s.max_seq - ptp->c2s.syn - payload_len;
 	     }
 	  }
 	else if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))

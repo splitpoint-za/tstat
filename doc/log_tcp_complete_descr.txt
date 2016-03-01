@@ -25,8 +25,8 @@ The order of the sets is hardcoded, so the structure of log_tcp_complete is alwa
  - TCP End to End set (optional)
  - TCP P2P set (optional)
  - TCP Options set (optional)
- - TCP Advanced set (optional)
  - TCP Layer7 set (optional)
+ - TCP Advanced set (optional)
 
 The structure of log_tcp_nocomplete is fixed and it will always only include 
 the Core TCP set. 
@@ -159,8 +159,6 @@ This set includes Layer7 and Application specific information (HTTP, TLS).
 It is enabled in runtime.conf setting "tcplog_layer7 = 1".
 The Layer 7 set will start at column K (K depending on the
 status of the other stat sets). All the other columns will be relative to K.
-The Layer 7 set will always be printed as the last information in each row 
-(also after the possible Advanced set).
 
 ###############################################################################
 # C2S # S2C # Short description         # Unit  # Long description            #

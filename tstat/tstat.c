@@ -1047,17 +1047,6 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
          wfprintf (fp, " s_pktsize%d:%d", i+1, col++);
 
        /*******************************
-        * TLS handshake segment sizes
-        *******************************/
-       wfprintf(fp, " c_tlshs_count:%d", col++);   // number of valid samples (out of MAX_COUNT_SEGMENTS)
-       for (i=0;i<MAX_COUNT_SEGMENTS;i++)
-         wfprintf (fp, " c_tlshs%d:%d", i+1, col++);
-
-       wfprintf(fp, " s_tlshs_count:%d", col++);         // number of valid samples (out of MAX_COUNT_SEGMENTS)
-       for (i=0;i<MAX_COUNT_SEGMENTS;i++)
-         wfprintf (fp, " s_tlshs%d:%d", i+1, col++);
-
-       /*******************************
         * segment intertimes
         *******************************/
        for (i=0; i < MAX_COUNT_SEGMENTS-1; i++)
@@ -1065,7 +1054,6 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
 
        for (i=0;i<MAX_COUNT_SEGMENTS-1;i++)
            wfprintf (fp, " s_sit%d:%d", i+1, col++);
-
 
        /*******************************
         * averages
@@ -1128,11 +1116,11 @@ void write_log_header(FILE *fp, int log_type)
      if (log_level & TCP_LOG_OPTIONS)
        col = write_tcplog_header_block(fp,TCP_LOG_OPTIONS,col);
 
-     if (log_level & TCP_LOG_ADVANCED)
-       col = write_tcplog_header_block(fp,TCP_LOG_ADVANCED,col);
-
      if (log_level & TCP_LOG_LAYER7)
        col = write_tcplog_header_block(fp,TCP_LOG_LAYER7,col);
+
+     if (log_level & TCP_LOG_ADVANCED)
+       col = write_tcplog_header_block(fp,TCP_LOG_ADVANCED,col);
 
      wfprintf (fp, "\n");
    }
@@ -1314,6 +1302,8 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf (fp,"\tpath:%d",col++);	        // 8: path
      wfprintf (fp,"\treferer:%d",col++);  	// 9: referer
      wfprintf (fp,"\tuser_agent:%d",col++);	// 10: user agent
+     wfprintf (fp,"\tcookie:%d",col++);		// 11: cookie
+     wfprintf (fp,"\tdnt:%d",col++);		// 12: do not track me
      wfprintf(fp, "\n");
 
      col = 1;
@@ -1338,6 +1328,7 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf (fp,"\tserver:%d",col++);  	// 10: server
      wfprintf (fp,"\trange:%d",col++);		// 11: range
      wfprintf (fp,"\tlocation:%d",col++);	// 12: location
+     wfprintf (fp,"\tset_cookie:%d",col++);		// 13: cookie
      wfprintf(fp, "\n");
    }
 

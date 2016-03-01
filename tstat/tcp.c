@@ -2397,17 +2397,6 @@ void print_tcp_stats_advanced(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba,
     	wfprintf (fp, " %f",ptp_save->s2c.seg_intertime[i]/1000.);
      }
 
-     /* TLS handshake segment sizes */
-    wfprintf (fp, " %d",ptp_save->c2s.ssl_handshake_seg_count);
-    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
-        wfprintf (fp, " %d",ptp_save->c2s.ssl_handshake_seg_size[i]);
-     }
-
-    wfprintf (fp, " %d",ptp_save->s2c.ssl_handshake_seg_count);
-    for (i=0;i<MAX_COUNT_SEGMENTS;i++) {
-        wfprintf (fp, " %d",ptp_save->s2c.ssl_handshake_seg_size[i]);
-     }
-
 #define MEAN(SUM,ENNE) (((ENNE)>0)?((SUM)*1.0/(ENNE)):0.0)
 #define VAR(ME,SQ,ENNE) (((ENNE)>1)?((SQ)-(ENNE)*(ME)*(ME))/((ENNE)-1):0.0)
 
@@ -3574,13 +3563,13 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
      if ((log_level & TCP_LOG_OPTIONS) && (complete))
        print_tcp_stats_options(fp, ptp_save, pab, pba);
 
-     /* TCP flow advanced measurements */
-     if ((log_level & TCP_LOG_ADVANCED) && (complete))
-       print_tcp_stats_advanced(fp, ptp_save, pab, pba, pab_expected, pba_expected);
-
      /* TCP Layer7 specific information */
      if ((log_level & TCP_LOG_LAYER7) && (complete))
        print_tcp_stats_layer7(fp, ptp_save, pab, pba);
+
+     /* TCP flow advanced measurements */
+     if ((log_level & TCP_LOG_ADVANCED) && (complete))
+       print_tcp_stats_advanced(fp, ptp_save, pab, pba, pab_expected, pba_expected);
 
      wfprintf (fp, "\n");
    }

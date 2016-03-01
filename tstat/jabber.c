@@ -54,11 +54,11 @@ FindConTypeJabber (tcp_pair * ptp, struct ip *pip, struct tcphdr *ptcp,
 	  if (LOG_IS_ENABLED(LOG_CHAT_MESSAGES) && fp_chat_log_msg != NULL)
 	    {
 	      wfprintf (fp_chat_log_msg,
-		       "%ld MESSAGE %d ? %d '%s' %.3f %d\n",
+		       "%ld MESSAGE %d ? %d %f %.3f %d\n",
 		       ptp->id_number,
 		       dir,
 		       payload_len,
-		       ts2ascii (&ptp->first_time),
+		       time2double(ptp->first_time) / 1000.0 / 1000.0,
 		       elapsed (ptp->first_time,
 				current_time) / 1000.0 / 1000.0,
 		       ptp->con_type);
@@ -156,7 +156,7 @@ print_jabber_conn_stats (tcp_pair *ptp)
 
   //     5   No. of total messages
 
-  wfprintf (fp_chat_logc, " %d", pjabber->MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d 0 0 0 0 0", pjabber->MESSAGE_count);
 
   /* S2C */
   thisTdir = &(ptp->s2c);
@@ -181,7 +181,7 @@ print_jabber_conn_stats (tcp_pair *ptp)
 
   //    10   No. of total messages
 
-  wfprintf (fp_chat_logc, " %d", pjabber->MESSAGE_count);
+  wfprintf (fp_chat_logc, " %d 0 0 0 0 0", pjabber->MESSAGE_count);
 
   //    11   Flow Start Time
   //    12   Flow End Time
