@@ -73,6 +73,9 @@
 
 #ifdef __APPLE__
    #include "TargetConditionals.h"
+// It seems that in OS X the shortcuts for the in6_addr fields are different
+#define s6_addr16 __u6_addr.__u6_addr16
+#define s6_addr32 __u6_addr.__u6_addr32
 #endif
 
 /* #include "memwatch.h" */
@@ -651,6 +654,8 @@ struct ipaddr *IPV6ADDR2ADDR (struct in6_addr *addr6);
 
 #define CLASSIFICATION(X) ( (validRTT) ? X : (X | NO_RTT_SAMPLE_CLASSIFICATION) )
 
+#define ANSI_BOLD    "\x1b[1m"
+#define ANSI_RESET   "\x1b[0m"
 
 /* LM stop */
 

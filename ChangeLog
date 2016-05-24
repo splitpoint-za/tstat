@@ -12,6 +12,19 @@
   * The seldom used tcplog_advanced columns will appear at the end of the row (and not before
     the tcplog_layer7 columns)
   * Corrected a few incongruences in the chat logs (missing columns, time format)
+  * Adopted ANSI escape sequences to enhance some on-screen warnings
+  * Fixed potential problem with SNI verification and management of new TLDs
+  * Improved and reworked IPv6 management:
+    - IPv6 datagrams will respect the direction (internal/external) determined by the MAC 
+      addresses (-M) or by the ip_direction parameter (when used in LibTstat)
+    - DN-Hunter supports IPv6: 'AAAA' records are considered only in IPv6 datagrams, 
+      'A' records only in IPv4 datagrams (cross-reference would probably be useless).
+    - IPv6 addresses can be CryptoPAn-encrypted
+    - Unified the management for the lists of internal/crypto/cloud/whitelist networks,
+      that can mix IPv6 and IPv4 addresses in a single file (-N, -Y, -C, and -W)
+    - When IPv6 is enabled at compilation time, processing of IPv6 datagrams can be disabled
+      via the -6 command line option 
+   
 
 30/05/14 - MMM
 - Main changes since 2.4

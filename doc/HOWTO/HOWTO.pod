@@ -250,6 +250,7 @@ the command is the following:
               [-z file]
               [-A mask]
               [-H ?|file ]
+              [-6]                                                
               [-F file]                                           
               [-Z] [-P]
               [-r RRD_out_dir] [-R rrd_conf]
@@ -275,13 +276,15 @@ the command is the following:
                  This file must contain the subnets that will be
                  considered as 'internal' during the analysis.
                  Each subnet can be specified in one of the following types:
-                 - <Network IP/NetMask> on a single line 
-                     130.192.0.0/255.255.0.0
-                 - <Network IP/MaskLen> on a single line 
-                     130.192.0.0/16
-                 - Pairs of lines with <Network IP> and <NetMask>
-                     130.192.0.0
-                     255.255.0.0
+                 - <Network IPv4/MaskLen> on a single line                  
+                     130.192.0.0/16                                         
+                 - <Network IPv6/MaskLen> on a single line                  
+                     2001:db8::/32                                    
+                 - <Network IPv4/NetMask IPv4> on a single line             
+                     130.192.0.0/255.255.0.0                                
+                 - Pairs of lines with <Network IPv4> and <NetMask IPv4>    
+                     130.192.0.0                                            
+                     255.255.0.0                                            
                  If the option is not specified all networks are
                  considered internal
 
@@ -358,6 +361,7 @@ the command is the following:
         -z file: redirect all the stdout/stderr messages to the file specified
         -A mask: enable XOR-based anonymization for internal IPv4 addresses.
                  'mask' is a decimal, octal, or hexadecimal value.
+        -6: disable the L4 processing of IPv6 datagrams                          
         -X: disable the DN-Hunter DNS engine 
         -F file: specify the file name which contains the
                  list of DNS domains to be included/excluded from the
@@ -408,26 +412,32 @@ captured with DAG cards.
 As a minimal configuration, you must describe your network to Tstat. Indeed, in
 order to distinguish forward and backward paths, Tstat needs to know which host
 IP addresses can be considered as ``internal'' to the monitored network. 
-There are three different format to specify the internal subnets and
+There are four different format to specify the internal subnets and
 if, for example, we use Politecnico di Torino subnets, which are C<130.192.0.0/16> and
 C<192.204.134.0/24>, we can choose to use one of the following formats:
 
 =over 4
 
 
-=item <Network IP/MaskLen> on a single line 
+=item <Network IPv4/MaskLen> on a single line 
 
     130.192.0.0/16
     192.204.134.0/16
                                                          
 
-=item <Network IP/NetMask> on a single line 
+=item <Network IPv6/MaskLen> on a single line 
+
+    2100:abcd:ef00::/40
+    fe80::/64
+                                                         
+
+=item <Network IPv4/NetMask IPv4> on a single line 
 
     130.192.0.0/255.255.0.0
     192.204.134.0/255.255.0.0
                              
 
-=item (only for backward compatibility) pairs of lines with <Network IP> and <NetMask>
+=item (only for backward compatibility) pairs of lines with <Network IP> and <NetMask IPv4>
 
     130.192.0.0
     255.255.0.0
@@ -448,6 +458,9 @@ configuration is still correct
     192.168.0.0
     255.255.0.0
 
+IPv6 networks can be always included, but they will be considered only if IPv6 
+support has been enabled at compilation time (as reported by C<tstat -v>).
+
 In the directory C<tstat-conf> are placed the two files C<net.all> and
 C<net.private> 
 
@@ -455,6 +468,7 @@ C<net.private>
     # Mask to indicate that all IP subnets are supposed to be internal
     # The same result is obtained omitting the -N option
     0.0.0.0/0.0.0.0
+    ::/0
 
     >cat tstat-conf/net.private
     # Example mask to consider as internal all the subnets in the 
@@ -904,7 +918,7 @@ to mitigate the user information exposed in the log files.
 One main privacy concern is the presence of the actual user IP addresses in logs.
 To hide this information, Tstat implements two possible solutions. 
 
-The first one is a simple XOR-based obfuscation of the IP address, activated by the 
+The first one is a simple XOR-based obfuscation of the IPv4 address, activated by the 
 command line option C<-A mask>. The 32-bit mask is applied B<only> to internal IPv4 
 addresses, as defined by either the C<-N> or the C<-M> command line options. If no 
 internal network is defined, all IPs are considered internal and they are all 
@@ -917,7 +931,7 @@ based on the well known Crypto-PAn[*] algorithm.
 Crypto-PAn is a prefix-preserving IP anonymizer, and it is activated providing a 
 list of IP networks to be anonymized using the command line option C<-Y>. 
 The networks are indicated in a format similar to the one used for the C<-N> and C<-C>
-command line options. Any IPv4 address matching one of those networks is marked for 
+command line options. Any IP address matching one of those networks is marked for 
 encryption. Since the anonymization operations are CPU-intensive, any IP address 
 is anonymized only once, the translation cached, and it is actually used only when the 
 IP address must be printed in the logs. 
@@ -946,9 +960,12 @@ created in the log directory root (the one indicated by the C<-s> command line o
 The generated file is suitable to be later used as the argument of the C<--keybase64> 
 option.
 
-Only IPv4 address are obfuscated or anonymized. There is currently no support in Tstat
-for IPv6 anonymization, and obfuscation of TCP/UDP port numbers is of limited usage in
-a traffic analysis tool such as Tstat.
+For the sake of simplicity IPv6 addresses are currently anonymized as 4 IPv4 addresses 
+(after some masking to hide trivial bit patterns): this should maintain the 
+prefix-preserving property and should be sufficient to provide the required privacy.
+IPv6 addresses are currently not obfuscated (C<-A>).
+There is currently no support in Tstat for obfuscation of TCP/UDP port numbers, 
+since it is of limited usage in a traffic analysis tool such as Tstat.
 Obfuscated (C<-A>) addresses are not explicitely indicated in the log files (if they are
 internal, and obfuscation was active, they are actually obfuscated). The presence of 
 anonymized (C<-Y>) address is explicitely indicated in the log files in the C<c_iscrypto>
@@ -1452,7 +1469,8 @@ C<tstat-conf/globals.conf>. We report here a simplified list of the available pa
     max_white_hosts    = 100    # Max number of whitelisted networks (-W)
     max_internal_ethers = 20    # Max number of Ethernet addresses for internal traffic (-M)
     max_crypto_cache_size = 130000	# Size of the LRU cache used in address encryption
-    dns_cache_size = 100000	# Size of the DNS cache used by the DNhunter module 
+    dns_cache_size = 100000	# Size of the IPv4 DNS cache used by the DNhunter module 
+    dns_cache_size_ipv6 = 1000	# Size of the IPv6 DNS cache used by the DNhunter module 
 
     # Change to tailor the logging activity
     runtime_config_idle = 21.0	# Check interval for runtime.conf file (-T) 

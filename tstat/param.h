@@ -183,3 +183,6 @@ Increase this number on high speed network will help ...*/
                                          LRU cache for a few hours */
 /* Size of the DNS cache */
 #define DNS_CACHE_SIZE 100000   /* 500,000 used on large probes */
+#ifdef SUPPORT_IPV6
+#define DNS_CACHE_SIZE_IPV6 1000   /* possibly a small cache  */
+#endif

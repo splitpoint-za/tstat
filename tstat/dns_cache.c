@@ -54,6 +54,9 @@ void dns_cache_init()
 {
   /* init the cache */
   cacheInitialize(GLOBALS.DNS_Cache_Size);
+#ifdef SUPPORT_IPV6
+  cacheInitialize_ipv6(GLOBALS.DNS_Cache_Size_IPv6);
+#endif
 }
 
 void *check_dns_response(struct udphdr *pudp, int tproto, void *pdir, void *plast)
@@ -186,7 +189,7 @@ void dns_response_processing(
      qtype = ntohs(get_u16(dnsdata,offset));
      qclass = ntohs(get_u16(dnsdata,offset+2));
 
-     if ( qtype!=0x0001 || qclass!=0x0001)
+     if ( (qtype!=0x0001 && qtype!=0x001c && qtype!=0x00ff) || qclass!=0x0001)
       {
         // Question is not an PTR A question querying an IP address, then discard packet
         if (debug >0)
@@ -200,9 +203,13 @@ void dns_response_processing(
    {
      unsigned int n_answers;
      _Bool a_records = FALSE;
+     _Bool aaaa_records = FALSE;
      unsigned long int servers[MAX_DNS_ENTRIES];
+     struct in6_addr servers_ipv6[MAX_DNS_ENTRIES];
      int n_servers = 0;
+     int n_servers_ipv6 = 0;
      unsigned int client_ip = 0;
+     struct in6_addr client_ipv6;
 
      for (n_answers = 0; n_answers<ntohs(dns_hdr->ancount) && n_servers < MAX_DNS_ENTRIES ;n_answers++)
       {
@@ -236,17 +243,28 @@ void dns_response_processing(
   	   unsigned long int host_addr;
   	   a_records = TRUE;
   	   u_char i;
-  	   client_ip = ntohl(pip->ip_dst.s_addr);
+	   if (PIP_ISV4(pip))
+  	      client_ip = ntohl(pip->ip_dst.s_addr);
+	   else
+	      memcpy(&client_ipv6,&(PIP_V6(pip)->ip6_daddr),sizeof(struct in6_addr));
   	   for (i=0;i<rdlen/4 && n_servers < MAX_DNS_ENTRIES;i++)
 	    {
 	      host_addr = ntohl(get_u32(dns_payload,offset));
   	      if (debug >0)
-  	   	     fprintf(fp_stderr, "DNS entry: %lu.%lu.%lu.%lu %s %u\n",
+	       {
+	         char address_mem[INET6_ADDRSTRLEN];
+		 if (PIP_ISV4(pip))
+	           inet_ntop(AF_INET,&(pip->ip_dst.s_addr),address_mem,sizeof(address_mem));
+		 else
+	           inet_ntop(AF_INET6,&client_ipv6,address_mem,sizeof(address_mem));
+		 
+  	   	     fprintf(fp_stderr, "DNS entry: %lu.%lu.%lu.%lu %s %s\n",
 		             (host_addr & 0xff000000)>>24,
   	   	   	     (host_addr & 0x00ff0000)>>16,
   	   	   	     (host_addr & 0x0000ff00)>>8,
   	   	   	     (host_addr & 0x000000ff),
-  	   	   	     qquery,ntohl(pip->ip_src.s_addr));
+  	   	   	     qquery,address_mem);
+	       }
   	      servers[n_servers] = host_addr;
   	      n_servers++;
   	      offset+=4;
@@ -257,6 +275,43 @@ void dns_response_processing(
   	   //MX Record
   	   offset += rdlen;
   	 }
+  	else if (type==0x001c && class_==0x0001 )
+	 {
+	   // AAAA record
+	   // We parse these entries even if SUPPORT_IPV6 is false
+  	   aaaa_records = TRUE;
+  	   u_char i;
+	   struct in6_addr entry_ipv6;
+	   
+	   if (PIP_ISV4(pip))
+  	      client_ip = ntohl(pip->ip_dst.s_addr);
+	   else
+	      memcpy(&client_ipv6,&(PIP_V6(pip)->ip6_daddr),sizeof(struct in6_addr));
+	   for (i=0;i<rdlen/16;i++)
+	    {
+	      /* Read the IPv6 address in a in6_addr struct */
+              entry_ipv6.s6_addr32[0] = get_u32(dns_payload,offset);
+              entry_ipv6.s6_addr32[1] = get_u32(dns_payload,offset+4);
+              entry_ipv6.s6_addr32[2] = get_u32(dns_payload,offset+8);
+              entry_ipv6.s6_addr32[3] = get_u32(dns_payload,offset+12);
+  	      if (debug >0)
+	       {
+	         char address_mem[INET6_ADDRSTRLEN];
+	         inet_ntop(AF_INET6,&entry_ipv6,address_mem,sizeof(address_mem));
+	         fprintf(fp_stderr, "DNS AAAA entry: %s",address_mem);
+		 if (PIP_ISV4(pip))
+	           inet_ntop(AF_INET,&(pip->ip_dst.s_addr),address_mem,sizeof(address_mem));
+		 else
+	           inet_ntop(AF_INET6,&client_ipv6,address_mem,sizeof(address_mem));
+	         fprintf(fp_stderr, " for %s",address_mem);
+                 fprintf(fp_stderr," about %s\n",qquery);
+	       }
+
+	      memcpy(&(servers_ipv6[n_servers_ipv6]),&entry_ipv6,sizeof(struct in6_addr));
+	      n_servers_ipv6++;
+	      offset+=16;
+	    }
+	 }
 	else
 	 {
   	   offset += rdlen;
@@ -264,7 +319,7 @@ void dns_response_processing(
       }
 
      /* Send the answer to the cache if there is something to send */
-     if (a_records)
+     if (a_records && PIP_ISV4(pip))
       {
         int rval;
         rval = insert(
@@ -281,6 +336,28 @@ void dns_response_processing(
 	   // fprintf(fp_stderr,"\nDNS cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
       }
+#ifdef SUPPORT_IPV6
+     else if (aaaa_records && PIP_ISV6(pip))
+      {
+        // We store only IPv6 entries contained in IPv6 DNS queries
+        int rval;
+	struct my_in6_addr my_client_ipv6;
+	memcpy(&my_client_ipv6,&client_ipv6,sizeof(struct my_in6_addr));
+        rval = insert_ipv6(
+			qquery,
+			my_client_ipv6,
+			(struct my_in6_addr*)servers_ipv6,
+			n_servers_ipv6*sizeof(servers_ipv6[0]),
+			PIP_V6(pip)->ip6_saddr,
+			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
+			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
+
+	if (rval > 0)
+	 {
+	   fprintf(fp_stderr,"\nDNS IPv6 cache (size=%d) full at %s\n",rval,Timestamp());
+	 }
+      }
+#endif
    }
 }
 
@@ -303,6 +380,31 @@ struct DNS_data* get_dns_entry(
 	}
 }
 
+#ifdef SUPPORT_IPV6
+unsigned char* reverse_lookup_ipv6(struct in6_addr *client_ip, struct in6_addr *server_ip)
+{
+  struct my_in6_addr my_client_ip,my_server_ip;
+  memcpy(&my_client_ip,client_ip,sizeof(struct my_in6_addr));
+  memcpy(&my_server_ip,server_ip,sizeof(struct my_in6_addr));
+  return get_ipv6(my_client_ip,my_server_ip);
+}
+
+struct DNS_data_IPv6* get_dns_entry_ipv6(
+		struct in6_addr *client_ip,
+		struct in6_addr *server_ip)
+{
+	struct DNS_data_IPv6* dns_data;
+	struct my_in6_addr my_client_ip,my_server_ip;
+        memcpy(&my_client_ip,client_ip,sizeof(struct my_in6_addr));
+        memcpy(&my_server_ip,server_ip,sizeof(struct my_in6_addr));
+	dns_data = getEntry_ipv6(my_client_ip, my_server_ip);
+	if(dns_data!=NULL){
+		return dns_data;
+	}else{
+		return NULL;
+	}
+}
+#endif
 /*
 unsigned long int dns_server(unsigned long int client_ip, unsigned long int server_ip)
 {

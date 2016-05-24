@@ -54,7 +54,7 @@ extern int yt_mobile;
 extern int yt_stream;
 #endif
 
-regex_t re_ssl_subject;
+regex_t re_ssl_subject,re_ssl_clean;
 char cname[80];
 
 enum http_content YTMAP(enum http_content X)
@@ -83,8 +83,9 @@ tcpL7_init ()
 #ifdef VIDEO_DETAILS
    init_web_patterns();
 #endif
-   regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,4}\\.?$",REG_EXTENDED);
-   
+   regcomp(&re_ssl_subject,"[A-Za-z0-9]+\\.[A-Za-z0-9]{2,24}\\.?$",REG_EXTENDED);
+   regcomp(&re_ssl_clean,"[^[:cntrl:][:space:]]+",REG_EXTENDED);
+
    init_tls_patterns();
 }
 
@@ -261,7 +262,8 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
                   // crosscheck that subject has a reasonable syntax
                   if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
                    {
-                      ptp->ssl_client_subject = strdup(cname);
+		      if (regexec(&re_ssl_clean,cname, (size_t) 0, NULL, 0)==0)
+                         ptp->ssl_client_subject = strdup(cname);
                    }
 
                   ii = next;
@@ -448,7 +450,8 @@ int ssl_certificate_check(tcp_pair *ptp, void *pdata, int data_length)
 	
 	if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
 	  {
-	    ptp->ssl_server_subject = strdup(cname);
+	    if (regexec(&re_ssl_clean,cname, (size_t) 0, NULL, 0)==0)
+	       ptp->ssl_server_subject = strdup(cname);
 	    done = 1;
 	  }
 

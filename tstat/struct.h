@@ -759,7 +759,7 @@ struct stcp_pair
 
   /* DNS reverse lookup */
   char* dns_name;
-  struct in_addr dns_server;
+  ipaddr  dns_server;
   timeval request_time;
   timeval response_time;
   
@@ -1068,7 +1068,7 @@ struct sudp_pair
 
   /* DNS reverse lookup */
   char *dns_name;
-  struct in_addr dns_server;
+  ipaddr  dns_server;
   timeval request_time;
   timeval response_time;
 };
@@ -1224,6 +1224,9 @@ struct global_parameters {
  int Max_Crypto_Cache_Size;
 
  int DNS_Cache_Size;
+#ifdef SUPPORT_IPV6 
+ int DNS_Cache_Size_IPv6;
+#endif
 };
 
 typedef struct param_value

@@ -104,10 +104,13 @@ struct ipv6_ext_frag
 };
 
 
-void IPv6_support (struct ip *pip, struct in6_addr  internal_net_listv6, void * plast);
+void IPv6_support (struct ip *pip, void * plast, int ip_direction);
 void ICMPv6_support(char * next, int internal_srcv6, int internal_dstv6);
-int LoadInternalNetsv6 (char *file, struct in6_addr * internal_net_listv6, int * tot_internal_nets);
-int internal_ipv6(struct in6_addr adx, struct in6_addr  internal_net_listv6);
+int LoadInternalNetsv6 (char *file, struct in6_addr *internal_net_listv6, int *internal_net_mask_size, int * tot_internal_nets);
+int LoadCryptoNetsv6 (char *file, struct in6_addr *crypto_net_listv6, int *crypto_net_mask_size, int * tot_crypto_nets);
+int internal_ipv6(struct in6_addr adx);
+int cloud_ipv6(struct in6_addr adx);
+int crypto_ipv6(struct in6_addr adx);
 char * findheader_ipv6 ( void *pplast,struct ip *pip,unsigned int * proto_type);
 /* tcptrace's IPv6 access routines */
 struct tcphdr *gettcp (struct ip *pip, void **pplast);

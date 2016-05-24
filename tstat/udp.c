@@ -131,12 +131,22 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 
   if (crypto_src)
    {
-     store_crypto_ip(&(pup->addr_pair.a_address.un.ip4));
+#ifdef SUPPORT_IPV6   
+     if (ADDR_ISV6(&(pup->addr_pair.a_address)))
+       store_crypto_ipv6(&(pup->addr_pair.a_address.un.ip6));
+     else
+#endif
+       store_crypto_ip(&(pup->addr_pair.a_address.un.ip4));
    }
 
   if (crypto_dst)
    {
-     store_crypto_ip(&(pup->addr_pair.b_address.un.ip4));
+#ifdef SUPPORT_IPV6   
+     if (ADDR_ISV6(&(pup->addr_pair.a_address)))
+       store_crypto_ipv6(&(pup->addr_pair.b_address.un.ip6));
+     else
+#endif
+       store_crypto_ip(&(pup->addr_pair.b_address.un.ip4));
    }
 
   pup->crypto_src = crypto_src;
@@ -157,14 +167,31 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 #ifdef DNS_CACHE_PROCESSOR
  if (dns_enabled)
   {
+#ifdef SUPPORT_IPV6
+    if (PIP_ISV6(pip))
+     { 
+    struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv6(&(PIP_V6(pip)->ip6_saddr), &(PIP_V6(pip)->ip6_daddr));
+    if(dns_data!=NULL){
+	 pup->dns_name = dns_data->hostname;
+	 pup->dns_server.addr_vers = 6;
+	 memcpy((&pup->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
+	 pup->request_time = dns_data->request_time;
+	 pup->response_time = dns_data->response_time;
+     }
+     }
+    else
+#endif
+    {
     /* Do reverse lookup */
     struct DNS_data* dns_data = get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
     if(dns_data!=NULL){
 	  pup->dns_name = dns_data->hostname;
-	  pup->dns_server = dns_data->dns_server;
+	  pup->dns_server.addr_vers = 6;
+	  memcpy((&pup->dns_server.un.ip4),&(dns_data->dns_server),sizeof(struct in_addr));
 	  pup->request_time = dns_data->request_time;
 	  pup->response_time = dns_data->response_time;
      }
+    }
   }
  else
   pup->dns_name = NULL;

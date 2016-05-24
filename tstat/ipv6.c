@@ -19,6 +19,24 @@
 #include "tstat.h"
 extern Bool coming_in;
 extern Bool net6_conf;
+extern Bool internal_shost;
+extern Bool internal_dhost;
+extern eth_filter mac_filter;
+
+#ifdef SUPPORT_IPV6
+extern struct in6_addr *internal_net_listv6;
+extern int *internal_net_maskv6;
+extern int tot_internal_netsv6;
+extern struct in6_addr *crypto_net_listv6;
+extern int *crypto_net_maskv6;
+extern int tot_crypto_netsv6;
+extern struct in6_addr *cloud_net_listv6;
+extern int *cloud_net_maskv6;
+extern int tot_cloud_netsv6;
+extern struct in6_addr *white_net_listv6;
+extern int *white_net_maskv6;
+extern int tot_white_netsv6;
+#endif
 
 /* the names of IPv6 extensions that we understand */
 char *
@@ -88,44 +106,42 @@ ipv6_nextheader (void *pheader0, u_char * pnextheader)
 
 }
 
-
-int
-LoadInternalNetsv6 (char *file, struct in6_addr *internal_net_listv6,
-		    int *tot_internal_nets)
+#ifdef SUPPORT_IPV6
+int match_ipv6_net(struct in6_addr adx, struct in6_addr *internal_list, int *mask_list, int list_size)
 {
-  int i;
-  FILE *fp;
-  char c[50];
+  static unsigned short int masks[] = { 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe, 0xff };
+  int i,full,partial,match;
+//  char c[INET6_ADDRSTRLEN],d[INET6_ADDRSTRLEN];
 
-
-  fp = fopen (file, "r");
-
-  if (fp == NULL)
+  for (i = 0; i < list_size; i++)
     {
-      return 0;
+      if (mask_list[i]==0) 
+	return 1;
+
+//  inet_ntop(AF_INET6,&(adx),c,INET6_ADDRSTRLEN),
+//  inet_ntop(AF_INET6,&(internal_net_listv6[i]),d,INET6_ADDRSTRLEN);
+  
+      full = mask_list[i]/8;
+      partial = mask_list[i]%8;
+      
+      match = 0;
+      if ( memcmp(&adx,&(internal_list[i]),full)!=0 )
+       {
+	 match = 0;
+       }
+      else if (partial!=0)
+       {
+	 if ( (adx.s6_addr[full] & masks[partial-1] ) == (internal_list[i].s6_addr[full] & masks[partial-1]) )
+	   match = 1;
+       }
+      else
+	match = 1;
+      
+      if (match == 1) 
+         return 1;
     }
 
-  if (fgets (c, 35, fp) != NULL)
-    {
-
-      if ((i = inet_pton (AF_INET6, c, internal_net_listv6)) == 0)
-	fprintf (fp_stderr, "Error using inet_pton: not a valid presentation format \n");
-      else if (i < 0)
-	fprintf (fp_stderr, "Error using inet_pton \n");
-    }
-  else
-    {
-      fprintf (fp_stderr, "Error \n");
-
-      return 0;
-    }
-
-  if (debug)
-    {
-      fprintf (fp_stderr, "Adding: %s as internal net \n",
-	      inet_ntop (AF_INET6, internal_net_listv6, c, INET6_ADDRSTRLEN));
-    }
-  return 1;
+  return 0;
 }
 
 /* 
@@ -133,30 +149,42 @@ LoadInternalNetsv6 (char *file, struct in6_addr *internal_net_listv6,
  */
 
 int
-internal_ipv6 (struct in6_addr adx, struct in6_addr internal_net_listv6)
+internal_ipv6 (struct in6_addr adx)
 {
-
-  //fprintf (fp_stdout, 
-  //  "Indir: %s \n indir comp: %s \n",
-  //  inet_ntop(AF_INET6,&adx,c,INET6_ADDRSTRLEN),
-  //  inet_ntop(AF_INET6,&internal_net_listv6,d,INET6_ADDRSTRLEN));
-
-  if (memcmp (&adx, &internal_net_listv6, 8) == 0)
-    {
-      //fprintf (fp_stdout, "the same \n");
-      return 1;
-    }
-  else
-    {
-      //fprintf (fp_stdout, "not the same \n");
-      return 0;
-    }
+  return match_ipv6_net(adx,internal_net_listv6,internal_net_maskv6,tot_internal_netsv6);
 }
 
+int
+cloud_ipv6 (struct in6_addr adx)
+{
+  return match_ipv6_net(adx,cloud_net_listv6,cloud_net_maskv6,tot_cloud_netsv6);
+}
+
+int
+crypto_ipv6 (struct in6_addr adx)
+{
+  int crypto_res, white_res;
+  
+  if (tot_white_netsv6==0)    // No Whitelisted networks: just return Crypto
+    return match_ipv6_net(adx,crypto_net_listv6,crypto_net_maskv6,tot_crypto_netsv6);
+  else
+   {
+     crypto_res = match_ipv6_net(adx,crypto_net_listv6,crypto_net_maskv6,tot_crypto_netsv6);
+     if (crypto_res == 0)
+       return 0;
+     else
+      {
+        white_res = match_ipv6_net(adx,white_net_listv6,white_net_maskv6,tot_white_netsv6);
+        return white_res == 0 ? 1 : 0;
+      }
+   }
+}
+
+#endif
 
 #ifdef SUPPORT_IPV6
 void
-IPv6_support (struct ip *pip, struct in6_addr internal_netv6, void *pplast)
+IPv6_support (struct ip *pip, void *pplast, int ip_direction)
 {
   struct ipv6 *ipv6;
   int internal_srcv6 = 0, internal_dstv6 = 0;
@@ -175,16 +203,52 @@ IPv6_support (struct ip *pip, struct in6_addr internal_netv6, void *pplast)
       internal_srcv6 = coming_in;
       internal_dstv6 = !coming_in;
     }
-  else if (!net6_conf)
-    {
-      internal_srcv6 = 1;
-      internal_dstv6 = 1;
-    }
   else
-    {
-      internal_srcv6 = internal_ipv6 (ipv6->ip6_saddr, internal_netv6);
-      internal_dstv6 = internal_ipv6 (ipv6->ip6_daddr, internal_netv6);
-    }
+   {
+     if (mac_filter.tot_internal_eth >0)
+      {
+        /* going to use the Ethernet MAC here */
+          internal_srcv6 = internal_shost;
+          internal_dstv6 = internal_dhost;
+      }
+     else
+      {
+         /* stick with ip networks - or trust what you have been told */
+         switch(ip_direction)                                                                         
+          {
+           case SRC_IN_DST_IN:
+            internal_srcv6 = 1;
+            internal_dstv6 = 1;
+            break;
+           case SRC_IN_DST_OUT:
+            internal_srcv6 = 1;
+            internal_dstv6 = 0;
+            break;
+           case SRC_OUT_DST_IN:
+            internal_srcv6 = 0;
+            internal_dstv6 = 1;
+            break;
+           case SRC_OUT_DST_OUT:
+            internal_srcv6 = 0;
+            internal_dstv6 = 0;
+            break;
+           case DEFAULT_NET:
+           default:
+              if (!net_conf)
+               {
+                 internal_srcv6 = 1;
+                 internal_dstv6 = 1;
+               }
+             else
+               {
+                 internal_srcv6 = internal_ipv6 (ipv6->ip6_saddr);
+                 internal_dstv6 = internal_ipv6 (ipv6->ip6_daddr);
+               }
+            break;
+          }
+
+      }
+   }
 
   if (internal_srcv6 && !internal_dstv6)
     {

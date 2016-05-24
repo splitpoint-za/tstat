@@ -389,12 +389,22 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   if (crypto_src)
    {
-     store_crypto_ip(&(ptp->addr_pair.a_address.un.ip4));
+#ifdef SUPPORT_IPV6
+     if (ADDR_ISV6(&(ptp->addr_pair.a_address)))
+       store_crypto_ipv6(&(ptp->addr_pair.a_address.un.ip6));
+     else
+#endif
+       store_crypto_ip(&(ptp->addr_pair.a_address.un.ip4));
    }
 
   if (crypto_dst)
    {
-     store_crypto_ip(&(ptp->addr_pair.b_address.un.ip4));
+#ifdef SUPPORT_IPV6
+     if (ADDR_ISV6(&(ptp->addr_pair.b_address)))
+       store_crypto_ipv6(&(ptp->addr_pair.b_address.un.ip6));
+     else
+#endif
+       store_crypto_ip(&(ptp->addr_pair.b_address.un.ip4));
    }
 
   ptp->crypto_src = crypto_src;
@@ -414,19 +424,41 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 #ifdef DNS_CACHE_PROCESSOR
  if (dns_enabled)
   {
-    struct DNS_data* dns_data =  get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+#ifdef SUPPORT_IPV6
+    if (PIP_ISV6(pip))
+     { 
+    struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv6(&(PIP_V6(pip)->ip6_saddr), &(PIP_V6(pip)->ip6_daddr));
     if(dns_data!=NULL){
 	 ptp->dns_name = dns_data->hostname;
-	 ptp->dns_server = dns_data->dns_server;
+	 ptp->dns_server.addr_vers = 6;
+	 memcpy((&ptp->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
      }
     if(debug >1)
      {
        fprintf (fp_stdout, "got DNS reverse %s %s ", ptp->dns_name, HostName (ptp->addr_pair.a_address));
-       fprintf (fp_stdout, "from DNS server %s\n", inet_ntoa(ptp->dns_server));
+       fprintf (fp_stdout, "from DNS server %s\n", HostName(ptp->dns_server));
      }
-  /* check if we are interested into dumping this flow packets accoring to the DNS name */
+     }
+    else
+#endif
+     {
+    struct DNS_data* dns_data =  get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+    if(dns_data!=NULL){
+	 ptp->dns_name = dns_data->hostname;
+	 ptp->dns_server.addr_vers = 4;
+	 memcpy((&ptp->dns_server.un.ip4),&(dns_data->dns_server),sizeof(struct in_addr));
+	 ptp->request_time = dns_data->request_time;
+	 ptp->response_time = dns_data->response_time;
+     }
+    if(debug >1)
+     {
+       fprintf (fp_stdout, "got DNS reverse %s %s ", ptp->dns_name, HostName (ptp->addr_pair.a_address));
+       fprintf (fp_stdout, "from DNS server %s\n", HostName(ptp->dns_server));
+     }
+     }
+/* check if we are interested into dumping this flow packets accoring to the DNS name */
   ptp->stop_dumping_tcp = !check_DNSname(ptp->dns_name);
   }
  else
@@ -2494,9 +2526,9 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
   if (ptp_save->dns_name!=NULL)
    {
      wfprintf(fp, " %s",ptp_save->dns_name);
-     /* DNS server */
-     wfprintf(fp, " %s",inet_ntoa(ptp_save->dns_server));
-      /* Absolute Request time */
+     /* DNS server */     
+     wfprintf(fp, " %s",HostName(ptp_save->dns_server));
+     /* Absolute Request time */
      wfprintf(fp, " %f", time2double(ptp_save->request_time) / 1000.);
       /* Absolute Response time */
      wfprintf(fp, " %f", time2double(ptp_save->response_time) / 1000.);

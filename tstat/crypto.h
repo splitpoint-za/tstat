@@ -12,6 +12,12 @@ void      store_crypto_ip(struct in_addr *);
 in_addr_t retrieve_crypto_ip(struct in_addr *);
 char      *HostNameEncrypted(ipaddr );
 
+#ifdef SUPPORT_IPV6
+void      encrypt_ipv6(struct in6_addr *,struct in6_addr *);
+void      store_crypto_ipv6(struct in6_addr *);
+struct in6_addr *retrieve_crypto_ipv6(struct in6_addr *);
+#endif
+
 #define CPKEY_RANDOM 1
 #define CPKEY_FILE   2
 #define CPKEY_FILE64 3

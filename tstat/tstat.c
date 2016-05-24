@@ -96,40 +96,42 @@ Bool internal_src = FALSE;
 Bool internal_dst = FALSE;
 
 struct in_addr *internal_net_list;
-struct in_addr *internal_net_mask2;
+struct in6_addr *internal_net_listv6;
 int *internal_net_mask;
+int *internal_net_maskv6;
 int tot_internal_nets;
+int tot_internal_netsv6;
 
 /* Variables for Cloud definition*/
 Bool cloud_src = FALSE;
 Bool cloud_dst = FALSE;
 
 struct in_addr *cloud_net_list;
-struct in_addr *cloud_net_mask2;
+struct in6_addr *cloud_net_listv6;
 int *cloud_net_mask;
+int *cloud_net_maskv6;
 int tot_cloud_nets;
+int tot_cloud_netsv6;
 
 /* Variables for Crypto definition*/
 Bool crypto_src = FALSE;
 Bool crypto_dst = FALSE;
 
 struct in_addr *crypto_net_list;
-struct in_addr *crypto_net_mask2;
+struct in6_addr *crypto_net_listv6;
 int *crypto_net_mask;
+int *crypto_net_maskv6;
 int tot_crypto_nets;
+int tot_crypto_netsv6;
 
 struct in_addr *white_net_list;
-struct in_addr *white_net_mask2;
+struct in6_addr *white_net_listv6;
 int *white_net_mask;
+int *white_net_maskv6;
 int tot_white_nets;
+int tot_white_netsv6;
 
 unsigned int ip_obfuscate_mask = 0x00000000; /* This is already in network order */
-
-#ifdef SUPPORT_IPV6
-struct in6_addr internal_net_listv6;
-int tot_internal_netsv6;
-int contr_flag = 0;
-#endif
 
 /* option flags and default values */
 Bool live_flag = FALSE;
@@ -326,7 +328,6 @@ Bool net_conf = FALSE;
 Bool cloud_conf = FALSE;
 Bool crypto_conf = FALSE;
 Bool white_conf = FALSE;
-Bool net6_conf = FALSE;
 Bool eth_conf = FALSE;
 
 int  crypto_source = CPKEY_RANDOM;
@@ -350,6 +351,10 @@ char runtime_conf_fname[200];
 char *dns_namefilter_file;
 Bool dns_namefilter_specified = FALSE;
 Bool dns_enabled = TRUE;
+#endif
+
+#ifdef SUPPORT_IPV6
+Bool ipv6_enabled = TRUE;
 #endif
 
 /* PROFILE VARIABLES */
@@ -403,7 +408,7 @@ Help (void)
     "\t      [-A mask]\n"
     "\t      [-H ?|file ]\n"
 #ifdef SUPPORT_IPV6
-    "\t      [-y] [-6 file]\n"
+    "\t      [-6]\n"
 #endif
 #ifdef HAVE_ZLIB
     "\t      [-Z] [-P]\n"
@@ -441,11 +446,13 @@ Help (void)
     "\t         This file must contain the subnets that will be\n"
     "\t         considered as 'internal' during the analysis.\n"
     "\t         Each subnet can be specified in one of the following types:\n"
-    "\t         - <Network IP/NetMask> on a single line \n"
-    "\t             130.192.0.0/255.255.0.0\n"
-    "\t         - <Network IP/MaskLen> on a single line \n"
+    "\t         - <Network IPv4/MaskLen> on a single line \n"
     "\t             130.192.0.0/16\n"
-    "\t         - Pairs of lines with <Network IP> and <NetMask>\n"
+    "\t         - <Network IPv6/MaskLen> on a single line \n"
+    "\t             2001:db8::/32\n"
+    "\t         - <Network IPv4/NetMask IPv4> on a single line \n"
+    "\t             130.192.0.0/255.255.0.0\n"
+    "\t         - Pairs of lines with <Network IPv4> and <NetMask IPv4>\n"
     "\t             130.192.0.0\n"
     "\t             255.255.0.0\n"
     "\t         If the option is not specified all networks are\n"
@@ -460,14 +467,14 @@ Help (void)
     "\t         If this option is specified, the -N param is ignored.\n"
     "\n"
     "\t-C file: specify the file name which contains the\n"
-    "\t         description of the cloud networks.\n"
-    "\t         This file must contain the subnets that will be\n"
+    "\t         description of the cloud IPv4 networks.\n"
+    "\t         This file must contain the IPv4 subnets that will be\n"
     "\t         considered as belonging to a specific group of networks\n"
     "\t         (cloud) during the analysis.\n"
     "\t         Subnets are specified like in the -N option.\n"
     "\n"
     "\t-Y file: specify the file name which contains the\n"
-    "\t         description of the encrypted networks.\n"
+    "\t         description of the encrypted IPv4 networks.\n"
     "\t         This file must contain the subnets for which the IPv4 address\n"
     "\t         will be anonymized using the Crypto-PAn algorithm.\n"
     "\t         Subnets are specified like in the -N option.\n"
@@ -488,7 +495,7 @@ Help (void)
     "\t         among --keyvalue, --keyfile, and --keybase64 can be used.\n"
     "\n"
     "\t-W file: specify the file name which contains the\n"
-    "\t         description of the whitelisted hosts/networks.\n"
+    "\t         description of the whitelisted IPv4 hosts/networks.\n"
     "\t         This file must contain the subnets for which the IPv4 address\n"
     "\t         will be whitelisted and *NOT* anonymized using the Crypto-PAn algorithm.\n"
     "\t         Subnets are specified like in the -N option.\n"
@@ -525,8 +532,7 @@ Help (void)
     "\t-A mask: enable XOR-based anonymization for internal IPv4 addresses.\n"
     "\t         'mask' is a decimal, octal, or hexadecimal value.\n"
 #ifdef SUPPORT_IPV6
-    "\t-6 file: specify the file name which contains the\n"
-    "\t         description of the internal IPv6 network.\n"
+    "\t-6: disable the L4 processing of IPv6 datagrams\n"
 #endif
 #ifdef HAVE_ZLIB
     "\t-Z: Create gzip compressed (.gz) log files.\n"
@@ -620,8 +626,14 @@ static void
 Version (void)
 {
   fprintf (fp_stderr, "\nVersion: %s\n", tstat_version);
-  fprintf (fp_stderr, "Compiled by <%s>, the <%s> on machine <%s>\n\n",
+  fprintf (fp_stderr, "Compiled by <%s>, the <%s> on machine <%s>",
 	   built_bywhom, built_when, built_where);
+#ifdef SUPPORT_IPV6
+  fprintf (fp_stderr, ANSI_BOLD " with " ANSI_RESET);
+#else
+  fprintf (fp_stderr, ANSI_BOLD " without " ANSI_RESET);
+#endif
+  fprintf (fp_stderr, "IPv6 support\n\n");
 }
 
 
@@ -1766,10 +1778,15 @@ ip_header_stat (int phystype,
       //It does all the statistics about IPv6 packets
 
       /*IPv6 SUPPORT */
-      IPv6_support (pip, internal_net_listv6, plast);
+      IPv6_support (pip, plast,ip_direction);
 
+      // We must set this in a suitable way, possibly inside IPv6_support
+      crypto_src = crypto_ipv6 (PIP_V6(pip)->ip6_saddr);
+      crypto_dst = crypto_ipv6 (PIP_V6(pip)->ip6_daddr);
 
-
+      cloud_src = cloud_ipv6 (PIP_V6(pip)->ip6_saddr);
+      cloud_dst = cloud_ipv6 (PIP_V6(pip)->ip6_daddr);
+      
     }				//if it isnt an IPv6 packet I do statistics thinking that it's an IPv4
   else
     {
@@ -2113,7 +2130,7 @@ static int ProcessPacket(struct timeval *pckt_time,
     }
 
     /* If it's IP-over-IP, skip the external IP header */
-    if (PIP_ISV4(pip) && pip->ip_p == IPPROTO_IPIP)
+    if (PIP_ISV4(pip) && (pip->ip_p == IPPROTO_IPIP || pip->ip_p == IPPROTO_IPV6))
      {
        pip = (struct ip *)((char *)pip+4*pip->ip_hl);
        if (!PIP_ISV4 (pip) && !PIP_ISV6 (pip))
@@ -2122,6 +2139,7 @@ static int ProcessPacket(struct timeval *pckt_time,
           return 0;
         }
      }
+     
 
     /* Statistics from IP HEADER */
     if (ip_header_stat
@@ -2134,6 +2152,14 @@ static int ProcessPacket(struct timeval *pckt_time,
 
     /* Statistics from LAYER 4 (TCP/UDP) HEADER */
 
+#ifdef SUPPORT_IPV6
+     /* 
+        IPv6 traffic is completely ignored in the L4 traffic stats, 
+        if disabled from the command line.
+     */
+     if (PIP_ISV6(pip) && !ipv6_enabled)
+       return 0;
+#endif
 
     flow_stat_code = FLOW_STAT_NONE;  /* No flow (and dup) check done yet */
 
@@ -2737,6 +2763,9 @@ tstat_report * get_stats_report(tstat_report *report) {
 }
 
 extern int crypto_total_hit,crypto_total_insert,crypto_total_miss;
+#ifdef SUPPORT_IPV6
+extern int crypto_total_hit_ipv6,crypto_total_insert_ipv6,crypto_total_miss_ipv6;
+#endif
 
 void
 tstat_print_report (tstat_report *rep, FILE *wheref)
@@ -2774,7 +2803,12 @@ tstat_print_report (tstat_report *rep, FILE *wheref)
     fprintf(wheref, "%d flows/sec analyzed\n", rep->flowspersec);
 
     if (crypto_conf==TRUE)
-      fprintf(wheref, "Hash Insert: %d Hit: %d Miss: %d\n", crypto_total_insert,crypto_total_hit,crypto_total_miss);
+     {
+       fprintf(wheref, "Hash Insert: %d Hit: %d Miss: %d\n", crypto_total_insert,crypto_total_hit,crypto_total_miss);
+#ifdef SUPPORT_IPV6
+       fprintf(wheref, "Hash IPv6 Insert: %d Hit: %d Miss: %d\n", crypto_total_insert_ipv6,crypto_total_hit_ipv6,crypto_total_miss_ipv6);
+#endif
+     }
 #ifdef GROK_LIVE_TCPDUMP
     if (live_flag == TRUE && livecap_type == ETH)
         tcpdump_cleanup (wheref);
@@ -3003,34 +3037,31 @@ CheckArguments (int *pargc, char *argv[])
     if (net_conf == FALSE && eth_conf == FALSE) {
 	    internal_net_mask[0] = 0;
         inet_aton ("0.0.0.0", &(internal_net_list[0]));
-	    inet_aton ("0.0.0.0", &(internal_net_mask2[0]));
         tot_internal_nets = 1;
         if (debug)
         {
+	    struct in_addr mask2;
+	    mask2.s_addr = internal_net_mask[0];
             fprintf (fp_stdout, "Adding: %s as internal net ",
                     inet_ntoa (internal_net_list[0]));
             fprintf (fp_stdout, "with mask %s (%u)\n", 
-                    inet_ntoa (internal_net_mask2[0]),
+                    inet_ntoa (mask2),
                     internal_net_mask[0]);
         }
         fprintf(fp_stdout, 
-            "Warning: -N option not specified.\n"
+            ANSI_BOLD "Warning:" ANSI_RESET " -N option not specified.\n"
             "         All subnets are assumed to be internal\n");
     }
     if (cloud_conf == FALSE) {
         tot_cloud_nets = 0;
+        tot_cloud_netsv6 = 0;
     }
     if (crypto_conf == FALSE) {
         tot_crypto_nets = 0;
 	tot_white_nets = 0;
+        tot_crypto_netsv6 = 0;
+	tot_white_netsv6 = 0;
     }
-#ifdef SUPPORT_IPV6
-    if (net6_conf == FALSE) {
-        fprintf(fp_stdout, 
-            "Warning: IPv6 support enabled and -6 option not specified.\n"
-            "         All IPv6 subnets are assumed to be internal\n");
-    }
-#endif
 #ifdef HAVE_RRDTOOL
     /*-----------------------------------------------------------*/
     /* RRDtools                                                */
@@ -3043,14 +3074,14 @@ CheckArguments (int *pargc, char *argv[])
     if (crypto_conf == FALSE && key_modes_set>0 )
      {
        fprintf(fp_stdout, 
-               "Warning: One encryption key option has been specified but no encrypted\n"
+               ANSI_BOLD "Warning:" ANSI_RESET " One encryption key option has been specified but no encrypted\n"
                "         networks have been defined with the -Y option. Encryption is disabled\n");
      }
      
     if (crypto_conf == FALSE && white_conf == TRUE )
      {
        fprintf(fp_stdout, 
-               "Warning: A set of whitelisted networks has been provided but no encrypted\n"
+               ANSI_BOLD "Warning:" ANSI_RESET " A set of whitelisted networks has been provided but no encrypted\n"
                "         networks have been defined with the -Y option.\n");
      }
 
@@ -3081,7 +3112,9 @@ CheckArguments (int *pargc, char *argv[])
 #endif
 
 #ifdef SUPPORT_IPV6
-#define SUPPORT_IPV6_OPT "6:"
+// #define SUPPORT_IPV6_OPT "6:y:"
+#define SUPPORT_IPV6_OPT "6"
+// Currently empty, we leave it as a placeholder for future IPv6 specific options
 #else
 #define SUPPORT_IPV6_OPT ""
 #endif
@@ -3218,7 +3251,7 @@ ParseArgs (int *pargc, char *argv[])
 	  if (eth_conf && net_conf)
 	   {
          fprintf(fp_stdout, 
-            "Warning: Both -M and -N options specified.\n"
+            ANSI_BOLD "Warning:" ANSI_RESET " Both -M and -N options specified.\n"
             "         Ethernet filter is used and -N addresses are ineffective\n");
 	   }
 	  break;
@@ -3236,9 +3269,43 @@ ParseArgs (int *pargc, char *argv[])
 	  if (eth_conf && net_conf)
 	   {
          fprintf(fp_stdout, 
-            "Warning: Both -M and -N options specified.\n"
+            ANSI_BOLD "Warning:" ANSI_RESET " Both -M and -N options specified.\n"
             "         Ethernet filter is used and -N addresses are ineffective\n");
 	   }
+#ifndef SUPPORT_IPV6
+         if (tot_internal_netsv6!=0)
+	  {
+            fprintf(fp_stdout, 
+               ANSI_BOLD "Warning:" ANSI_RESET " IPv6 networks declared in the -N file but IPv6 support is disabled\n");
+	  }
+#endif
+         if (tot_internal_nets == 0)
+	  {
+	    internal_net_mask[0] = 0;
+            inet_aton ("0.0.0.0", &(internal_net_list[0]));
+            tot_internal_nets = 1;
+            if (debug)
+             {
+	       struct in_addr mask2;
+	       mask2.s_addr = internal_net_mask[0];
+               fprintf (fp_stdout, "Adding: %s as internal net ",
+                    inet_ntoa (internal_net_list[0]));
+               fprintf (fp_stdout, "with mask %s (%u)\n", 
+                    inet_ntoa (mask2),
+                    internal_net_mask[0]);
+             }
+            fprintf(fp_stdout, 
+               ANSI_BOLD "Warning:" ANSI_RESET " -N option contains no IPv4 network.\n"
+               "         All IPv4 subnets are assumed to be internal\n");
+	  }
+#ifdef SUPPORT_IPV6
+         if (tot_internal_netsv6==0)
+	  {
+            fprintf(fp_stdout, 
+               ANSI_BOLD "Warning:" ANSI_RESET " -N option contains no IPv6 network.\n"
+               "         All IPv6 subnets are assumed to be internal\n");
+	  }
+#endif
 	  break;
 	case 'C':
 	  /* -C file */
@@ -3300,19 +3367,8 @@ ParseArgs (int *pargc, char *argv[])
 	  break;
 #ifdef SUPPORT_IPV6
 	case '6':
-	  /* -6file */
-	  tmpstring = strdup (optarg);
-
-	  if (!LoadInternalNetsv6
-	      (tmpstring, &internal_net_listv6,
-	       &tot_internal_netsv6))
-	    {
-	      fprintf (fp_stdout,
-		       "Error while loading IPv6 configuration file\n");
-	      fprintf (fp_stdout, "Could not open %s\n", tmpstring);
-	      exit (1);
-	    }
-	  net6_conf = TRUE;
+	  ipv6_enabled = FALSE;
+	  fprintf (fp_stdout, ANSI_BOLD "IPv6 traffic ignored" ANSI_RESET "\n");
 	  break;
 #endif
 #ifdef HAVE_ZLIB
@@ -3326,7 +3382,7 @@ ParseArgs (int *pargc, char *argv[])
 #ifdef DNS_CACHE_PROCESSOR
 	case 'X':
 	  dns_enabled = FALSE;
-	  fprintf (fp_stdout, "DNS engine disabled\n");
+	  fprintf (fp_stdout, ANSI_BOLD "DNS engine disabled" ANSI_RESET "\n");
 	  break;
 	case 'F':
 	  {
@@ -3334,7 +3390,7 @@ ParseArgs (int *pargc, char *argv[])
         dns_namefilter_specified = TRUE;
 	  }
 	  break;
-#endif /* GROK_DPMI */
+#endif
 	case 'd':
 	  ++debug;
 	  break;
@@ -3639,17 +3695,24 @@ ParseArgs (int *pargc, char *argv[])
 int
 ParseNetFile (FILE *fp, char *qualifier, int max_entries, 
               struct in_addr *CLASS_net_list,
-              struct in_addr *CLASS_net_mask2,
+	      struct in6_addr *CLASS_net_listv6,
               int *CLASS_net_mask,
-              int *tot_CLASS_nets) {
+	      int *CLASS_net_mask_sizev6,
+              int *tot_CLASS_nets,
+	      int *tot_CLASS_netsv6) {
     char *line, *ip_string, *mask_string, *err;
-    int i, len;
+    int i,j,k,len;
+    int is_ipv4;
     long int mask_bits;
     unsigned int full_local_mask;
-    char s[16];
+    struct in_addr mask2;
+    char s[INET6_ADDRSTRLEN];
 
     (*tot_CLASS_nets) = 0;
-    i = 0;
+    (*tot_CLASS_netsv6) = 0;
+    i = 0; // File line
+    j = 0; // Index for IPv4
+    k = 0; // Index for IPv6
     while (1) {
         line = readline(fp, 1, 1);
         if (!line)
@@ -3660,11 +3723,17 @@ ParseNetFile (FILE *fp, char *qualifier, int max_entries,
             line[len - 1] = '\0';
         ip_string = line;
 
-        if (i == max_entries) {
-            fprintf (fp_stderr, "Maximum number of %s hosts/networks (%d) exceeded\n", qualifier, max_entries);
+        if (j == max_entries) {
+            fprintf (fp_stderr, "Maximum number of %s IPv4 hosts/networks (%d) exceeded\n", qualifier, max_entries);
+            return 0;
+        }
+        
+        if (k == max_entries) {
+            fprintf (fp_stderr, "Maximum number of %s IPv6 hosts/networks (%d) exceeded\n", qualifier, max_entries);
             return 0;
         }
 
+        is_ipv4 = 0;
         //single line format
         if (strchr(ip_string,'/'))
         {
@@ -3675,80 +3744,149 @@ ParseNetFile (FILE *fp, char *qualifier, int max_entries,
                 fprintf(fp_stderr, "Missing ip or network mask in %s config n.%d\n", qualifier, (i+1));
                 return 0;
             }
-            if (!inet_aton (ip_string, &(CLASS_net_list[i]))) {
-                fprintf(fp_stderr, "Invalid ip address in %s config n.%d\n", qualifier, (i+1));
-                return 0;
-            }
+            
+            if (strchr(ip_string,':')) 
+	     {  // IPv6 Address
+                if (!inet_pton (AF_INET6,ip_string, &(CLASS_net_listv6[k]))) 
+		  {
+	            fprintf(fp_stderr, "Invalid ip address in %s config n.%d\n", qualifier, (i+1));
+                    return 0;
+                  }
+	        is_ipv4 = 0;
+	     }
+	    else
+	     {  // IPv4 Address
+                if (!inet_pton (AF_INET,ip_string, &(CLASS_net_list[j])))
+		 {
+                   fprintf(fp_stderr, "Invalid ip address in %s config n.%d\n", qualifier, (i+1));
+                   return 0;
+	         }
+	        is_ipv4 = 1;
+             }
 
             //network mask as a single number
             if (!strchr(mask_string,'.'))
             { 
                 err = NULL;
                 mask_bits = strtol(mask_string, &err, 10);
-                if (*err || mask_bits < 1 || mask_bits > 32) {
-                    fprintf(fp_stderr, "Invalid network mask in %s config n.%d\n", qualifier, (i+1));
-                    return 0;
-                }
+		if (is_ipv4==1)
+		 {
+                   if (*err || mask_bits < 0 || mask_bits > 32) {
+                      fprintf(fp_stderr, "Invalid network mask in %s config n.%d\n", qualifier, (i+1));
+                      return 0;
+		    }
+                   else if (mask_bits==0)
+	            {
+                      fprintf(fp_stderr, ANSI_BOLD "Warning:" ANSI_RESET " IPv4 mask set to 0 bits in %s config n.%d\n\tAny IPv4 address will be considered internal\n",
+		         qualifier, (i+1));
+		      CLASS_net_list[j].s_addr = 0; 
+	            }
+	            
+                   if (CLASS_net_list[j].s_addr == 0)
+                     full_local_mask = 0;
+                   else
+                     full_local_mask = 0xffffffff << (32 - mask_bits);
 
-                if (CLASS_net_list[i].s_addr == 0)
-                   full_local_mask = 0;
-                else
-                   full_local_mask = 0xffffffff << (32 - mask_bits);
+                   sprintf(s,"%d.%d.%d.%d",
+                      full_local_mask >> 24,
+                      (full_local_mask >> 16)  & 0x00ff,
+                      (full_local_mask >> 8 ) & 0x0000ff,
+                      full_local_mask & 0xff);
+                   // inet_aton (s, &(CLASS_net_mask2[j]));
+                   CLASS_net_mask[j] = inet_addr(s);
+	           CLASS_net_list[j].s_addr &= CLASS_net_mask[j];
+		 }
+		else
+		 {
+                   if (*err || mask_bits < 0 || mask_bits > 128) {
+                     fprintf(fp_stderr, "Invalid network mask in %s config n.%d\n", qualifier, (i+1));
+                     return 0;
+                     }
+                   else if (mask_bits>64 && mask_bits!=128)
+	            {
+                      fprintf(fp_stderr, ANSI_BOLD "Warning:" ANSI_RESET " IPv6 mask should not exceed 64 bits in %s config n.%d\n", qualifier, (i+1));
+	              // mask_bits=64;
+	            }
+                   else if (mask_bits==0)
+	            {
+                      fprintf(fp_stderr, ANSI_BOLD "Warning:" ANSI_RESET " IPv6 mask set to 0 bits in %s config n.%d\n\tAny IPv6 address will be considered internal\n",
+		         qualifier, (i+1));
+	            }
 
-                sprintf(s,"%d.%d.%d.%d",
-                    full_local_mask >> 24,
-                    (full_local_mask >> 16)  & 0x00ff,
-                    (full_local_mask >> 8 ) & 0x0000ff,
-                    full_local_mask & 0xff);
-                inet_aton (s, &(CLASS_net_mask2[i]));
-                CLASS_net_mask[i] = inet_addr(s);
-	        CLASS_net_list[i].s_addr &= CLASS_net_mask[i];
+                   CLASS_net_mask_sizev6[k] = mask_bits;
+		  }
             }
             //mask in dotted format
-            else
+            else if (is_ipv4==1)
             {
-                if (!inet_aton (mask_string, &(CLASS_net_mask2[i]))) {
-                    fprintf(fp_stderr, "Invalid network mask in %s config n.%d\n", qualifier, (i+1));
+                if (!inet_aton (mask_string, &mask2)) {
+                    fprintf(fp_stderr, "Invalid IPv4 network mask in %s config n.%d\n", qualifier, (i+1));
                     return 0;
                 }
-                CLASS_net_mask[i] = inet_addr (mask_string);
-	        CLASS_net_list[i].s_addr &= CLASS_net_mask[i];
+                CLASS_net_mask[j] = inet_addr (mask_string);
+	        CLASS_net_list[j].s_addr &= CLASS_net_mask[j];
             }
+            else
+	    {
+               fprintf(fp_stderr, "Invalid IPv6 network mask in %s config n.%d\n", qualifier, (i+1));
+               return 0;
+	    }
         }
         //old format
         else
         {
-            if (!inet_aton (ip_string, &(CLASS_net_list[i]))) {
-                fprintf(fp_stderr, "Invalid ip address in %s config n.%d\n", qualifier, (i+1));
+            if (!inet_aton (ip_string, &(CLASS_net_list[j]))) {
+                fprintf(fp_stderr, "Invalid IPv4 address in %s config n.%d\n", qualifier, (i+1));
                 return 0;
             }
 
             mask_string = readline(fp, 1, 1);
             if (!mask_string){
-                fprintf(fp_stderr, "Missing network mask in %s config n.%d\n", qualifier, (i+1));
+                fprintf(fp_stderr, "Missing IPv4 network mask in %s config n.%d\n", qualifier, (i+1));
                 return 0;
             }
 
             len = strlen(mask_string);
             if (mask_string[len - 1] == '\n')
                 mask_string[len - 1] = '\0';
-            if (!inet_aton (mask_string, &(CLASS_net_mask2[i]))) {
-                fprintf(fp_stderr, "Invalid network mask in %s config n.%d\n", qualifier, (i+1));
+            if (!inet_aton (mask_string, &mask2)) {
+                fprintf(fp_stderr, "Invalid IPv4 network mask in %s config n.%d\n", qualifier, (i+1));
                 return 0;
             }
-            CLASS_net_mask[i] = inet_addr (mask_string);
-	    CLASS_net_list[i].s_addr &= CLASS_net_mask[i];
+            CLASS_net_mask[j] = inet_addr (mask_string);
+	    CLASS_net_list[j].s_addr &= CLASS_net_mask[j];
+            is_ipv4 = 1;
         }
        if (debug)
         {
+	  if (is_ipv4==1)
+	   {
+	    mask2.s_addr = CLASS_net_mask[j];
             fprintf (fp_stdout, "Adding: %s as %s ",
-                    inet_ntoa (CLASS_net_list[i]),qualifier);
+                    inet_ntoa (CLASS_net_list[j]),qualifier);
             fprintf (fp_stdout, "with mask %s (%u)\n", 
-                    inet_ntoa (CLASS_net_mask2[i]),
-                    CLASS_net_mask[i]);
+                    inet_ntoa (mask2),
+                    CLASS_net_mask[j]);
+	   }
+	   else
+	   {
+	    inet_ntop (AF_INET6,&(CLASS_net_listv6[k]),s,INET6_ADDRSTRLEN);
+            fprintf (fp_stdout, "Adding: %s as %s ",s,qualifier);
+            fprintf (fp_stdout, "with mask %u\n",
+                    CLASS_net_mask_sizev6[k]);
+	   }
         }
-
-        (*tot_CLASS_nets)++;
+        
+        if (is_ipv4==1)
+ 	 {
+           (*tot_CLASS_nets)++;
+	   j++;
+	 }
+	 else
+	 {
+           (*tot_CLASS_netsv6)++;
+	   k++;
+	 }
         i++;
     }
     return 1;
@@ -3765,10 +3903,14 @@ LoadInternalNets (char *file) {
         return 0;
     }
 
+
     retval = ParseNetFile(fp,"internal",GLOBALS.Max_Internal_Hosts,
-			     internal_net_list,internal_net_mask2,
-			     internal_net_mask,&tot_internal_nets);
-   
+			     internal_net_list,internal_net_listv6,
+			     internal_net_mask,internal_net_maskv6,
+			     &tot_internal_nets,&tot_internal_netsv6);
+			     
+//			     printf("Read %d IPv4 networks and %d IPv6 networks\n",tot_internal_nets,
+//				    tot_internal_netsv6);
     fclose(fp);
     
     return retval;
@@ -3786,8 +3928,9 @@ LoadCloudNets (char *file) {
     }
 
     retval = ParseNetFile(fp,"cloud",GLOBALS.Max_Cloud_Hosts,
-			     cloud_net_list,cloud_net_mask2,
-			     cloud_net_mask,&tot_cloud_nets);
+			     cloud_net_list,cloud_net_listv6,
+			     cloud_net_mask,cloud_net_maskv6,
+			     &tot_cloud_nets,&tot_cloud_netsv6);
    
     fclose(fp);
     
@@ -3806,8 +3949,9 @@ LoadCryptoNets (char *file) {
     }
 
     retval = ParseNetFile(fp,"crypto",GLOBALS.Max_Crypto_Hosts,
-			     crypto_net_list,crypto_net_mask2,
-			     crypto_net_mask,&tot_crypto_nets);
+			     crypto_net_list,crypto_net_listv6,
+			     crypto_net_mask,crypto_net_maskv6,
+			     &tot_crypto_nets,&tot_crypto_netsv6);
    
     fclose(fp);
     
@@ -3826,8 +3970,9 @@ LoadWhiteNets (char *file) {
     }
 
     retval = ParseNetFile(fp,"whitelisted",GLOBALS.Max_White_Hosts,
-			     white_net_list,white_net_mask2,
-			     white_net_mask,&tot_white_nets);
+			     white_net_list,white_net_listv6,
+			     white_net_mask,white_net_maskv6,
+			     &tot_white_nets,&tot_white_netsv6);
    
     fclose(fp);
     

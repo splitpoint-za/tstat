@@ -75,6 +75,9 @@ void InitGlobals (void)
   GLOBALS.Max_Crypto_Cache_Size = MAX_CRYPTO_CACHE_SIZE;
 
   GLOBALS.DNS_Cache_Size        = DNS_CACHE_SIZE;
+#ifdef SUPPORT_IPV6
+  GLOBALS.DNS_Cache_Size_IPv6   = DNS_CACHE_SIZE_IPV6;
+#endif
 }
 
 void PrintGlobals (void)
@@ -104,6 +107,9 @@ void PrintGlobals (void)
   fprintf (fp_stdout,"\tMax_White_Hosts = %d\n",GLOBALS.Max_White_Hosts);
   fprintf (fp_stdout,"\tMax_Crypto_Cache_Size = %d\n",GLOBALS.Max_Crypto_Cache_Size);
   fprintf (fp_stdout,"\tDNS_Cache_Size = %d\n",GLOBALS.DNS_Cache_Size);
+#ifdef SUPPORT_IPV6
+  fprintf (fp_stdout,"\tDNS_Cache_Size_IPv6 = %d\n",GLOBALS.DNS_Cache_Size_IPv6);
+#endif
 
   fprintf (fp_stdout,"\tRuntime_Config_Idle = %f\n",GLOBALS.Runtime_Config_Idle);
   fprintf (fp_stdout,"\tRuntime_Mtime_Counter = %d\n",GLOBALS.Runtime_Mtime_Counter);
@@ -123,22 +129,30 @@ void PrintGlobals (void)
 void InitGlobalArrays (void)
 {
   extern struct in_addr *internal_net_list;
-  extern struct in_addr *internal_net_mask2;
   extern int *internal_net_mask;
 
   extern struct in_addr *cloud_net_list;
-  extern struct in_addr *cloud_net_mask2;
   extern int *cloud_net_mask;
 
   extern struct in_addr *crypto_net_list;
-  extern struct in_addr *crypto_net_mask2;
   extern int *crypto_net_mask;
 
   extern struct in_addr *white_net_list;
-  extern struct in_addr *white_net_mask2;
   extern int *white_net_mask;
   extern eth_filter mac_filter;
 
+  extern struct in6_addr *internal_net_listv6;
+  extern int *internal_net_maskv6;
+  
+  extern struct in6_addr *cloud_net_listv6;
+  extern int *cloud_net_maskv6;
+  
+  extern struct in6_addr *crypto_net_listv6;
+  extern int *crypto_net_maskv6;
+
+  extern struct in6_addr *white_net_listv6;
+  extern int *white_net_maskv6;
+  
   static Bool initted = FALSE;
   int i;
 
@@ -148,19 +162,15 @@ void InitGlobalArrays (void)
   initted = TRUE;
 
   internal_net_list  = (struct in_addr *) MallocZ (GLOBALS.Max_Internal_Hosts * sizeof (struct in_addr));
-  internal_net_mask2 = (struct in_addr *) MallocZ (GLOBALS.Max_Internal_Hosts * sizeof (struct in_addr));
   internal_net_mask  = (int *) MallocZ (GLOBALS.Max_Internal_Hosts * sizeof (int));
 
   cloud_net_list  = (struct in_addr *) MallocZ (GLOBALS.Max_Cloud_Hosts * sizeof (struct in_addr));
-  cloud_net_mask2 = (struct in_addr *) MallocZ (GLOBALS.Max_Cloud_Hosts * sizeof (struct in_addr));
   cloud_net_mask  = (int *) MallocZ (GLOBALS.Max_Cloud_Hosts * sizeof (int));
   
   crypto_net_list  = (struct in_addr *) MallocZ (GLOBALS.Max_Crypto_Hosts * sizeof (struct in_addr));
-  crypto_net_mask2 = (struct in_addr *) MallocZ (GLOBALS.Max_Crypto_Hosts * sizeof (struct in_addr));
   crypto_net_mask  = (int *) MallocZ (GLOBALS.Max_Crypto_Hosts * sizeof (int));
 
   white_net_list  = (struct in_addr *) MallocZ (GLOBALS.Max_White_Hosts * sizeof (struct in_addr));
-  white_net_mask2 = (struct in_addr *) MallocZ (GLOBALS.Max_White_Hosts * sizeof (struct in_addr));
   white_net_mask  = (int *) MallocZ (GLOBALS.Max_White_Hosts * sizeof (int));
 
   mac_filter.addr = (uint8_t **) MallocZ (GLOBALS.Max_Internal_Ethers * sizeof ( uint8_t *));
@@ -168,6 +178,20 @@ void InitGlobalArrays (void)
    {
      mac_filter.addr[i] = (uint8_t *) MallocZ ( 6 * sizeof(uint8_t) );
    }
+   
+  // IPv6 Address structures, even if unused 
+  internal_net_listv6 = (struct in6_addr *) MallocZ (GLOBALS.Max_Internal_Hosts * sizeof (struct in6_addr));
+  internal_net_maskv6 = (int *) MallocZ (GLOBALS.Max_Internal_Hosts * sizeof (int));
+
+  cloud_net_listv6 = (struct in6_addr *) MallocZ (GLOBALS.Max_Cloud_Hosts * sizeof (struct in6_addr));
+  cloud_net_maskv6 = (int *) MallocZ (GLOBALS.Max_Cloud_Hosts * sizeof (int));
+
+  crypto_net_listv6 = (struct in6_addr *) MallocZ (GLOBALS.Max_Crypto_Hosts * sizeof (struct in6_addr));
+  crypto_net_maskv6 = (int *) MallocZ (GLOBALS.Max_Crypto_Hosts * sizeof (int));
+  
+  white_net_listv6  = (struct in6_addr *) MallocZ (GLOBALS.Max_White_Hosts * sizeof (struct in6_addr));
+  white_net_maskv6  = (int *) MallocZ (GLOBALS.Max_White_Hosts * sizeof (int));
+  
 }
 
 int LoadGlobals (char *globals_file) 
@@ -561,7 +585,17 @@ void globals_parse_ini_arg(char *param_name, param_value param_value)
        else
 	 croak_global_integer(param_name);
      }
- 
+#ifdef SUPPORT_IPV6     
+    else if (strcasecmp(param_name,"dns_cache_size_ipv6") == 0) 
+     {
+       if (param_value.type == INTEGER && param_value.value.ivalue > 0) 
+        {
+	  GLOBALS.DNS_Cache_Size_IPv6 = param_value.value.ivalue;
+        }
+       else
+	 croak_global_integer(param_name);
+     }
+#endif 
     else {
         fprintf(fp_stderr, "global conf: '%s' - unknown keyword\n", param_name);
         exit(1);

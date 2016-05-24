@@ -1,5 +1,21 @@
 News in @PACKAGE_VERSION@
 -------------
+* Improved and reworked IPv6 management:
+    - IPv6 datagrams will respect the direction (internal/external) determined by the MAC 
+      addresses (-M) or by the ip_direction parameter (when used in LibTstat)
+    - DN-Hunter supports IPv6
+    - IPv6 addresses can be CryptoPAn-encrypted
+    - Unified the management for the lists of internal/crypto/cloud/whitelist networks
+    - When IPv6 is enabled at compilation time, processing of IPv6 datagrams can be disabled
+      via the -6 command line option 
+* Added explicit Netflix classification, included as a separate Web class in the RRDs
+* Defined new RRD/histos for TLS classification based on SNI for the major services
+* Relaxed the test for HALFDUPLEX flows to be less strict on out-of-order SYN/SYNACKs
+* Added Cookies and Do-Not-Track to log_http_complete. Cookies are valid only when http_full_url=2
+* General improvements and bugfixes
+
+News in 3.0
+-------------
 * New features
     - New modular organization for the log files
         + Modular structure controlled by runtime.conf
