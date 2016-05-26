@@ -110,6 +110,9 @@ dup_tcp_check (struct ip *pip, struct tcphdr *ptcp, tcb * thisdir)
 {
 //  static int tot;
   double delta_t = elapsed (thisdir->last_time, current_time);
+  
+  if (!PIP_ISV4(pip)) return FALSE;
+  
   if (thisdir->last_ip_id == pip->ip_id &&
       thisdir->last_checksum == ntohs(ptcp->th_sum) && 
       delta_t < GLOBALS.Min_Delta_T_TCP_Dup_Pkt && thisdir->last_len == pip->ip_len)
@@ -161,30 +164,30 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
 
   if (internal_src && !internal_dst)
     {
-      L4_bitrate.out[TCP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.out[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (tcp_port_src_out, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_out, (float) ntohs (ptcp->th_dport));
       if (cloud_dst)
        {
-         L4_bitrate.c_out[TCP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.c_out[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
       else
        {
-         L4_bitrate.nc_out[TCP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.nc_out[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
     }
   else if (!internal_src && internal_dst)
     {
-      L4_bitrate.in[TCP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.in[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (tcp_port_src_in, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_in, (float) ntohs (ptcp->th_dport));
       if (cloud_src)
        {
-         L4_bitrate.c_in[TCP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.c_in[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
       else
        {
-         L4_bitrate.nc_in[TCP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.nc_in[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
     }
 #ifndef LOG_UNKNOWN
@@ -193,7 +196,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip)
   else
 #endif
     {
-      L4_bitrate.loc[TCP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.loc[TCP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (tcp_port_src_loc, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_loc, (float) ntohs (ptcp->th_dport));
     }
@@ -1125,13 +1128,26 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     }
 
   /*TTL stats */
-  if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) pip->ip_ttl))
-    thisdir->ttl_min = (int) pip->ip_ttl;
-  if (thisdir->ttl_max < (int) pip->ip_ttl)
-    thisdir->ttl_max = (int) pip->ip_ttl;
+  if (PIP_ISV4(pip))
+  {
+    if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) pip->ip_ttl))
+      thisdir->ttl_min = (int) pip->ip_ttl;
+    if (thisdir->ttl_max < (int) pip->ip_ttl)
+      thisdir->ttl_max = (int) pip->ip_ttl;
 
-   /*TOPIX*/ thisdir->ttl_tot += (u_llong) pip->ip_ttl;
-   /*TOPIX*/
+     /*TOPIX*/ thisdir->ttl_tot += (u_llong) pip->ip_ttl;
+     /*TOPIX*/
+    }
+  else
+  {
+    if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) PIP_V6(pip)->ip6_hlimit))
+      thisdir->ttl_min = (int) PIP_V6(pip)->ip6_hlimit;
+    if (thisdir->ttl_max < (int) PIP_V6(pip)->ip6_hlimit)
+      thisdir->ttl_max = (int) PIP_V6(pip)->ip6_hlimit;
+
+     /*TOPIX*/ thisdir->ttl_tot += (u_llong) PIP_V6(pip)->ip6_hlimit;
+     /*TOPIX*/
+  }
     /* total packets stats */
     ++ptp_save->packets;
   ++thisdir->packets;
@@ -1245,8 +1261,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       if (thisdir != NULL && thisdir->ptp != NULL)
        {
-        make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
-        make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+        make_tcpL7_rate_stats(thisdir->ptp, PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth));
+        make_videoL7_rate_stats(thisdir->ptp, PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth));
        }
       /* */
       
@@ -1393,8 +1409,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   if (thisdir != NULL && thisdir->ptp != NULL)
    {
-     make_tcpL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
-     make_videoL7_rate_stats(thisdir->ptp, ntohs (pip->ip_len));
+     make_tcpL7_rate_stats(thisdir->ptp, PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth));
+     make_videoL7_rate_stats(thisdir->ptp, PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth));
    }
   
 

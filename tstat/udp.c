@@ -54,6 +54,9 @@ dup_udp_check (struct ip *pip, struct udphdr *pudp, ucb * thisdir)
 {
 //  static int tot;
   double delta_t = elapsed (thisdir->last_pkt_time, current_time);
+  
+  if (!PIP_ISV4(pip)) return FALSE;
+  
   if (thisdir->last_ip_id == pip->ip_id &&
       thisdir->last_checksum == ntohs(pudp->uh_sum) && 
       delta_t < GLOBALS.Min_Delta_T_UDP_Dup_Pkt && thisdir->last_len == pip->ip_len)
@@ -996,28 +999,28 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip)
 {
   if (internal_src && !internal_dst)
     {
-      L4_bitrate.out[UDP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.out[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (udp_port_dst_out, (float) ntohs(pudp->uh_dport));
       if (cloud_dst)
        {
-         L4_bitrate.c_out[UDP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.c_out[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
       else
        {
-         L4_bitrate.nc_out[UDP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.nc_out[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
     }
   else if (!internal_src && internal_dst)
     {
-      L4_bitrate.in[UDP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.in[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (udp_port_dst_in, (float) ntohs(pudp->uh_dport));
       if (cloud_src)
        {
-         L4_bitrate.c_in[UDP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.c_in[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
       else
        {
-         L4_bitrate.nc_in[UDP_TYPE] += ntohs (pip->ip_len);
+         L4_bitrate.nc_in[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
        }
     }
 #ifndef LOG_UNKNOWN
@@ -1026,7 +1029,7 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip)
   else
 #endif
     {
-      L4_bitrate.loc[UDP_TYPE] += ntohs (pip->ip_len);
+      L4_bitrate.loc[UDP_TYPE] += PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth);
       add_histo (udp_port_dst_loc, (float) ntohs(pudp->uh_dport));
     }
 
@@ -1124,13 +1127,26 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
   ++pup_save->packets;
   ++thisdir->packets;
 
+  if (PIP_ISV4(pip))
+   {
    /*TOPIX*/
     /*TTL stats */
-    if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) pip->ip_ttl))
-    thisdir->ttl_min = (int) pip->ip_ttl;
-  if (thisdir->ttl_max < (int) pip->ip_ttl)
-    thisdir->ttl_max = (int) pip->ip_ttl;
-  thisdir->ttl_tot += (u_llong) pip->ip_ttl;
+     if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) pip->ip_ttl))
+       thisdir->ttl_min = (int) pip->ip_ttl;
+     if (thisdir->ttl_max < (int) pip->ip_ttl)
+       thisdir->ttl_max = (int) pip->ip_ttl;
+     thisdir->ttl_tot += (u_llong) pip->ip_ttl;
+   }
+  else
+   {
+   /*TOPIX*/
+    /*TTL stats */
+     if ((thisdir->ttl_min == 0) || (thisdir->ttl_min > (int) PIP_V6(pip)->ip6_hlimit))
+       thisdir->ttl_min = (int) PIP_V6(pip)->ip6_hlimit;
+     if (thisdir->ttl_max < (int) PIP_V6(pip)->ip6_hlimit)
+       thisdir->ttl_max = (int) PIP_V6(pip)->ip6_hlimit;
+     thisdir->ttl_tot += (u_llong) PIP_V6(pip)->ip6_hlimit;
+   }
    /*TOPIX*/
     //
     // NOW, this should be called by proto_analyzer...
@@ -1146,7 +1162,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
 
     //if (thisdir != NULL && thisdir->pup != NULL)
-    make_udpL7_rate_stats(thisdir, ntohs(pip->ip_len));
+    make_udpL7_rate_stats(thisdir, PIP_ISV4(pip) ? ntohs (pip->ip_len) : ntohs(PIP_V6(pip)->ip6_lngth));
 
   return (FLOW_STAT_OK);
 }

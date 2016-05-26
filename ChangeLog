@@ -1,3 +1,7 @@
+25/05/16 - MMM
+- Main changes since 3.0
+  * Fixed TTL and IP Payload Lenght stats for IPv6
+
 17/09/15 - MMM
 - Main changes since 3.0
   * Relaxed the test for HALFDUPLEX flows to be less strict on out-of-order SYN/SYNACKs
