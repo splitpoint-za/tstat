@@ -27,7 +27,8 @@
 #define SKYPE_OUT_DATA 5
 #define TOTAL_SKYPE_KNOWN_TYPE 6
 
-#define UDP_PAYLOAD_LEN(p) ((ntohs ((p)->ip_len) - ((p)->ip_hl * 4) - 8))
+//#define UDP_PAYLOAD_LEN(p) ((ntohs ((p)->ip_len) - ((p)->ip_hl * 4) - 8))
+#define UDP_PAYLOAD_LEN(p,l) ((getpayloadlength(p,l) - 8))
 
 #define MIN_SKYPE_PKTS 10	/* only flows with at least MIN_SKYPE_PKTS 
 				   will be logged into the 

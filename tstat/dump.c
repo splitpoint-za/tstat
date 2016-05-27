@@ -393,7 +393,11 @@ void dump_packet(FILE *fp,
     phdr.ts.tv_usec = current_time.tv_usec;
     phdr.caplen = cap_bytes;
     phdr.caplen += sizeof(struct ether_header); /* add in the ether header */
-    phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));	
+    if (PIP_ISV4(pip))
+      phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));
+    else
+      phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip)) + gethdrlength(pip,plast);
+      
 #ifdef HAVE_ZLIB
     if (zlib_dump)
      { 
@@ -407,7 +411,11 @@ void dump_packet(FILE *fp,
 
     // write a (bogus) ethernet header
     memset(&eth_header, 0, sizeof(struct ether_header));
-    eth_header.ether_type = htons (ETHERTYPE_IP);
+    if (PIP_ISV4(pip))
+      eth_header.ether_type = htons (ETHERTYPE_IP);
+    else
+      eth_header.ether_type = htons (ETHERTYPE_IPV6);
+      
 #ifdef HAVE_ZLIB
     if (zlib_dump)
      { 

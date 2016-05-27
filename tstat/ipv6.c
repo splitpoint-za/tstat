@@ -516,6 +516,8 @@ gethdrlength (struct ip *pip, void *plast)
 	    return length;
 	  if (nextheader == IPPROTO_UDP)
 	    return length;
+	  if (nextheader == IPPROTO_ICMPV6)
+	    return length;
 	  if (nextheader == IPPROTO_FRAGMENT)
 	    {
 	      nextheader = *pheader;

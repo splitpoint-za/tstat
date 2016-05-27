@@ -377,7 +377,7 @@ getrtp (struct udphdr *pudp, int tproto, void *prtp, void *plast)
 
 void
 rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
-	       void *hdr, void *last)
+	       void *hdr, void *plast)
 {
   struct udphdr *pudp;
   struct rtphdr *prtp;
@@ -403,19 +403,19 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
     {
     case UDP_UNKNOWN:
       {
-	init_rtp (thisdir, dir, pudp, prtp, last);
+	init_rtp (thisdir, dir, pudp, prtp, plast);
 	break;
       }
     case FIRST_RTP:
       {
 	/* already got a packet ... double check it */
-	rtp_check (thisdir, prtp, dir, pip);
+	rtp_check (thisdir, prtp, dir, pip, plast);
 	break;
       }
     case FIRST_RTCP:
       {
 	/* already got a packet ... double check it */
-	rtcp_check (thisdir, dir, prtp, last);
+	rtcp_check (thisdir, dir, prtp, plast);
 	break;
       }
     case RTP:
@@ -426,7 +426,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 
 	if ((prtp->v == VALID_VERSION) && (f_rtp->ssrc == pssrc)
 	    && (prtp->pt < VALID_PT))
-	  rtp_stat (thisdir, f_rtp, prtp, dir, pip);
+	  rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
 	else
 	  {
 	    /* The RTP flow is closed but not the UDP one */
@@ -454,7 +454,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    (pt_rtcp <= RTCP_MAX_PT) &&
 	    ((pup->addr_pair.a_port & 1) == 1) &&
 	    (pup->addr_pair.a_port > 1024))
-	  rtcp_stat (thisdir, dir, prtp, last);
+	  rtcp_stat (thisdir, dir, prtp, plast);
 	else
 	  {
 	    /* The RTCP flow is closed but not the UDP one */
@@ -635,7 +635,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 /* function used to control if the current analyzed packet is an RTP packet */
 
 void
-rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip)
+rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
 {
   struct rtp *f_rtp = &thisdir->flow.rtp;
 
@@ -674,7 +674,7 @@ rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip)
             break;
       }
       
-      rtp_stat (thisdir, f_rtp, prtp, dir, pip);
+      rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
       thisdir->type = RTP;
     }
   else				/* is not an RTP packet */
@@ -732,7 +732,7 @@ rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast)
 
 void
 rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
-	  struct ip *pip)
+	  struct ip *pip, void *plast)
 {
   struct sudp_pair *pup;
   int i, freq, index, delta_seq, delta_seq_win;
@@ -759,8 +759,9 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 
   /* TOPIX compute data length */
   /* IP_len - IP_header - UDP_header - RTP_(fixed header+optional header) */
+  /*    ntohs (pip->ip_len) - pip->ip_hl * 4 - 8 - 12 - prtp->cc * 4; */
   f_rtp->data_bytes +=
-    ntohs (pip->ip_len) - pip->ip_hl * 4 - 8 - 12 - prtp->cc * 4;
+      getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4; /* Should be OK also for IPv6 */
 
 
 /** management of the window used for oos, duplicate, late or lost packets **/
@@ -898,7 +899,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	      float byte_period;
 
 	      /* evaluate the delay of the oos segment */
-	      byte_period = (ntohs (pip->ip_len) - ntohs (pip->ip_hl) - 8	/* udp header len */
+//	      byte_period = (ntohs (pip->ip_len) - ntohs (pip->ip_hl) - 8	/* udp header len */
+//			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
+//		) * period;
+              /* Possible bug above, *4 missing in ip_hl  */
+	      byte_period = (getpayloadlength(pip,plast) - 8	/* udp header len */
 			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
 		) * period;
 	      delay =
@@ -1067,7 +1072,11 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	      double delay;
 	      float byte_period;
 
-	      byte_period = (ntohs (pip->ip_len) - ntohs (pip->ip_hl) - 8	/* udp header len */
+//	      byte_period = (ntohs (pip->ip_len) - ntohs (pip->ip_hl) - 8	/* udp header len */
+//			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
+//		) * period;
+              /* Possible bug above, *4 missing in ip_hl  */
+	      byte_period = (getpayloadlength(pip,plast) - 8	/* udp header len */
 			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
 		) * period;
 	      delay =

@@ -201,7 +201,7 @@ extern timeval last_packet;
 void *MallocZ (int);
 void *ReallocZ (void *oldptr, int obytes, int nbytes);
 void trace_init (void);
-void tcp_header_stat (struct tcphdr *ptcp, struct ip *pip);
+void tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast);
 int tcp_flow_stat (struct ip *, struct tcphdr *ptcp, void *plast,
 			 int *dir);
 double elapsed (timeval, timeval);
@@ -258,7 +258,7 @@ int IPcmp (ipaddr * pipA, ipaddr * pipB);
 /* UDP support routines */
 void udptrace_init (void);
 void udptrace_done (void);
-void udp_header_stat (struct udphdr *pudp, struct ip *pip);
+void udp_header_stat (struct udphdr *pudp, struct ip *pip, void *plast);
 int udp_flow_stat (struct ip *pip, struct udphdr *pudp, void *plast);
 void close_udp_flow (udp_pair * pup, int ix, int dir);
 

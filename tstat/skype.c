@@ -298,7 +298,7 @@ skype_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
       switch (tproto)
 	{
 	case PROTOCOL_UDP:
-	  pktsize = UDP_PAYLOAD_LEN (pip);
+	  pktsize = UDP_PAYLOAD_LEN (pip,plast);
       if (!sk->first_pkt_done) {
           sk->win.start = current_time;
       }
@@ -460,7 +460,7 @@ static Bool is_skype_pkt (struct ip * pip, struct udphdr * pudp, void *pdir,
 
 
   if (((pskype->func & 0x8f) == 0x07) &&	/* is function 7  */
-      (UDP_PAYLOAD_LEN (pip) == 11))	/* the length was 11bytes */
+      (UDP_PAYLOAD_LEN (pip,plast) == 11))	/* the length was 11bytes */
     {
       /* this is a NAK, used as quick STUN like hack to find my real IP
          in case a NAT is going to be traversed */
@@ -487,7 +487,7 @@ static Bool is_skype_pkt (struct ip * pip, struct udphdr * pudp, void *pdir,
 
   if ((pskype->func & 0x8f) == 0x0d)	/* is function 13  */
     {
-      if (UDP_PAYLOAD_LEN (pip) > 4)
+      if (UDP_PAYLOAD_LEN (pip,plast) > 4)
 	{
 	  /* this might be a voice sample */
 	  /* should see one every DeltaT ms */

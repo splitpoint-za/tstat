@@ -2169,7 +2169,7 @@ static int ProcessPacket(struct timeval *pckt_time,
         flow_stat_code = tcp_flow_stat (pip, ptcp, plast, &dir);
 	if ( flow_stat_code!=FLOW_STAT_DUP && 
 	     flow_stat_code!=FLOW_STAT_SHORT )
-	   tcp_header_stat (ptcp, pip);
+	   tcp_header_stat (ptcp, pip, plast);
      }	   
     else if (do_udp)
      {
@@ -2179,7 +2179,7 @@ static int ProcessPacket(struct timeval *pckt_time,
            flow_stat_code = udp_flow_stat (pip, pudp, plast);
 	   if ( flow_stat_code!=FLOW_STAT_DUP && 
 	        flow_stat_code!=FLOW_STAT_SHORT )
-	      udp_header_stat (pudp, pip);
+	      udp_header_stat (pudp, pip, plast);
 	 }
      }
 
