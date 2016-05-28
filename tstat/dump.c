@@ -396,7 +396,10 @@ void dump_packet(FILE *fp,
     if (PIP_ISV4(pip))
       phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip));
     else
-      phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip)) + gethdrlength(pip,plast);
+      // IPv6 PIP_LEN is the payload after the 40 bytes header, so the
+      // datagram is always 40+ip6_lngth
+      // gethdrlength computes the overall headers, but is not what we need here
+      phdr.len = sizeof(struct ether_header) + ntohs (PIP_LEN (pip)) + 40; // gethdrlength(pip,plast);
       
 #ifdef HAVE_ZLIB
     if (zlib_dump)

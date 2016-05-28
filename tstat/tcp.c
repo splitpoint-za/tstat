@@ -137,7 +137,7 @@ dup_tcp_check (struct ip *pip, struct tcphdr *ptcp, tcb * thisdir)
 void
 tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
 {
-  int datagram_size;
+  int ip_len = gethdrlength (pip, plast) + getpayloadlength (pip, plast);
   
   /* perform TCP packet analysis */
   if ((!ACK_SET (ptcp) && SYN_SET (ptcp)))
@@ -163,37 +163,32 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
 	}
     }
 
-  if (PIP_ISV4(pip))
-    datagram_size =  ntohs (pip->ip_len);
-  else
-    datagram_size = getpayloadlength(pip,plast) + gethdrlength(pip,plast);
-  
   if (internal_src && !internal_dst)
     {
-      L4_bitrate.out[TCP_TYPE] += datagram_size;
+      L4_bitrate.out[TCP_TYPE] += ip_len;
       add_histo (tcp_port_src_out, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_out, (float) ntohs (ptcp->th_dport));
       if (cloud_dst)
        {
-         L4_bitrate.c_out[TCP_TYPE] += datagram_size;
+         L4_bitrate.c_out[TCP_TYPE] += ip_len;
        }
       else
        {
-         L4_bitrate.nc_out[TCP_TYPE] += datagram_size;
+         L4_bitrate.nc_out[TCP_TYPE] += ip_len;
        }
     }
   else if (!internal_src && internal_dst)
     {
-      L4_bitrate.in[TCP_TYPE] += datagram_size;
+      L4_bitrate.in[TCP_TYPE] += ip_len;
       add_histo (tcp_port_src_in, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_in, (float) ntohs (ptcp->th_dport));
       if (cloud_src)
        {
-         L4_bitrate.c_in[TCP_TYPE] += datagram_size;
+         L4_bitrate.c_in[TCP_TYPE] += ip_len;
        }
       else
        {
-         L4_bitrate.nc_in[TCP_TYPE] += datagram_size;
+         L4_bitrate.nc_in[TCP_TYPE] += ip_len;
        }
     }
 #ifndef LOG_UNKNOWN
@@ -202,7 +197,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
   else
 #endif
     {
-      L4_bitrate.loc[TCP_TYPE] += datagram_size;
+      L4_bitrate.loc[TCP_TYPE] += ip_len;
       add_histo (tcp_port_src_loc, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_loc, (float) ntohs (ptcp->th_dport));
     }
@@ -1267,14 +1262,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
       if (thisdir != NULL && thisdir->ptp != NULL)
        {
-	 int datagram_size;
-         if (PIP_ISV4(pip))
-            datagram_size =  ntohs (pip->ip_len);
-         else
-            datagram_size = getpayloadlength(pip,plast) + gethdrlength(pip,plast);
-
-	make_tcpL7_rate_stats(thisdir->ptp, datagram_size);
-        make_videoL7_rate_stats(thisdir->ptp, datagram_size);
+	    make_tcpL7_rate_stats(thisdir->ptp, ip_len);
+        make_videoL7_rate_stats(thisdir->ptp, ip_len);
        }
       /* */
       
@@ -1421,14 +1410,8 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 
   if (thisdir != NULL && thisdir->ptp != NULL)
    {
-     int datagram_size;
-     if (PIP_ISV4(pip))
-       datagram_size =  ntohs (pip->ip_len);
-     else
-       datagram_size = getpayloadlength(pip,plast) + gethdrlength(pip,plast);
-     
-     make_tcpL7_rate_stats(thisdir->ptp, datagram_size);
-     make_videoL7_rate_stats(thisdir->ptp, datagram_size);
+     make_tcpL7_rate_stats(thisdir->ptp, ip_len);
+     make_videoL7_rate_stats(thisdir->ptp, ip_len);
    }
   
 

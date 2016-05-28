@@ -997,36 +997,32 @@ void check_udp_vod(struct ip * pip, struct udphdr * pudp, void *plast,
 void
 udp_header_stat (struct udphdr * pudp, struct ip * pip, void *plast)
 {
-  int datagram_size;
-  if (PIP_ISV4(pip))
-    datagram_size =  ntohs (pip->ip_len);
-  else
-    datagram_size = getpayloadlength(pip,plast) + gethdrlength(pip,plast);
+  int ip_len = gethdrlength (pip, plast) + getpayloadlength (pip, plast);
 
   if (internal_src && !internal_dst)
     {
-      L4_bitrate.out[UDP_TYPE] += datagram_size;
+      L4_bitrate.out[UDP_TYPE] += ip_len;
       add_histo (udp_port_dst_out, (float) ntohs(pudp->uh_dport));
       if (cloud_dst)
        {
-         L4_bitrate.c_out[UDP_TYPE] += datagram_size;
+         L4_bitrate.c_out[UDP_TYPE] += ip_len;
        }
       else
        {
-         L4_bitrate.nc_out[UDP_TYPE] += datagram_size;
+         L4_bitrate.nc_out[UDP_TYPE] += ip_len;
        }
     }
   else if (!internal_src && internal_dst)
     {
-      L4_bitrate.in[UDP_TYPE] += datagram_size;
+      L4_bitrate.in[UDP_TYPE] += ip_len;
       add_histo (udp_port_dst_in, (float) ntohs(pudp->uh_dport));
       if (cloud_src)
        {
-         L4_bitrate.c_in[UDP_TYPE] += datagram_size;
+         L4_bitrate.c_in[UDP_TYPE] += ip_len;
        }
       else
        {
-         L4_bitrate.nc_in[UDP_TYPE] += datagram_size;
+         L4_bitrate.nc_in[UDP_TYPE] += ip_len;
        }
     }
 #ifndef LOG_UNKNOWN
@@ -1035,7 +1031,7 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip, void *plast)
   else
 #endif
     {
-      L4_bitrate.loc[UDP_TYPE] += datagram_size;
+      L4_bitrate.loc[UDP_TYPE] += ip_len;
       add_histo (udp_port_dst_loc, (float) ntohs(pudp->uh_dport));
     }
 
@@ -1054,7 +1050,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
   u_short uh_sport;		/* source port */
   u_short uh_dport;		/* destination port */
   u_short uh_ulen;		/* data length */
-  int datagram_size;
+  int ip_len;
 
   /* make sure we have enough of the packet */
   if ((unsigned long) pudp + sizeof (struct udphdr) - 1 >
@@ -1073,6 +1069,7 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
   uh_sport = ntohs (pudp->uh_sport);
   uh_dport = ntohs (pudp->uh_dport);
   uh_ulen = ntohs (pudp->uh_ulen);
+  ip_len = gethdrlength (pip, plast) + getpayloadlength (pip, plast);
 
   /* stop at this level of analysis */
   ++udp_trace_count;
@@ -1168,13 +1165,8 @@ udp_flow_stat (struct ip * pip, struct udphdr * pudp, void *plast)
     proto_analyzer (pip, pudp, PROTOCOL_UDP, thisdir, dir, plast);
     //fprintf(stderr, "AFTER: %f\n\n", time2double(thisdir->skype->win.start));
 
-    if (PIP_ISV4(pip))
-      datagram_size =  ntohs (pip->ip_len);
-    else
-      datagram_size = getpayloadlength(pip,plast) + gethdrlength(pip,plast);
-
     //if (thisdir != NULL && thisdir->pup != NULL)
-    make_udpL7_rate_stats(thisdir, datagram_size);
+    make_udpL7_rate_stats(thisdir, ip_len);
 
   return (FLOW_STAT_OK);
 }

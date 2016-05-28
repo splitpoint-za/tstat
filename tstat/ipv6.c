@@ -60,6 +60,12 @@ ipv6_header_name (u_char nextheader)
       return ("TCP");
     case IPPROTO_UDP:
       return ("UDP");
+    case IPPROTO_AH:
+      return ("IPSec AH header");
+    case IPPROTO_ESP:
+      return ("IPSec ESP");
+    case IPPROTO_MH:
+      return ("Mobility IPv6");
     default:
       return ("<unknown>");
     }
@@ -81,20 +87,22 @@ ipv6_nextheader (void *pheader0, u_char * pnextheader)
     case IPPROTO_NONE:
     case IPPROTO_ICMPV6:
     case IPPROTO_UDP:
+    case IPPROTO_ESP:
       return (NULL);
 
       /* somebody follows these */
     case IPPROTO_HOPOPTS:
     case IPPROTO_ROUTING:
     case IPPROTO_DSTOPTS:
+    case IPPROTO_MH:
       *pnextheader = pheader->ip6ext_nheader;
+      return ((struct ipv6_ext *) ((char *) pheader + 8 + (pheader->ip6ext_len)*8));
 
-      /* sanity check, if length is 0, terminate */
-      if (pheader->ip6ext_len == 0)
-	return (NULL);
-
-      return ((struct ipv6_ext *) ((char *) pheader + pheader->ip6ext_len));
-
+    case IPPROTO_AH:
+      /* Autentication Header lenght is measured in 32 bits units (minus 2 bytes) */
+      *pnextheader = pheader->ip6ext_nheader;
+      return ((struct ipv6_ext *) ((char *) pheader + 8 + (pheader->ip6ext_len)*4));
+      
       /* I don't understand them.  Just save the type and return a NULL */
     default:
       *pnextheader = pheader->ip6ext_nheader;
@@ -327,6 +335,7 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
 
   while ((void *) next_header6 < pplast)
     {
+	//  fprintf (fp_stdout, "next header: %s (%d) \n",ipv6_header_name(next_header),next_header);
       switch (next_header)
 	{
 	case IPPROTO_TCP:
@@ -353,19 +362,28 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
 	      }
 
 	    next_header = (int) pfrag->ip6ext_fr_nheader;
-	    next_header6 = (char *) (next_header6 + pfrag->ip6ext_fr_res);
+        next_header6 = (char *) (next_header6 + sizeof (struct ipv6_ext_frag));
+        *proto_type = next_header;
 	    break;
 	  }
-	case IPPROTO_NONE:
 	case IPPROTO_HOPOPTS:
 	case IPPROTO_ROUTING:
 	case IPPROTO_DSTOPTS:
-	default:
+	case IPPROTO_MH:
 	  pdef = (struct ipv6_ext *) next_header6;
 	  next_header = pdef->ip6ext_nheader;
-	  next_header6 = (char *) (next_header6 + pdef->ip6ext_len);
-	  return NULL;
+	  next_header6 = (char *) (next_header6 + 8 + pdef->ip6ext_len*8);
+      *proto_type = next_header;
 	  break;
+	case IPPROTO_AH:
+	  pdef = (struct ipv6_ext *) next_header6;
+	  next_header = pdef->ip6ext_nheader;
+      next_header6 = (char *) (next_header6 + 8 + pdef->ip6ext_len*4);
+      *proto_type = next_header;
+	  break;
+	case IPPROTO_NONE:
+	default:
+	  return NULL;
 	}
     }
 
@@ -512,31 +530,43 @@ gethdrlength (struct ip *pip, void *plast)
 	{
 	  if (nextheader == IPPROTO_NONE)
 	    return length;
-	  if (nextheader == IPPROTO_TCP)
+	  else if (nextheader == IPPROTO_TCP)
 	    return length;
-	  if (nextheader == IPPROTO_UDP)
+	  else if (nextheader == IPPROTO_UDP)
 	    return length;
-	  if (nextheader == IPPROTO_ICMPV6)
+	  else if (nextheader == IPPROTO_ICMPV6)
 	    return length;
-	  if (nextheader == IPPROTO_FRAGMENT)
+	  else if (nextheader == IPPROTO_FRAGMENT)
 	    {
 	      nextheader = *pheader;
 	      pheader += 8;
 	      length += 8;
 	    }
-	  if ((nextheader == IPPROTO_HOPOPTS)
-	      || (nextheader == IPPROTO_ROUTING)
-	      || (nextheader == IPPROTO_DSTOPTS))
+	  else if (nextheader == IPPROTO_AH)
 	    {
 	      nextheader = *pheader;
-	      pheader += *(pheader + 1);
-	      length += *(pheader + 1);
+	      length += (*(pheader+1)+2)*4;
+	      pheader += (*(pheader+1)+2)*4;
+	    }
+	  else if ((nextheader == IPPROTO_HOPOPTS)
+	      || (nextheader == IPPROTO_ROUTING)
+	      || (nextheader == IPPROTO_DSTOPTS)
+	      || (nextheader == IPPROTO_MH))
+	    {
+	      nextheader = *pheader;
+	      length += (*(pheader+1)+1)*8;
+	      pheader += (*(pheader+1)+1)*8;
+	    }
+	  else
+	    { /* Not a supported extension header */
+	    break;
 	    }
 	  if (pheader > (char *) plast)
 	    return -1;
 	}
+	return length;
     }
-  else
+  else /* IPv4 */
     {
       return pip->ip_hl * 4;
     }
@@ -554,8 +584,10 @@ getpayloadlength (struct ip *pip, void *plast)
   if (PIP_ISV6 (pip))
     {
       pipv6 = (struct ipv6 *) pip;	/* how about all headers */
-      return ntohs (pipv6->ip6_lngth);
+    //  return ntohs (pipv6->ip6_lngth);
+      return ntohs (pipv6->ip6_lngth) + 40 - gethdrlength(pip,plast);
     }
+  else /* IPv4 */
 #endif
   return ntohs (pip->ip_len) - (pip->ip_hl * 4);
 }
@@ -790,7 +822,7 @@ int
 IPcmp (ipaddr * pipA, ipaddr * pipB)
 {
   int i;
-  int len = (pipA->addr_vers == 4) ? 4 : 6;
+  int len = (pipA->addr_vers == 4) ? 4 : 16;
   u_char *left = (unsigned char *) &pipA->un.ip4;
   u_char *right = (unsigned char *) &pipB->un.ip4;
 

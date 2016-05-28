@@ -68,6 +68,10 @@ in6_addr;
 
 #endif /* notdef IPPROTO_NONE */
 
+/* Newest protocols might not be defined */
+#if !defined(IPPROTO_MH)
+#define IPPROTO_MH			135 /* IPv6 mobility header.  */
+#endif
 
 /*
  * IPv6 datagram header 
