@@ -99,9 +99,14 @@ ipv6_nextheader (void *pheader0, u_char * pnextheader)
       return ((struct ipv6_ext *) ((char *) pheader + 8 + (pheader->ip6ext_len)*8));
 
     case IPPROTO_AH:
-      /* Autentication Header lenght is measured in 32 bits units (minus 2 bytes) */
+      /* Autentication Header lenght is measured in 32 bits units (minus 2 units) */
       *pnextheader = pheader->ip6ext_nheader;
       return ((struct ipv6_ext *) ((char *) pheader + 8 + (pheader->ip6ext_len)*4));
+      
+    case IPPROTO_FRAGMENT:
+      /* Fragment extension is 8 bytes long */
+      *pnextheader = pheader->ip6ext_nheader;
+      return ((struct ipv6_ext *) ((char *) pheader + 8 ));
       
       /* I don't understand them.  Just save the type and return a NULL */
     default:
@@ -382,6 +387,7 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
       *proto_type = next_header;
 	  break;
 	case IPPROTO_NONE:
+	case IPPROTO_ESP:
 	default:
 	  return NULL;
 	}
@@ -528,13 +534,11 @@ gethdrlength (struct ip *pip, void *plast)
       pipv6 = (struct ipv6 *) pip;
       while (1)
 	{
-	  if (nextheader == IPPROTO_NONE)
-	    return length;
-	  else if (nextheader == IPPROTO_TCP)
-	    return length;
-	  else if (nextheader == IPPROTO_UDP)
-	    return length;
-	  else if (nextheader == IPPROTO_ICMPV6)
+          if (   (nextheader == IPPROTO_TCP)
+	      || (nextheader == IPPROTO_UDP)
+	      || (nextheader == IPPROTO_ICMPV6)
+	      || (nextheader == IPPROTO_NONE)
+	      || (nextheader == IPPROTO_ESP))
 	    return length;
 	  else if (nextheader == IPPROTO_FRAGMENT)
 	    {

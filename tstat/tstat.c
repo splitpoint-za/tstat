@@ -1446,7 +1446,7 @@ create_new_outfiles (char *input_filename, Bool reuse_dir)
       }
       else {
              if (S_ISREG(fbuf.st_mode)){
-             	basenamedir = realloc (basenamedir, strlen (basenamedir + 5) );
+             	basenamedir = realloc (basenamedir, strlen (basenamedir) + 5 );
 		strcat(basenamedir, ".out");
 	  	sprintf(date, "mkdir -p %s", basenamedir);
 	 	system(date);
