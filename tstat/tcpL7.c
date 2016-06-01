@@ -132,10 +132,10 @@ int ssl_parse_npnalpn_extension(char *base, int idx, int ii, int data_limit, int
           {
            res |= (isNPN) ? NPN_SPDY : ALPN_SPDY;
           }
-        // check if NPN carries the string "h2-"
+        // check if NPN carries the string is (exactly) "h2" or starts with "h2-"
         else if (base[idx + ii + iii]  == 0x68 &&
                 base[idx + ii + iii+1] == 0x32 &&
-                base[idx + ii + iii+2] == 0x2D) 
+                ( base[idx + ii + iii-1] == 0x02 || base[idx + ii + iii+2] == 0x2D) ) 
           {
             res |= (isNPN) ? NPN_H2 : ALPN_H2;
           }
