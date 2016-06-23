@@ -103,6 +103,7 @@ regex_t yt_re[4];
 
 void init_ssl_youtube_patterns();
 Bool is_ssl_youtube(tcp_pair *ptp_save);
+extern Bool is_tls_netflix(tcp_pair *ptp_save);
 
 #ifdef CHECK_TCP_DUP
 Bool
@@ -3630,7 +3631,8 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
  ytimg.com, that is excluded in is_ssl_youtube(). -MMM-
 */
   if (fp_video_logc && LOG_IS_ENABLED(LOG_VIDEO_COMPLETE) 
-                    && ( is_video(ptp_save) || is_streaming(ptp_save) || is_ssl_youtube(ptp_save) ) 
+                    && ( is_video(ptp_save) || is_streaming(ptp_save) || is_ssl_youtube(ptp_save) || 
+                         is_tls_netflix(ptp_save) ) 
                     && complete )
    {
      update_video_log(ptp_save,pab,pba);

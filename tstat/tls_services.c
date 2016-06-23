@@ -157,7 +157,7 @@ General idea:
 The tls_service will be stored in the ptp as soon as the TLS state is consolidated.
 Step 1: We normally use only the SNI indicated by the client
 Step 2: If needed, and the SNI is missing, we use the CommonName in the server certificate (often too broad)
-Step 3: If both the SNI and the CN are missing, we might thing about using the FQDN
+Step 3: If both the SNI and the CN are missing, we might think about using the FQDN
 */
 
 Bool is_tls_facebook(tcp_pair *ptp_save)

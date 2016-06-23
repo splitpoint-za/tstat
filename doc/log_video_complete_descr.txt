@@ -1,6 +1,6 @@
 Tstat produces a "log_video_complete" file which logs every TCP Video
 connection that has been tracked. Currently are classified as Video 
-the RTMP connections, SSL/TLS connections associated to YouTube, and 
+the RTMP connections, TLS connections associated to YouTube and Netflix, and 
 HTTP connections based on 2 distinguished approaches:
 1) HTTP request URL matching (Tstat HTTP engine)
 2) HTTP response DPI (Tstat Streaming Classifier engine)
@@ -14,11 +14,13 @@ based on 2 distinguished approaches:
 1) Value of Content-Type information in the HTTP's header 
 2) Signature matching in the video payload, to identify the video container.
 
-Since YouTube transfers (as of May 2014) a large part of traffic over SSL/TLS,
-we include in log_video_complete also those SSL/TLS connection for which the
+Since YouTube transfers (as of May 2014) a large part of traffic over TLS,
+we include in log_video_complete also those TLS connection for which the
 client requested (in the TLS handshake) a site name matching "*.youtube.com",
-"*.youtube-nocookie.com", and "*.googlevideo.com". For these connections, 
+"*.youtube-nocookie.com", "*.googlevideo.com", and "*.gvt1.com". For these connections, 
 obviously, no video specific information can be reported. 
+Similarly, for Netflix traffic over TLS (as of June 2016), we include connections 
+matching "*.nflxvideo.net".
 The requested site name is included in the log only if the TCP Layer 7 set is enabled
 (but the connections are always included).
 
