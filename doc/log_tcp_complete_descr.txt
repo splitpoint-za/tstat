@@ -54,7 +54,7 @@ included and cannot be disactivated in runtime.conf.
 #  7  # 21  # unique bytes           # bytes # number of bytes sent in the payload
 #  8  # 22  # data pkts              # -     # number of segments with payload
 #  9  # 23  # data bytes             # bytes # number of bytes transmitted in the payload, including retransmissions
-# 10  # 24  # rexmit pkts            # -     # number of retransmitted segments
+# 10  # 24  # rexmit pkts            # -     # number of retransmitted segments (including SYNs and FINs)
 # 11  # 25  # rexmit bytes           # bytes # number of retransmitted bytes
 # 12  # 26  # out seq pkts           # -     # number of segments observed out of sequence
 # 13  # 27  # SYN count              # -     # number of SYN segments observed (including rtx)

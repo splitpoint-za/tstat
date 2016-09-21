@@ -700,11 +700,12 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   tcb *thisdir;
   tcb *otherdir;
   tcp_pair tp_in;
-  Bool retrans;
+  Bool is_retrans;
   Bool ecn_ce = FALSE;
   Bool ecn_echo = FALSE;
   Bool cwr = FALSE;
   int retrans_num_bytes;
+  int retrans_actual_bytes;
   Bool out_order;		/* out of order */
   u_short th_sport;		/* source port */
   u_short th_dport;		/* destination port */
@@ -1168,21 +1169,23 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   ecn_echo = ECN_ECHO_SET (ptcp);
 
   /* do rexmit stats */
-  retrans = FALSE;
+  is_retrans = FALSE;
   out_order = FALSE;
   retrans_num_bytes = 0;
+  retrans_actual_bytes = 0;
   if (SYN_SET (ptcp) || FIN_SET (ptcp) || tcp_data_length > 0)
     {
       int len = tcp_data_length;
-      int retrans;
+
       if (SYN_SET (ptcp))
 	++len;
       if (FIN_SET (ptcp))
 	++len;
 
-      retrans = retrans_num_bytes =
+      retrans_num_bytes =
 	rexmit (thisdir, start, len, &out_order, pip->ip_id);
-
+      retrans_actual_bytes = retrans_num_bytes;	
+	
       /* count anything NOT retransmitted as "unique" */
       /* exclude SYN and FIN */
       if (SYN_SET (ptcp))
@@ -1190,19 +1193,19 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
 	  /* don't count the SYN as data */
 	  --len;
 	  /* if the SYN was rexmitted, then don't count it */
-	  if (thisdir->syn_count > 1)
-	    --retrans;
+	  if (thisdir->syn_count > 1 && retrans_actual_bytes > 0 )
+            --retrans_actual_bytes;
 	}
       if (FIN_SET (ptcp))
 	{
 	  /* don't count the FIN as data */
 	  --len;
 	  /* if the FIN was rexmitted, then don't count it */
-	  if (thisdir->fin_count > 1  && retrans > 0)
-	    --retrans;
+	  if (thisdir->fin_count > 1  && retrans_actual_bytes > 0)
+            --retrans_actual_bytes;
 	}
-      if (retrans < len)
-	thisdir->unique_bytes += (len - retrans);
+      if (retrans_actual_bytes < len)
+	thisdir->unique_bytes += (len - retrans_actual_bytes);
 
     }
   if (out_order)
@@ -1239,9 +1242,9 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   /* stats for rexmitted data */
   if (retrans_num_bytes > 0)
     {
-      retrans = TRUE;
+      is_retrans = TRUE;
       thisdir->rexmit_pkts += 1;
-      thisdir->rexmit_bytes += retrans_num_bytes;
+      thisdir->rexmit_bytes += retrans_actual_bytes;
     }
   else
     {
@@ -1338,7 +1341,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
     }
   if ((tcp_data_length > 0) && (!thisdir->data_acked))
     {
-      if (!retrans)
+      if (!is_retrans)
 	{
 	  /* don't count it if it was retransmitted */
 	  thisdir->initialwin_bytes += tcp_data_length;
@@ -1375,7 +1378,7 @@ tcp_flow_stat (struct ip * pip, struct tcphdr * ptcp, void *plast, int *dir)
   /* do stats for congestion window (estimated) */
   /* estimate the congestion window as the number of outstanding */
   /* un-acked bytes */
-  if (!SYN_SET (ptcp) && !out_order && !retrans)
+  if (!SYN_SET (ptcp) && !out_order && !is_retrans)
     {
       u_int32_t cwin = end - otherdir->ack;
 

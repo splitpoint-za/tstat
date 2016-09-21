@@ -1,9 +1,11 @@
 25/05/16 - MMM
-- Main changes since 3.0
+- Main changes since 3.1
   * Fixed TTL and IP Payload Length stats for IPv6
   * Fixed dump issues for IPv6
   * Fixed identification of HTTP2 negotiation
   * Included TLS Netflix flows in log_video_complete
+  * Fixed various (historical) minor issues with the TCP retransmission counters involving 
+    retransmitted SYN and FIN segments
 
 17/09/15 - MMM
 - Main changes since 3.0
