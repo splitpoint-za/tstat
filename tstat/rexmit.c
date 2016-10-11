@@ -522,7 +522,7 @@ rtt_ackin (tcb * ptcb, segment * pseg, Bool rexmit_prev)
       /* smoothed RTT and stdev estimation */
       /* see RFC 2988 */
       ptcb->rttvar =
-	(1.0 - BETA) * ptcb->rttvar + BETA * abs (ptcb->srtt - etime_rtt);
+	(1.0 - BETA) * ptcb->rttvar + BETA * fabs (ptcb->srtt - etime_rtt);
 
       ptcb->srtt = (1.0 - ALPHA) * ptcb->srtt + BETA * etime_rtt;
 
@@ -629,7 +629,7 @@ ack_in (tcb * ptcb, seqnum ack, unsigned tcp_data_length)
 	      if (pseg->acked == 4)
 		{
 		  /* some people say these CAN'T have data */
-		  if ((tcp_data_length == 0))
+		  if (tcp_data_length == 0)
 		    {
 		      ++ptcb->rtt_triple_dupack;
 		      ret = TRIPLE;

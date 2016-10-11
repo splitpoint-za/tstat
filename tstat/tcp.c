@@ -1472,7 +1472,7 @@ trace_done (void)
     {
       ptp = ttp[ix];
 
-      if ((ptp == NULL))
+      if (ptp == NULL)
 	continue;
 
 #ifdef WIPE_TCP_SINGLETONS
@@ -1544,7 +1544,7 @@ trace_done_periodic ()
     {
       ptp = ttp[ix];
 
-      if ((ptp == NULL))
+      if (ptp == NULL)
 	continue;
 
       /* If no packets have been received in the last IDLE_TIME period,
@@ -1636,7 +1636,7 @@ trace_done_periodic ()
     {
       pup = utp[ix];
 
-      if ((pup == NULL))
+      if (pup == NULL)
 	continue;
 
       /* If no packets have been received in the last UDP_IDLE_TIME period,

@@ -686,10 +686,23 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
   Let's start with unidirectional status, just checking CID and SeqNr.
   Depending on the result, we might correlate the two directions.
 
+  Oct  2016 - 
+  It seems a new logic has been introduced in QUIC. 
+  ConnID Size is now always 8 bytes, and some server packets can contain a Diversification Nonce.
+  This means that the bits yy of the flag are now two different fields <ConnID present> (bit 0x08) 
+  and <Diversification Nonce used> (bit 0x04)
+  The usage of the Nonce is declared at the opening but the field is actually present only in 
+  server generated packets.
+  This means that there are new Data states 0x04 and 0x14 where the SeqNr is at offset 8+1+32= 41 (since the
+  Diversification Nonce, when present, precedes the SeqNr).
+  The OPEN packets have states 0x08/0x18 (like 0x0c and 0x1c) and 0x09 (like 0x0d) but the SeqNr position is
+  the same.
+
 */
      case QUIC_UNKNOWN:
        switch (base[8])
         {
+	  case 0x09:
 	  case 0x0d:
 	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
 	     {
@@ -701,7 +714,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	          thisdir->is_QUIC = 1;
 	     }
 	    break;
+	  case 0x08:
 	  case 0x0c:
+	  case 0x18:
 	  case 0x1c:
 	     thisdir->QUIC_seq_nr = (int)base[17];
 	     memcpy(thisdir->QUIC_conn_id,base+9,8);
@@ -727,6 +742,17 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	        thisdir->QUIC_state=QUIC_DATA_SENT;
 	      }	
 	    break;
+	  case 0x04:
+	  case 0x14:
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		/* Given the lightweight matching, we wait until the other direction has started
+		   the QUIC classification
+		*/
+	        thisdir->QUIC_seq_nr = (int)base[41];
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }	
+	    break;
 	  default:
 	    break;
 	}
@@ -737,6 +763,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
        /* If there is an CID, We expect to match the ID with the previous ID state, and that the sequence number is +1 */
        switch (base[8])
         {
+	  case 0x09:
 	  case 0x0d:
 	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
 	     {
@@ -759,7 +786,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 		 }
 	     }
 	    break;
+	  case 0x08:
 	  case 0x0c:
+	  case 0x18:
 	  case 0x1c:
 	    /* We match with the previous in the same direction */
 	    seq_nr = (int)base[17];
@@ -792,6 +821,20 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	        thisdir->QUIC_state=QUIC_DATA_SENT;
 	      }	
 	    break;
+	  case 0x04:
+	  case 0x14:
+	    /* If we are here, we had a previous OPEN state, but now we have some DATA */
+	    /* We use the previous logic, and elaborate only if the status in the opposite direction */
+	    /* is not unknown */
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	      {
+		/* Given the lightweight matching, we wait until the other direction has started
+		   the QUIC classification
+		*/
+	        thisdir->QUIC_seq_nr = (int)base[41];
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }	
+	    break;
 	  default:
 	    break;
 	}
@@ -800,6 +843,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
        /* If we are here, we started the classification in the opposite direction, and we started seeing data in this direction */ 
        switch (base[8])
         {
+	  case 0x09:
 	  case 0x0d:
 	    /* Another OPENV - Reset the status */
 	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
@@ -812,7 +856,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	          thisdir->is_QUIC = 1;
 	     }
 	    break;
+	  case 0x08:
 	  case 0x0c:
+	  case 0x18:
 	  case 0x1c:
 	    /* Another OPEN - Reset the status */
 	     thisdir->QUIC_seq_nr = (int)base[17];
@@ -832,6 +878,21 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	  case 0x10:
 	    /* If we are here, we had a previous DATA state, we match the sequence number */
 	     seq_nr = (int)base[9];
+	     if ( seq_nr == thisdir->QUIC_seq_nr + 1 )
+	      {
+		thisdir->QUIC_seq_nr = seq_nr;
+		thisdir->is_QUIC = 1;  
+	      }
+	     else
+	      {
+		thisdir->QUIC_seq_nr = seq_nr;
+	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	      }
+	    break;
+	  case 0x04:
+	  case 0x14:
+	    /* If we are here, we had a previous DATA state, we match the sequence number */
+	     seq_nr = (int)base[41];
 	     if ( seq_nr == thisdir->QUIC_seq_nr + 1 )
 	      {
 		thisdir->QUIC_seq_nr = seq_nr;
@@ -1415,7 +1476,7 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
 	{
 	  //      pup = utp[ix];
 
-	  if ((utp[ix] == NULL))
+	  if (utp[ix] == NULL)
 	    continue;
 
 	  if (SameConn (&pup->addr_pair, &utp[ix]->addr_pair, &tmp))

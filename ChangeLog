@@ -6,6 +6,7 @@
   * Included TLS Netflix flows in log_video_complete
   * Fixed various (historical) minor issues with the TCP retransmission counters involving 
     retransmitted SYN and FIN segments
+  * Updated QUIC classification to QUIC 3.4
 
 17/09/15 - MMM
 - Main changes since 3.0

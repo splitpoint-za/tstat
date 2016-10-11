@@ -556,10 +556,6 @@ swap_histo ()			/* also updates the global ststistics */
       temphp = temphp->next;
     }
 
-#ifdef DEBUG_THREAD
-  fprintf (fp_stdout, "All histos swapped!\n");
-#endif
-
 }
 
 /* Return the pointer to the unused histo */
