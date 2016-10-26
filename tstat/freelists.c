@@ -477,6 +477,18 @@ utp_release (udp_pair * rel_udp_pair)
      rel_udp_pair->dns_name=NULL;
    }
 
+  if (rel_udp_pair->quic_sni_name!=NULL)
+   {
+     free(rel_udp_pair->quic_sni_name);
+     rel_udp_pair->quic_sni_name=NULL;
+   }
+
+  if (rel_udp_pair->quic_ua_string!=NULL)
+   {
+     free(rel_udp_pair->quic_ua_string);
+     rel_udp_pair->quic_ua_string=NULL;
+   }
+
   if (rel_udp_pair->c2s.skype!=NULL)
    {
      memset (rel_udp_pair->c2s.skype, 0, sizeof (skype_stat));

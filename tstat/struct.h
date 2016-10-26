@@ -1071,6 +1071,11 @@ struct sudp_pair
   ipaddr  dns_server;
   timeval request_time;
   timeval response_time;
+  
+  /* QUIC info */
+  char *quic_sni_name;
+  char *quic_ua_string;
+
 };
 typedef struct sudp_pair udp_pair;
 typedef struct udphdr udphdr;

@@ -22,6 +22,9 @@ DEFINES += -DSTREAMING_CLASSIFIER
 # Enables the DN-Hunter DNS engine to collect the FQDN of contacted servers
 DEFINES += -DDNS_CACHE_PROCESSOR
 
+# Include QUIC SNI and User Agent information in log_udp_complete
+#DEFINES += -DQUIC_DETAILS
+
 # define P2P_DETAILS to extend the UDP P2P information logging,
 # classifying all packets of the UDP flows and reporting per-protocol
 # information in log_udp_complete
@@ -79,10 +82,6 @@ DEFINES += -DSUPPORT_IPV6
 # define MEMDEBUG to get memory allocation statistics when
 # receiving a SIGUSR1
 # DEFINES += -DMEMDEBUG
-
-# define DEBUG_THREAD to print some information about thread managements
-# DEFINES += -DDEBUG_THREAD_UTP
-# DEFINES += -DDEBUG_THREAD
 
 # define USE_MEMCPY to copy the content of the libpcap buffer in a local
 # buffer instead of accessing directly the libpcap buffer 

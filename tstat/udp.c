@@ -25,6 +25,10 @@
 extern Bool dns_enabled;
 #endif
 
+#define get_u8(X,O)   (*(tt_uint8  *)(X + O))
+#define get_u16(X,O)  (*(tt_uint16 *)(X + O))
+#define get_u32(X,O)  (*(tt_uint32 *)(X + O))
+
 extern struct L4_bitrates L4_bitrate;
 
 /* locally global variables */
@@ -43,6 +47,9 @@ udp_pair **utp = NULL;		/* array of pointers to allocated pairs */
 static udp_pair *NewUTP (struct ip *, struct udphdr *);
 static udp_pair *FindUTP (struct ip *, struct udphdr *, int *);
 
+char *url_encode(char *str);
+#define QUIC_BUFFER_SIZE 1600
+char quic_buffer[QUIC_BUFFER_SIZE+1];
 
 extern unsigned long int fcount;
 extern Bool warn_MAX_;
@@ -208,6 +215,9 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 */  
 #endif
 
+  pup->quic_sni_name = NULL;
+  pup->quic_ua_string = NULL;
+  
   return (utp[num_udp_pairs]);
 }
 
@@ -623,6 +633,92 @@ void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
   return;
 }
 
+void get_QUIC_tags(unsigned char *base, int data_len, ucb *thisdir)
+{
+  int quic_hdr_size=0;
+  int base_string_index;
+  
+  // Verify we do not exceed data_len 
+  if ( !(
+          ( base[8]==0x0d || base[8]==0x0c || base[8]==0x08 || base[8]==0x09 ) && 
+          ( data_len > 8+14+12+4+4)
+        )
+     )
+    return; /* Minimal conditions failed */
+    
+    // If it is a 0x0d/0x0c/0x08/0x09, I know quic_hdr_size ; 
+    // check the packet is long enough to perform the check (42 bytes)
+  quic_hdr_size = ( base[8]==0x0d || base[8]==0x09 )? 14 : 10; 
+   
+    // Check if there it is a CHLO: must add UDP header, Hash, STREAM
+  base_string_index = 8 + quic_hdr_size + 12 + 4;
+    
+  if ( memcmp ( &base[base_string_index], "CHLO", 4) == 0 )
+   {
+     // Get the number of TAGs, which is exatcly after CHLO
+     int tag_nb = get_u32(base,base_string_index + 4);
+ 
+     // Calculate base offset
+     int base_offset= 8 + quic_hdr_size + 12 + 12 + 8*tag_nb;
+     // Calculate where to start iterate over TAGs
+     int base_tags= 8 + quic_hdr_size + 12 + 12;
+     int i;
+     int last_tag = 0;
+
+     // Check the packet is long enough to include all the tags
+     if (  data_len < base_tags + tag_nb * 8 )
+        return;
+        
+     // Iterate over tags
+     for (i=0;i<tag_nb;i++)
+      {
+        // Get where start this tag
+        int base_this_tag = base_tags + i*8;
+        // Get the offset of data pointed by this tag
+        int tag_value_last_byte = get_u32(base,base_this_tag + 4);
+                 
+        // Match SNI
+        if ( memcmp(&base[base_this_tag], "SNI", 3)==0 && last_tag!=0 )
+         {
+           // Copy SNI
+           int sni_len = tag_value_last_byte - last_tag;
+           // Check the packet is long enough to include SNI
+           if (data_len < base_offset+last_tag + sni_len)
+              return;
+           memcpy( quic_buffer, &base[base_offset+last_tag ], 
+	                        sni_len<QUIC_BUFFER_SIZE?sni_len:QUIC_BUFFER_SIZE);
+           quic_buffer[sni_len<QUIC_BUFFER_SIZE?sni_len:QUIC_BUFFER_SIZE]='\0';
+	   if (thisdir->pup->quic_sni_name==NULL)
+	    { 
+	      thisdir->pup->quic_sni_name = strdup(quic_buffer);
+	    } 
+         }
+        // Match UAID
+        if ( memcmp(&base[base_this_tag], "UAID", 4)==0 && last_tag!=0 )
+	 {
+           // Copy UAID
+           int uaid_len = tag_value_last_byte - last_tag;
+           // Check the packet is long enough to include UAID
+           if (data_len < base_offset+last_tag + uaid_len)
+              return;
+           memcpy( quic_buffer, &base[base_offset+last_tag ], 
+	                        uaid_len<QUIC_BUFFER_SIZE?uaid_len:QUIC_BUFFER_SIZE);
+           quic_buffer[uaid_len<QUIC_BUFFER_SIZE?uaid_len:QUIC_BUFFER_SIZE]='\0';
+           // URLencode the string to remove/hide unwanted chars and 
+	   // to print it as single field in the logs
+	   if (thisdir->pup->quic_ua_string==NULL)
+	    { 
+	      thisdir->pup->quic_ua_string = url_encode(quic_buffer);
+	    } 
+         }
+       // Update previous tag pointed area
+       last_tag = tag_value_last_byte;
+     } // Close for
+   } // Close if (CHLO)
+
+  return;
+}
+
 void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
                 ucb *thisdir, ucb *otherdir)
 {
@@ -702,20 +798,23 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
      case QUIC_UNKNOWN:
        switch (base[8])
         {
-	  case 0x09:
 	  case 0x0d:
-	    if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
-	     {
-	       thisdir->QUIC_seq_nr = base[21];
-	       memcpy(thisdir->QUIC_conn_id,base+9,8);
-	       thisdir->QUIC_state=QUIC_OPENV_SENT;
-	       /* If SeqNr == 1, the match is strong enough to guarantee the classification */
-               if (thisdir->QUIC_seq_nr == 1)
+	  case 0x09:
+	     if (base[17]==0x51) // 'Q', first char of the QUIC version string 'Qxxx'
+	      {
+	        thisdir->QUIC_seq_nr = base[21];
+	        memcpy(thisdir->QUIC_conn_id,base+9,8);
+	        thisdir->QUIC_state=QUIC_OPENV_SENT;
+	        /* If SeqNr == 1, the match is strong enough to guarantee the classification */
+                if (thisdir->QUIC_seq_nr == 1)
 	          thisdir->is_QUIC = 1;
-	     }
-	    break;
-	  case 0x08:
+	      }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
+	     break;
 	  case 0x0c:
+	  case 0x08:
 	  case 0x18:
 	  case 0x1c:
 	     thisdir->QUIC_seq_nr = (int)base[17];
@@ -730,6 +829,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	            thisdir->is_QUIC = 1;
 		 }
 	      }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
 	    break;
 	  case 0x00:
 	  case 0x10:
@@ -744,7 +846,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	    break;
 	  case 0x04:
 	  case 0x14:
-	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN && data_len > 42 )
 	      {
 		/* Given the lightweight matching, we wait until the other direction has started
 		   the QUIC classification
@@ -755,6 +857,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	    break;
 	  default:
 	    break;
+	
 	}
        break;
      case QUIC_OPENV_SENT:
@@ -785,6 +888,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	              thisdir->is_QUIC = 1;
 		 }
 	     }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
 	    break;
 	  case 0x08:
 	  case 0x0c:
@@ -806,6 +912,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 		thisdir->QUIC_seq_nr = seq_nr;
 	        thisdir->QUIC_state=QUIC_OPEN_SENT;
 	      }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
 	    break;
 	  case 0x00:
 	  case 0x10:
@@ -826,7 +935,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	    /* If we are here, we had a previous OPEN state, but now we have some DATA */
 	    /* We use the previous logic, and elaborate only if the status in the opposite direction */
 	    /* is not unknown */
-	     if (otherdir->QUIC_state!=QUIC_UNKNOWN)
+	     if (otherdir->QUIC_state!=QUIC_UNKNOWN && data_len > 42 )
 	      {
 		/* Given the lightweight matching, we wait until the other direction has started
 		   the QUIC classification
@@ -855,6 +964,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
                if (thisdir->QUIC_seq_nr == 1)
 	          thisdir->is_QUIC = 1;
 	     }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
 	    break;
 	  case 0x08:
 	  case 0x0c:
@@ -873,6 +985,9 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	            thisdir->is_QUIC = 1;
 		 }
 	      }
+#ifdef QUIC_DETAILS      
+             get_QUIC_tags(base,data_len,thisdir);
+#endif      
 	    break;
 	  case 0x00:
 	  case 0x10:
@@ -892,16 +1007,19 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 	  case 0x04:
 	  case 0x14:
 	    /* If we are here, we had a previous DATA state, we match the sequence number */
-	     seq_nr = (int)base[41];
-	     if ( seq_nr == thisdir->QUIC_seq_nr + 1 )
-	      {
-		thisdir->QUIC_seq_nr = seq_nr;
-		thisdir->is_QUIC = 1;  
-	      }
-	     else
-	      {
-		thisdir->QUIC_seq_nr = seq_nr;
-	        thisdir->QUIC_state=QUIC_DATA_SENT;
+	     if (data_len > 42 )
+	      { /* For safety, only check when the packet is large enough */
+	        seq_nr = (int)base[41];
+	        if ( seq_nr == thisdir->QUIC_seq_nr + 1 )
+	         {
+		   thisdir->QUIC_seq_nr = seq_nr;
+		   thisdir->is_QUIC = 1;  
+	         }
+	        else
+	         {
+		   thisdir->QUIC_seq_nr = seq_nr;
+	           thisdir->QUIC_state=QUIC_DATA_SENT;
+	         }
 	      }
 	    break;
 	  default:
@@ -911,7 +1029,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
      default:
        break;
    }
-
+   
   if (thisdir->is_QUIC==1 && otherdir->is_QUIC==1)
    {
      if (thisdir->type==UDP_UNKNOWN ||
@@ -1238,62 +1356,62 @@ behavioral_flow_wrap (struct ip *pip, void *pproto, int tproto, void *pdir,
 {
   if (tproto == PROTOCOL_UDP)
     {
-		ucb *thisdir;
-		ucb *otherdir;
-		udphdr *pudp = (udphdr *)hdr;
-		udp_pair *pup_save = ((ucb *)pdir)->pup;
-		u_short uh_ulen = ntohs (pudp->uh_ulen);		/* data length */
-		
-		/* figure out which direction this packet is going */
-		if (dir == C2S)
-		 {
-		   thisdir = &pup_save->c2s;
-		   otherdir = &pup_save->s2c;
-		 }
-		else
-		 {
-		   thisdir = &pup_save->s2c;
-		   otherdir = &pup_save->c2s;
-		 }
-		
-		if (pup_save->packets<MAX_UDP_UTP)
-		  check_uTP(pip, pudp,plast,thisdir,otherdir);
-		
-		if (pup_save->packets<MAX_UDP_QUIC)
-		  check_QUIC(pip, pudp,plast,thisdir,otherdir);
+	ucb *thisdir;
+	ucb *otherdir;
+	udphdr *pudp = (udphdr *)hdr;
+	udp_pair *pup_save = ((ucb *)pdir)->pup;
+	u_short uh_ulen = ntohs (pudp->uh_ulen);		/* data length */
+	
+	/* figure out which direction this packet is going */
+	if (dir == C2S)
+	 {
+	   thisdir = &pup_save->c2s;
+	   otherdir = &pup_save->s2c;
+	 }
+	else
+	 {
+	   thisdir = &pup_save->s2c;
+	   otherdir = &pup_save->c2s;
+	 }
+	
+	if (pup_save->packets<MAX_UDP_UTP)
+	  check_uTP(pip, pudp,plast,thisdir,otherdir);
+	
+	if (pup_save->packets<MAX_UDP_QUIC)
+	  check_QUIC(pip, pudp,plast,thisdir,otherdir);
 
-		if (pup_save->packets<MAX_UDP_VOD)
-		  check_udp_vod(pip, pudp,plast,thisdir,otherdir);
-		
-		if (pup_save->packets<MAX_UDP_OBFUSCATE)
-		  check_udp_obfuscate(thisdir,otherdir,uh_ulen);
+	if (pup_save->packets<MAX_UDP_VOD)
+	  check_udp_vod(pip, pudp,plast,thisdir,otherdir);
+	
+	if (pup_save->packets<MAX_UDP_OBFUSCATE)
+	  check_udp_obfuscate(thisdir,otherdir,uh_ulen);
     }
   else
     {
-		tcb *thisdir;
-		tcphdr *ptcp = (tcphdr *) hdr;
-		tcp_pair *ptp_save = ((tcb *) pdir)->ptp;
-		
-		if (ptp_save == NULL)
-		  return;
-		
-		/* figure out which direction this packet is going */
-		if (dir == C2S)
- 		 {
-		   thisdir = &ptp_save->c2s;
-		 }
-		else
-		 {
-		   thisdir = &ptp_save->s2c;
-		 }
-		
-		/* Message size evaluation used for MSE detection might be incomplete 
-		 if the last FIN segment is not considered */
-		if (FIN_SET(ptcp) && thisdir != NULL && thisdir->ptp != NULL && 
-		    thisdir->ptp->con_type == UNKNOWN_PROTOCOL)
-		   mse_protocol_check(thisdir->ptp);
-		
+	tcb *thisdir;
+	tcphdr *ptcp = (tcphdr *) hdr;
+	tcp_pair *ptp_save = ((tcb *) pdir)->ptp;
+	
+	if (ptp_save == NULL)
+	  return;
+	
+	/* figure out which direction this packet is going */
+	if (dir == C2S)
+ 	 {
+	   thisdir = &ptp_save->c2s;
 	 }
+	else
+	 {
+	   thisdir = &ptp_save->s2c;
+	 }
+	
+	/* Message size evaluation used for MSE detection might be incomplete 
+	 if the last FIN segment is not considered */
+	if (FIN_SET(ptcp) && thisdir != NULL && thisdir->ptp != NULL && 
+	    thisdir->ptp->con_type == UNKNOWN_PROTOCOL)
+	   mse_protocol_check(thisdir->ptp);
+	
+    }
 
 }
 
@@ -1489,3 +1607,70 @@ close_udp_flow (udp_pair * pup, int ix, int dir)
   utp[ix] = NULL;
 
 }
+
+/* 
+** Code to URLencode (percent-encode) a string. 
+** Public domain code from http://www.geekhideout.com/urlcode.shtml
+*/
+
+/* Converts a hex character to its integer value */
+char from_hex(char ch) 
+{
+  return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
+}
+
+/* Converts an integer value to its hex character*/
+char to_hex(char code) 
+{
+  static char hex[] = "0123456789abcdef";
+  return hex[code & 15];
+}
+
+/* Returns a url-encoded version of str */
+/* IMPORTANT: be sure to free() the returned string after use */
+char *url_encode(char *str)
+{
+  char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
+  while (*pstr)
+   {
+     if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~') 
+       *pbuf++ = *pstr;
+     else if (*pstr == ' ') 
+       *pbuf++ = '+';
+     else 
+       *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
+     pstr++;
+   }
+  *pbuf = '\0';
+  return buf;
+}
+
+/* Returns a url-decoded version of str */
+/* IMPORTANT: be sure to free() the returned string after use */
+char *url_decode(char *str)
+{
+  char *pstr = str, *buf = malloc(strlen(str) + 1), *pbuf = buf;
+  while (*pstr)
+   {
+     if (*pstr == '%')
+      {
+        if (pstr[1] && pstr[2])
+	 {
+           *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
+           pstr += 2;
+         }
+      }
+     else if (*pstr == '+')
+      { 
+       *pbuf++ = ' ';
+      }
+     else
+      {
+       *pbuf++ = *pstr;
+      }
+     pstr++;
+   }
+  *pbuf = '\0';
+  return buf;
+}
+

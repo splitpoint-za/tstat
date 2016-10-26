@@ -1200,6 +1200,10 @@ void write_log_header(FILE *fp, int log_type)
 #ifdef DNS_CACHE_PROCESSOR
         wfprintf (fp, " fqdn:%d", col++);
 #endif
+#ifdef QUIC_DETAILS      
+     wfprintf (fp, " quic_SNI:%d", col++);
+     wfprintf (fp, " quic_UA:%d", col++);
+#endif      
      wfprintf (fp, "\n");
    }
 

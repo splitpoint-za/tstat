@@ -770,6 +770,10 @@ make_p2p_conn_stats (void * flow, int tproto)
 #endif
 
   // wfprintf (fp_udp_logc, " %d %d",thisC2S->is_QUIC,thisS2C->is_QUIC);
+#ifdef QUIC_DETAILS      
+  wfprintf (fp_udp_logc, " %s",thisflow->quic_sni_name!=NULL?thisflow->quic_sni_name:"-");
+  wfprintf (fp_udp_logc, " %s",thisflow->quic_ua_string!=NULL?thisflow->quic_ua_string:"-");
+#endif      
   
   wfprintf (fp_udp_logc, "\n");
 

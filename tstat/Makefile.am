@@ -7,7 +7,7 @@ DEFINES += -DBUILT_USER="\"`whoami`\""
 DEFINES += -DBUILT_HOST="\"`hostname`\"" 
 DEFINES += -DBUILT_DATE="\"`date`\""
 
-include Makefile.conf
+include $(top_srcdir)/tstat/Makefile.conf
 
 
 ################################################################## 

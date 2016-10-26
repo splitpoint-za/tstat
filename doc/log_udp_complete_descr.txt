@@ -27,6 +27,15 @@ are separated by spaces.
 ############################################################################
 #  19       # FQDN                   # -     # Fully Qualified Domain Name recovered using DNHunter
 
+If enabled at compile time by QUIC_DETAILS, some information related to QUIC flows
+is included 
+############################################################################
+#  20       # QUIC SNI               # -     # SNI requested by QUIC connections
+#  21       # QUIC User Agent        # -     # User Agent reported by QUIC connections [+]
+
+[+] The QUIC User Agent is printed as a percent-encoded (URL-encoded) string
+(https://en.wikipedia.org/wiki/Percent-encoding).
+
 UDP type - col. 9, 18 (see struct.h)
 #########################################################################
 # Value # Internal      # Description                                   #

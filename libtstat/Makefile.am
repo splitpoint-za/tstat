@@ -8,8 +8,15 @@ DEFINES += -DBUILT_USER="\"`whoami`\""
 DEFINES += -DBUILT_HOST="\"`hostname`\"" 
 DEFINES += -DBUILT_DATE="\"`date`\""
 
-include Makefile.conf
-
+# Include the Tstat Makefile configuration from the source directory 
+include $(top_srcdir)/tstat/Makefile.conf
+################################################################## 
+# If you want to compile Libtstat with a different set of compile time
+# options with respect to the standalone Tstat executable, comment the 
+# previous 'include' and uncomment the line below to include a
+# local copy of the Makefile configuration  
+################################################################## 
+#include $(top_srcdir)/libtstat/Makefile.conf.libtstat
 
 ################################################################## 
 #

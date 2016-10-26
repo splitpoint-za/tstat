@@ -7,6 +7,10 @@
   * Fixed various (historical) minor issues with the TCP retransmission counters involving 
     retransmitted SYN and FIN segments
   * Updated QUIC classification to QUIC 3.4
+  * Optionally included in log_udp_complete SNI and User Agent extracted from QUIC connections
+    (enabled by QUIC_DETAILS in Makefile.conf)
+  * Libtstat compilation uses the Makefile.conf in the source directory (instead of its own 
+    copy, sometimes out-of-sync). It's possible to use a different local copy, if needed.
 
 17/09/15 - MMM
 - Main changes since 3.0
