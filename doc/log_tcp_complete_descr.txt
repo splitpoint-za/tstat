@@ -168,7 +168,7 @@ status of the other stat sets). All the other columns will be relative to K.
 # K+2       # First HTTP Response       # -     # First HTTP Response code seen in the server->client communication (for HTTP connections)
 # K+3       # PSH-separated C2S         # -     # number of push separated messages C2S
 # K+4       # PSH-separated S2C         # -     # number of push separated messages S2C
-# K+5       # TLS Client Hello SNI      # -     # For TLS flows, the server name indicated by the client in the Hello message extensions
+# K+5       # TLS Client Hello SNI      # -     # For TLS flows, the server name indicated by the client in the Hello message extensions [*]
 # K+6       # TLS Server Hello SCN      # -     # For TLS flows, the subject CN name indicated by the server in its certificate 
 # K+7       # TLS Client NPN/ALPN       # -     # For TLS flows, a bitmap representing the usage of NPN/ALPN for HTTP2/SPDY negotiation 
 # K+8       # TLS Server NPN/ALPN       # -     # For TLS flows, a bitmap representing the usage of NPN/ALPN for HTTP2/SPDY negotiation
@@ -184,6 +184,7 @@ status of the other stat sets). All the other columns will be relative to K.
 # K+17      # IP of DNS resolver        # -     # IP address of the contacted DNS resolver
 # K+18      # DNS request time          # ms    # unixtime (in ms) of the DNS request 
 # K+19      # DNS response time         # ms    # unixtime (in ms) of the DNS response 
+# K+20      # HTTP Hostname             # -     # Content of the HTTP request "Host:" header field (for HTTP connections)
 ###############################################################################
 
 NPN (Next Protocol Negotiation) is the old TLS mechanism to negotiate the application layer 
@@ -205,6 +206,8 @@ The NPN/ALPN bitmap possible values are the following:
 ||____________ ALPN used, SPDY negotiated
 |_____________ ALPN used, HTTP/2 negotiated
 
+
+[*] For Facebook Zero flows, the "TLS Client Hello SNI" contains the SNI included in the CHLO opening frame.
 
 Advanced Set
 -----------
@@ -248,11 +251,15 @@ Connection type - col. 42 Core Set (see protocol.h)
 #         32768 # SSH 2.0/1.99 protocol       # 
 #         65536 # RTMP protocol               # 
 #        131072 # Bittorrent MSE/PE protocol  # 
+#        262144 # Facebook Zero protocol [*]  # 
 ###############################################
 
 Since the connection type is a bitmask, it's possible to have combinated
 values. Common combinations are 257 (HTML and P2P), or 16640 (P2P and OBF).
 
+[*] As of 28/10/16, Facebook seems to be using this protocol in the
+mobile apps, instead of TLS, to secure transfer HTTP/2. The framing makes it
+similar to a lightweight QUIC framing over TCP.
 
 P2P type - col. 43 Core Set (see ipp2p_tstat.h)
 ##################################################################

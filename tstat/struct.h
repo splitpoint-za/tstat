@@ -526,6 +526,7 @@ enum state_type
   SSL_DATA,
   SSH_SERVER,
   RTMP_HANDSHAKE,
+  FB0_OPENING,
   IGNORE_FURTHER_PACKETS
 };
 
@@ -648,6 +649,17 @@ enum tls_category
   TLS_LAST_TYPE
 };
 
+enum l3_category
+{
+  L3_IPv4_TCP,
+  L3_IPv4_UDP,
+  L3_IPv4_OTHER,
+  L3_IPv6_TCP,
+  L3_IPv6_UDP,
+  L3_IPv6_OTHER,
+  L3_LAST_TYPE
+};
+
 struct flv_metadata {
   double duration;
   double starttime;
@@ -694,6 +706,10 @@ struct stcp_pair
   enum http_content http_data;
   int  http_request_count;
   int  http_response_count;
+  int  http_request_status;
+  int  http_response_status;
+  int  http_request_fragment;
+  int  http_response_fragment;
   char http_ytid[50];
   char http_ytitag[4];
   int  http_ytseek;
@@ -703,7 +719,8 @@ struct stcp_pair
   char http_response[4];
   int  http_ytmobile; /* Mobile device 0=desktop 1=Other 2=Apple 3=Android */
   int  http_ytstream;   
-
+  char *http_hostname;
+  
   /* obfuscate ed2k identification */
   unsigned state_11:1;
   unsigned state_11_83:1;
@@ -1137,6 +1154,13 @@ struct TLS_bitrates
   unsigned long long in[TLS_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
   unsigned long long out[TLS_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
   unsigned long long loc[TLS_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
+};
+
+struct L3_bitrates
+{
+  unsigned long long in[L3_LAST_TYPE];  /* unsigned long long in[L7_FLOW_TOT] */
+  unsigned long long out[L3_LAST_TYPE]; /* unsigned long long out[L7_FLOW_TOT] */
+  unsigned long long loc[L3_LAST_TYPE]; /* unsigned long long loc[L7_FLOW_TOT] */
 };
 
 #ifdef HAVE_RRDTOOL

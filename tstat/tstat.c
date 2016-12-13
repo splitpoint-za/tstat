@@ -173,6 +173,7 @@ unsigned long int f_RTP_count = 0;	/* total RTP flow number */
 unsigned long int f_RTCP_count = 0;	/* total RTP flow number */
 unsigned long int f_RTP_tunneled_TCP_count = 0;	/* total RTP flow tunneled on TCP */
 
+struct L3_bitrates L3_bitrate;
 struct L4_bitrates L4_bitrate;
 struct L7_bitrates L7_bitrate;
 struct L7_bitrates L7_udp_bitrate;
@@ -183,12 +184,12 @@ struct TLS_bitrates TLS_bitrate;
 struct VIDEO_rates VIDEO_rate;
 
 #ifdef L3_BITRATE
-unsigned long long L3_bitrate_in;
-unsigned long long L3_bitrate_out;
-unsigned long long L3_bitrate_loc;
-unsigned long long L3_bitrate_ip46_in;
-unsigned long long L3_bitrate_ip46_out;
-unsigned long long L3_bitrate_ip46_loc;
+unsigned long long L3_bit_rate_in;
+unsigned long long L3_bit_rate_out;
+unsigned long long L3_bit_rate_loc;
+unsigned long long L3_bit_rate_ip46_in;
+unsigned long long L3_bit_rate_ip46_out;
+unsigned long long L3_bit_rate_ip46_loc;
 struct timeval L3_last_time;
 #define L3_BITRATE_DELTA 10000000   /* 10 sec */
 #endif
@@ -749,6 +750,7 @@ main (int argc, char *argv[]) {
     }
 
   /* initialize bitrate struct */
+  memset (&L3_bitrate, 0, sizeof (struct L3_bitrates));
   memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
   memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
   memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
@@ -971,6 +973,7 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
        wfprintf(fp, " req_tm:%d", col++);        // absolute dns request time
        wfprintf(fp, " res_tm:%d", col++);        // absolute dns response time
 #endif
+       wfprintf(fp, " http_hostname:%d", col++); // first HTTP hostname (from Host:) if collected and present
        break;
      case TCP_LOG_P2P:
        wfprintf(fp, " p2p_st:%d", col++);	 // 103: p2p subtype
@@ -1654,6 +1657,21 @@ void ip_histo_stat(struct ip *pip)
       if (pip->ip_p == IPPROTO_ICMP)
     	L4_bitrate.out[ICMP_TYPE] += ntohs (pip->ip_len);
       add_histo (ip_protocol_out, pip->ip_p);
+      /* For TCP and UDP the L3_bitrate is computed elsewhere */
+      if (pip->ip_p==IPPROTO_TCP)
+       { 
+         add_histo (L3_protocol_out,L3_IPv4_TCP); 
+       }
+      else if (pip->ip_p==IPPROTO_UDP)
+       { 
+         add_histo (L3_protocol_out,L3_IPv4_UDP); 
+       }
+      else 
+       { 
+	 L3_bitrate.out[L3_IPv4_OTHER] += ntohs (pip->ip_len);
+         add_histo (L3_protocol_out,L3_IPv4_OTHER); 
+       }
+
       add_histo (ip_len_out, (float) ntohs (pip->ip_len));
       add_histo (ip_ttl_out, (float) pip->ip_ttl);
       add_histo (ip_tos_out, (float) pip->ip_tos);
@@ -1671,8 +1689,8 @@ void ip_histo_stat(struct ip *pip)
     	   L4_bitrate.nc_out[ICMP_TYPE] += ntohs (pip->ip_len);
        }
 #ifdef L3_BITRATE
-      L3_bitrate_out += ntohs (pip->ip_len);
-      L3_bitrate_ip46_out += max(ntohs(pip->ip_len),46);
+      L3_bit_rate_out += ntohs (pip->ip_len);
+      L3_bit_rate_ip46_out += max(ntohs(pip->ip_len),46);
 #endif
     }
   else if (!internal_src && internal_dst)
@@ -1681,6 +1699,20 @@ void ip_histo_stat(struct ip *pip)
       if (pip->ip_p == IPPROTO_ICMP)
     	L4_bitrate.in[ICMP_TYPE] += ntohs (pip->ip_len);
       add_histo (ip_protocol_in, pip->ip_p);
+      /* For TCP and UDP the L3_bitrate is computed elsewhere */
+      if (pip->ip_p==IPPROTO_TCP)
+       { 
+         add_histo (L3_protocol_in,L3_IPv4_TCP); 
+       }
+      else if (pip->ip_p==IPPROTO_UDP)
+       { 
+         add_histo (L3_protocol_in,L3_IPv4_UDP); 
+       }
+      else 
+       { 
+	 L3_bitrate.in[L3_IPv4_OTHER] += ntohs (pip->ip_len);
+         add_histo (L3_protocol_in,L3_IPv4_OTHER); 
+       }
       add_histo (ip_len_in, (float) ntohs (pip->ip_len));
       add_histo (ip_ttl_in, (float) pip->ip_ttl);
       add_histo (ip_tos_in, (float) pip->ip_tos);
@@ -1697,8 +1729,8 @@ void ip_histo_stat(struct ip *pip)
     	   L4_bitrate.nc_in[ICMP_TYPE] += ntohs (pip->ip_len);
        }
 #ifdef L3_BITRATE
-      L3_bitrate_in += ntohs (pip->ip_len);
-      L3_bitrate_ip46_in += max(ntohs(pip->ip_len),46);
+      L3_bit_rate_in += ntohs (pip->ip_len);
+      L3_bit_rate_ip46_in += max(ntohs(pip->ip_len),46);
 #endif
     }
 #ifndef LOG_UNKNOWN
@@ -1711,12 +1743,26 @@ void ip_histo_stat(struct ip *pip)
       if (pip->ip_p == IPPROTO_ICMP)
     	L4_bitrate.loc[ICMP_TYPE] += ntohs (pip->ip_len);
       add_histo (ip_protocol_loc, pip->ip_p);
+      /* For TCP and UDP the L3_bitrate is computed elsewhere */
+      if (pip->ip_p==IPPROTO_TCP)
+       { 
+         add_histo (L3_protocol_loc,L3_IPv4_TCP); 
+       }
+      else if (pip->ip_p==IPPROTO_UDP)
+       { 
+         add_histo (L3_protocol_loc,L3_IPv4_UDP); 
+       }
+      else 
+       { 
+	 L3_bitrate.loc[L3_IPv4_OTHER] += ntohs (pip->ip_len);
+         add_histo (L3_protocol_loc,L3_IPv4_OTHER); 
+       }
       add_histo (ip_len_loc, (float) ntohs (pip->ip_len));
       add_histo (ip_ttl_loc, (float) pip->ip_ttl);
       add_histo (ip_tos_loc, (float) pip->ip_tos);
 #ifdef L3_BITRATE
-      L3_bitrate_loc += ntohs (pip->ip_len);
-      L3_bitrate_ip46_loc += max(ntohs(pip->ip_len),46);
+      L3_bit_rate_loc += ntohs (pip->ip_len);
+      L3_bit_rate_ip46_loc += max(ntohs(pip->ip_len),46);
 #endif
     }
 
@@ -1979,12 +2025,12 @@ ip_header_stat (int phystype,
      first_packet = current_time;
 #ifdef L3_BITRATE
      L3_last_time = current_time;
-     L3_bitrate_in=0;
-     L3_bitrate_out=0;
-     L3_bitrate_loc=0;
-     L3_bitrate_ip46_in=0;
-     L3_bitrate_ip46_out=0;
-     L3_bitrate_ip46_loc=0;
+     L3_bit_rate_in=0;
+     L3_bit_rate_out=0;
+     L3_bit_rate_loc=0;
+     L3_bit_rate_ip46_in=0;
+     L3_bit_rate_ip46_out=0;
+     L3_bit_rate_ip46_loc=0;
 #endif
      adx2_last_time = current_time;
      adx3_last_time = current_time;
@@ -1998,19 +2044,19 @@ ip_header_stat (int phystype,
      if (LOG_IS_ENABLED(LOG_L3_BITRATE) && fp_l3bitrate!=NULL)
         wfprintf(fp_l3bitrate,"%.6f %.2f %.2f %.2f %.2f %.2f %.2f\n",
             (double)current_time.tv_sec + (double) current_time.tv_usec / 1000000.0,
-             L3_bitrate_in*8.0/L3_delta*1000.,
-             L3_bitrate_out*8.0/L3_delta*1000.,
-             L3_bitrate_loc*8.0/L3_delta*1000.,
-             L3_bitrate_ip46_in*8.0/L3_delta*1000.,
-             L3_bitrate_ip46_out*8.0/L3_delta*1000.,
-             L3_bitrate_ip46_loc*8.0/L3_delta*1000.
+             L3_bit_rate_in*8.0/L3_delta*1000.,
+             L3_bit_rate_out*8.0/L3_delta*1000.,
+             L3_bit_rate_loc*8.0/L3_delta*1000.,
+             L3_bit_rate_ip46_in*8.0/L3_delta*1000.,
+             L3_bit_rate_ip46_out*8.0/L3_delta*1000.,
+             L3_bit_rate_ip46_loc*8.0/L3_delta*1000.
 	     );
-     L3_bitrate_in=0;
-     L3_bitrate_out=0;
-     L3_bitrate_loc=0;
-     L3_bitrate_ip46_in=0;
-     L3_bitrate_ip46_out=0;
-     L3_bitrate_ip46_loc=0;
+     L3_bit_rate_in=0;
+     L3_bit_rate_out=0;
+     L3_bit_rate_loc=0;
+     L3_bit_rate_ip46_in=0;
+     L3_bit_rate_ip46_out=0;
+     L3_bit_rate_ip46_loc=0;
      L3_last_time = current_time;     
    }
 #endif
@@ -2052,6 +2098,7 @@ void InitAfterFirstPacketReaded(char *filename, int file_count) {
   if (con_cat == FALSE)
     {
       // reset bitrate stats
+      memset (&L3_bitrate, 0, sizeof (struct L3_bitrates));
       memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
       memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
       memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));
@@ -4370,6 +4417,7 @@ void flush_histo_engine(void) {
     
     last_time_step = current_time;
     // reset bitrate stats 
+    memset (&L3_bitrate, 0, sizeof (struct L3_bitrates));
     memset (&L4_bitrate, 0, sizeof (struct L4_bitrates));
     memset (&L7_bitrate, 0, sizeof (struct L7_bitrates));
     memset (&L7_udp_bitrate, 0, sizeof (struct L7_bitrates));

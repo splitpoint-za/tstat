@@ -29,6 +29,7 @@ extern Bool global_histo;
 
 extern unsigned int adx_addr_mask[3];
 
+extern struct L3_bitrates L3_bitrate;
 extern struct L4_bitrates L4_bitrate;
 extern struct L7_bitrates L7_bitrate;
 extern struct L7_bitrates L7_udp_bitrate;
@@ -2324,6 +2325,31 @@ create_all_histo (void)
 				   "TLS content bitrate [bit/s] - local segments", 0,
 				   TLS_LAST_TYPE, 1);
 
+  L3_protocol_out =
+    create_histo ("L3_protocol_out",
+		  "Layer 3 protocols - outgoing packets",
+                  0, L3_LAST_TYPE, 1);
+
+  L3_protocol_in =
+    create_histo ("L3_protocol_in",
+		  "Layer 3 protocols - incoming packets",
+                   0, L3_LAST_TYPE, 1);
+
+  L3_protocol_loc =
+    create_histo ("L3_protocol_loc",
+		  "Layer 3 protocols - local packets",
+                   0, L3_LAST_TYPE, 1);
+
+  L3_bitrate_in = create_histo ("L3_bitrate_in",
+				  "Layer 3 bitrate [bit/s] - incoming packets", 0,
+				  L3_LAST_TYPE, 1);
+  L3_bitrate_out = create_histo ("L3_bitrate_out",
+				   "Layer 3 bitrate [bit/s] - outgoing packets", 0,
+				   TLS_LAST_TYPE, 1);
+  L3_bitrate_loc = create_histo ("L3_bitrate_loc",
+				   "Layer 3 bitrate [bit/s] - local packets", 0,
+				   L3_LAST_TYPE, 1);
+
   /* Microsoft messenger  classification */
 
 #if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
@@ -2452,6 +2478,10 @@ update_fake_histos ()
   fake_histo_bitrate_update (video_rate_c_out, elapsed_time, VIDEO_rate.c_out, VIDEO_LAST_TYPE);
   fake_histo_bitrate_update (video_rate_nc_in, elapsed_time, VIDEO_rate.nc_in, VIDEO_LAST_TYPE);
   fake_histo_bitrate_update (video_rate_nc_out, elapsed_time, VIDEO_rate.nc_out, VIDEO_LAST_TYPE);
+
+  fake_histo_bitrate_update (L3_bitrate_in, elapsed_time, L3_bitrate.in, L3_LAST_TYPE);
+  fake_histo_bitrate_update (L3_bitrate_out, elapsed_time, L3_bitrate.out, L3_LAST_TYPE);
+  fake_histo_bitrate_update (L3_bitrate_loc, elapsed_time, L3_bitrate.loc, L3_LAST_TYPE);
 
 #ifdef MSN_CLASSIFIER
   msn_get_average ();

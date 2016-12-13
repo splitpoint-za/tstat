@@ -23,6 +23,8 @@ extern Bool internal_shost;
 extern Bool internal_dhost;
 extern eth_filter mac_filter;
 
+extern struct L3_bitrates L3_bitrate;
+
 #ifdef SUPPORT_IPV6
 extern struct in6_addr *internal_net_listv6;
 extern int *internal_net_maskv6;
@@ -311,6 +313,68 @@ IPv6_support (struct ip *pip, void *pplast, int ip_direction)
     {
       ICMPv6_support (next, internal_srcv6, internal_dstv6);
     }
+
+  /* We need to discover the actual protocol type navigating the headers */
+  if (proto_type == IPPROTO_TCP)
+   {
+     if (internal_srcv6 && !internal_dstv6)
+      {
+        add_histo (L3_protocol_out,L3_IPv6_TCP);
+      }
+     else if (!internal_srcv6 && internal_dstv6)
+      {
+        add_histo (L3_protocol_in,L3_IPv6_TCP);
+      }
+#ifndef LOG_UNKNOWN
+     else if (internal_srcv6 && internal_dstv6)
+#else
+     else
+#endif
+      { 
+        add_histo (L3_protocol_loc,L3_IPv6_TCP); 
+      }
+   }
+  else if (proto_type == IPPROTO_UDP)
+   {
+     if (internal_srcv6 && !internal_dstv6)
+      {
+        add_histo (L3_protocol_out,L3_IPv6_UDP);
+      }
+     else if (!internal_srcv6 && internal_dstv6)
+      {
+        add_histo (L3_protocol_in,L3_IPv6_UDP);
+      }
+#ifndef LOG_UNKNOWN
+     else if (internal_srcv6 && internal_dstv6)
+#else
+     else
+#endif
+      { 
+        add_histo (L3_protocol_loc,L3_IPv6_UDP); 
+      }
+   }
+  else
+   {
+     if (internal_srcv6 && !internal_dstv6)
+      {
+	L3_bitrate.out[L3_IPv6_OTHER] += (float) ntohs (ipv6->ip6_lngth);
+        add_histo (L3_protocol_out,L3_IPv6_OTHER);
+      }
+     else if (!internal_srcv6 && internal_dstv6)
+      {
+	L3_bitrate.in[L3_IPv6_OTHER] += (float) ntohs (ipv6->ip6_lngth);
+        add_histo (L3_protocol_in,L3_IPv6_OTHER);
+      }
+#ifndef LOG_UNKNOWN
+     else if (internal_srcv6 && internal_dstv6)
+#else
+     else
+#endif
+      { 
+	L3_bitrate.loc[L3_IPv6_OTHER] += (float) ntohs (ipv6->ip6_lngth);
+        add_histo (L3_protocol_loc,L3_IPv6_OTHER);
+      }
+   }
 
   //fprintf (fp_stdout, "IPv6 src addr: %s \n",
   //    inet_ntop(AF_INET6,

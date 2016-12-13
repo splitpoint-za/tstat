@@ -29,6 +29,7 @@ extern Bool dns_enabled;
 #define get_u16(X,O)  (*(tt_uint16 *)(X + O))
 #define get_u32(X,O)  (*(tt_uint32 *)(X + O))
 
+extern struct L3_bitrates L3_bitrate;
 extern struct L4_bitrates L4_bitrate;
 
 /* locally global variables */
@@ -1181,6 +1182,7 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip, void *plast)
   if (internal_src && !internal_dst)
     {
       L4_bitrate.out[UDP_TYPE] += ip_len;
+      L3_bitrate.out[PIP_ISV6(pip)?L3_IPv6_UDP:L3_IPv4_UDP] += ip_len;
       add_histo (udp_port_dst_out, (float) ntohs(pudp->uh_dport));
       if (cloud_dst)
        {
@@ -1194,6 +1196,7 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip, void *plast)
   else if (!internal_src && internal_dst)
     {
       L4_bitrate.in[UDP_TYPE] += ip_len;
+      L3_bitrate.in[PIP_ISV6(pip)?L3_IPv6_UDP:L3_IPv4_UDP] += ip_len;
       add_histo (udp_port_dst_in, (float) ntohs(pudp->uh_dport));
       if (cloud_src)
        {
@@ -1211,6 +1214,7 @@ udp_header_stat (struct udphdr * pudp, struct ip * pip, void *plast)
 #endif
     {
       L4_bitrate.loc[UDP_TYPE] += ip_len;
+      L3_bitrate.loc[PIP_ISV6(pip)?L3_IPv6_UDP:L3_IPv4_UDP] += ip_len;
       add_histo (udp_port_dst_loc, (float) ntohs(pudp->uh_dport));
     }
 

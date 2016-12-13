@@ -163,6 +163,12 @@ tp_release (tcp_pair * released_tcp_pair)
      released_tcp_pair->dns_name=NULL;
    }
   
+  if (released_tcp_pair->http_hostname!=NULL)
+   {
+     free(released_tcp_pair->http_hostname);
+     released_tcp_pair->http_hostname=NULL;
+   }
+
   memset (released_tcp_pair->c2s.ss, 0, sizeof (seqspace));
   memset (released_tcp_pair->s2c.ss, 0, sizeof (seqspace));
   sstemp1 = released_tcp_pair->c2s.ss;

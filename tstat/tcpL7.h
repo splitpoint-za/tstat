@@ -65,6 +65,10 @@
 #define RTSP 0x52545350UL
 #define ICY  0x49435920UL
 #define DESC 0x44455343UL
+#define PUT     0x50555420UL
+#define PATCH   0x50415443UL
+#define DELETE  0x44454C45UL
+#define OPTIONS 0x4F505449UL
 
 /*Flash header*/
 #define FLV  0x464C5601UL
@@ -93,6 +97,10 @@
 /* SSH header */
 #define SSH_HEADER 0x5353482DUL
 
+/* Facebook Zero header */
+#define FB0_HEADER 0x31515456UL  /* the string 1QTV */
+
+
 #else
 
 #define DESCRIBE 0x4542495243534544ULL
@@ -103,6 +111,10 @@
 #define RTSP 0x50535452UL
 #define ICY  0x20594349UL
 #define DESC 0x43534544UL
+#define PUT     0x20545550UL
+#define PATCH   0x43544150UL
+#define DELETE  0x454C4544UL
+#define OPTIONS 0x4954504FUL
 
 /*Flash header*/
 #define FLV  0x01564C46UL
@@ -130,6 +142,9 @@
 
 /* SSH header */
 #define SSH_HEADER 0x2D485353UL
+
+/* Facebook Zero header */
+#define FB0_HEADER 0x56545131UL  /* the string 1QTV */
 
 #endif
 

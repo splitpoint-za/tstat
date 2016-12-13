@@ -11,6 +11,13 @@
     (enabled by QUIC_DETAILS in Makefile.conf)
   * Libtstat compilation uses the Makefile.conf in the source directory (instead of its own 
     copy, sometimes out-of-sync). It's possible to use a different local copy, if needed.
+  * Added classification for the Facebook Zero protocol (see RWC2016 talk)
+  * Added content from the second HTTP header segment to log_http_complete 
+  * Included REST methods (PUT,PATCH,OPTIONS,DELETE) in log_http_complete and when classifying
+    HTTP connections
+  * Added the HTTP Hostname to log_tcp_complete
+  * Defined new L3_protocol_* and L3_bitrate_* RRDs/histograms for IPv4/IPv6 packets and bitrate
+    (previously computed in different non homogeneous histograms)
 
 17/09/15 - MMM
 - Main changes since 3.0

@@ -48,6 +48,7 @@
 #define SSH_PROTOCOL  32768
 #define RTMP_PROTOCOL 65536
 #define MSE_PROTOCOL 131072
+#define FB0_PROTOCOL 262144
 
 /* IP address classes */
 #define UNICAST       0

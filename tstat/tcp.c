@@ -40,6 +40,7 @@ extern unsigned long int fcount;
 extern unsigned long int f_TCP_count;
 /* TOPIX */
 extern unsigned long int f_RTP_tunneled_TCP_count;
+extern struct L3_bitrates L3_bitrate;
 extern struct L4_bitrates L4_bitrate;
 /* end TOPIX */
 extern int log_version;
@@ -167,6 +168,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
   if (internal_src && !internal_dst)
     {
       L4_bitrate.out[TCP_TYPE] += ip_len;
+      L3_bitrate.out[PIP_ISV6(pip)?L3_IPv6_TCP:L3_IPv4_TCP] += ip_len;
       add_histo (tcp_port_src_out, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_out, (float) ntohs (ptcp->th_dport));
       if (cloud_dst)
@@ -181,6 +183,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
   else if (!internal_src && internal_dst)
     {
       L4_bitrate.in[TCP_TYPE] += ip_len;
+      L3_bitrate.in[PIP_ISV6(pip)?L3_IPv6_TCP:L3_IPv4_TCP] += ip_len;
       add_histo (tcp_port_src_in, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_in, (float) ntohs (ptcp->th_dport));
       if (cloud_src)
@@ -199,6 +202,7 @@ tcp_header_stat (struct tcphdr *ptcp, struct ip *pip, void *plast)
 #endif
     {
       L4_bitrate.loc[TCP_TYPE] += ip_len;
+      L3_bitrate.loc[PIP_ISV6(pip)?L3_IPv6_TCP:L3_IPv4_TCP] += ip_len;
       add_histo (tcp_port_src_loc, (float) ntohs (ptcp->th_sport));
       add_histo (tcp_port_dst_loc, (float) ntohs (ptcp->th_dport));
     }
@@ -483,6 +487,8 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 
   ptp->http_request_count  = 0;
   ptp->http_response_count = 0;
+
+  ptp->http_hostname = NULL;
 
   ptp->ssl_client_subject = NULL;
   ptp->ssl_server_subject = NULL;
@@ -2559,6 +2565,8 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
      wfprintf(fp, " - - 0.0 0.0");
    }
 #endif
+  /* first collected HTTP hostname (from Host:), if any */
+  wfprintf(fp," %s",ptp_save->http_hostname!=NULL?ptp_save->http_hostname:"-");
 
  /*  Uncomment if we need to trace which TLS connections are popular and not classified */
 //  wfprintf(fp," %d",(ptp_save->tls_service); 

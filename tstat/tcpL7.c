@@ -40,6 +40,7 @@ extern struct TLS_bitrates TLS_bitrate;
 
 extern void map_tls_service(tcp_pair *ptp);
 extern void init_tls_patterns();
+extern int verify_long_method(u_int32_t , void *);
 
 #ifdef VIDEO_DETAILS
 extern void init_web_patterns();
@@ -606,6 +607,70 @@ void ed2k_obfuscate_check(tcp_pair *ptp,int payload_len)
    }
 }
 
+/* Check whether the packet is Facebook Zero, and extracts SNI */
+int get_fb0_tags(tcp_pair *ptp, void *pdata, int data_length)
+{
+  char cname[120];
+  unsigned char last_value_offset;
+
+  //Look for CHLO string at position 9. Packet must be longer than 9+4+1=14
+  // If CHLO is found, packet is classified as FB0
+  void *chlo_start = pdata + 9;
+  if ( data_length > 9+5 && memcmp(chlo_start, "CHLO", 4) == 0 )
+  {
+    void *tag_start_ptr = pdata + 17;
+    unsigned char tags_nb = *( (unsigned char*)(pdata + 9 + 4) );
+    void *values_start_ptr = tag_start_ptr + tags_nb*8;
+    
+    // Verify that the packet can contain all tags
+    if ( data_length >= 17 + 8* tags_nb)
+    {
+      int i;
+      // Loop over the tags
+      last_value_offset = 0;
+      for (i=0;i<tags_nb; i++)
+      {
+        void * this_tag_ptr = tag_start_ptr + i*8;
+        unsigned char this_value_offset = *( (unsigned char*)(this_tag_ptr + 4) );
+        //Look For SNI if packet is enough long
+        if ( data_length >=  17 + tags_nb*8 + this_value_offset && memcmp(this_tag_ptr, "SNI",3) == 0 )
+         {
+           // If SNI is found, get the string
+           int sni_len = this_value_offset - last_value_offset;
+//          char * sni = malloc ( sni_len + 1 );
+           memcpy ( cname, values_start_ptr + last_value_offset, sni_len < 119 ? sni_len : 119 );
+           cname[sni_len < 119 ? sni_len : 119] = '\0';
+
+           // crosscheck that subject has a reasonable syntax
+           if (regexec(&re_ssl_subject,cname, (size_t) 0, NULL, 0)==0)
+            {
+	      if (regexec(&re_ssl_clean,cname, (size_t) 0, NULL, 0)==0)
+                ptp->ssl_client_subject = strdup(cname);
+            }
+
+          // printf("FB0 SNI: %s\n",cname);
+         }
+        else if ( data_length >=  17 + tags_nb*8 + this_value_offset && memcmp(this_tag_ptr, "ALPN",4) == 0 )
+         {
+	   // We are extracting the ALPN, even if currently we do not store the information
+           int alpn_len = this_value_offset - last_value_offset;
+           memcpy ( cname, values_start_ptr + last_value_offset, alpn_len < 119 ? alpn_len : 119 );
+           cname[alpn_len < 119 ? alpn_len : 119] = '\0';
+	   
+           //printf(" - FB0 ALPN: >%s<\n",cname);
+	   
+	 }
+     
+        last_value_offset = this_value_offset;
+      }
+       
+    }
+    return 1;
+  }
+  else
+    return 0;
+}
+
 void mse_protocol_check(tcp_pair *ptp)
 {
 /* Identification of BitTorrent Message Stream Encryption protocol
@@ -943,7 +1008,17 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
                   ptp->http_data = classify_http_post(pdata,data_length);
 	        }
 	      break;
+	    case PATCH:         /* Include also typical REST methods */
+	    case OPTIONS:
+	    case DELETE:
+              if (dir == C2S && verify_long_method(*((u_int32_t *) pdata),pdata)==1)
+	        {
+	          tcp_stats->u_protocols.f_http = current_time;
+	          ptp->state = HTTP_COMMAND;
+	        }
+	      break;
 	    case HEAD:
+	    case PUT:		/* Include also typical REST methods */
 	      if (dir == C2S)
 	        {
 	          tcp_stats->u_protocols.f_http = current_time;
@@ -1093,6 +1168,18 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	        }
 	      break;
 
+            case FB0_HEADER:
+              /* Facebook Zero Protocol 
+	      */
+	      if (dir == C2S && ((char *) pdata + 14 <= (char *) plast))
+	       {
+		 if (get_fb0_tags(ptp, pdata, data_length) )
+		  {
+		    ptp->state = FB0_OPENING;
+		  }
+	        }
+	      break;
+	      
            default:
              if ( dir==C2S && ((char *) pdata + 6 <= (char *) plast) && ssl_client_check(ptp,pdata,payload_len,data_length) ) {
                  // check if the Client Hello message carries a sessionID
@@ -1109,6 +1196,27 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
              break;
 	 }
 	break;
+     case FB0_OPENING:
+        if (dir == S2C && ((char *) pdata + 6 <= (char *) plast))
+	 {
+	   /* Match the S2C FB0 header to confirm the flow
+	   Look of 1QTV0 at the beginning */
+	   if (*((u_int32_t *) pdata) == FB0_HEADER)
+	     {
+	       /* The server side is FB0 as well */
+	       // printf("found server FB0\n");
+	        ptp->con_type |= FB0_PROTOCOL;
+	        ptp->con_type &= ~OBF_PROTOCOL;
+	        ptp->con_type &= ~MSE_PROTOCOL;
+	        ptp->state = IGNORE_FURTHER_PACKETS;
+		break;
+	     }
+
+	   if (ptp->packets > MAX_HTTP_COMMAND_PACKETS)
+	     ptp->state = IGNORE_FURTHER_PACKETS;
+            
+	 }
+        break;
      case SMTP_OPENING:
         if (dir == C2S && ((char *) pdata + 4 <= (char *) plast))
 	 {
@@ -1864,6 +1972,12 @@ int map_flow_type(tcp_pair *thisflow)
    if(thisflow->con_type & SSH_PROTOCOL)
    {
       type = L7_FLOW_SSH;
+   }
+
+   /* Facebook Zero */
+   if(thisflow->con_type & FB0_PROTOCOL)
+   {
+      type = L7_FLOW_FB0;
    }
 
    /* P2P */

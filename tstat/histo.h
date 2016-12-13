@@ -613,6 +613,13 @@ struct double_histo_list *video_rate_c_in;
 struct double_histo_list *video_rate_nc_out;
 struct double_histo_list *video_rate_nc_in;
 
+/* IPv4/IPv6 statistics */
+struct double_histo_list *L3_protocol_out;
+struct double_histo_list *L3_protocol_in;
+struct double_histo_list *L3_protocol_loc;
+struct double_histo_list *L3_bitrate_out;
+struct double_histo_list *L3_bitrate_in;
+struct double_histo_list *L3_bitrate_loc;
 
 /* profiling */
 #define PROFILE_CPU_MAX 1
