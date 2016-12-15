@@ -18,6 +18,8 @@
   * Added the HTTP Hostname to log_tcp_complete
   * Defined new L3_protocol_* and L3_bitrate_* RRDs/histograms for IPv4/IPv6 packets and bitrate
     (previously computed in different non homogeneous histograms)
+  * Fixed the masks used in the encryption of IPv6 addresses (they were 16bit instead 32 bit)
+  * Included the IPv6 encryption masks to the set of global constants (-G)
 
 17/09/15 - MMM
 - Main changes since 3.0

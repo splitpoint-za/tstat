@@ -77,6 +77,11 @@ void InitGlobals (void)
   GLOBALS.DNS_Cache_Size        = DNS_CACHE_SIZE;
 #ifdef SUPPORT_IPV6
   GLOBALS.DNS_Cache_Size_IPv6   = DNS_CACHE_SIZE_IPV6;
+
+  GLOBALS.Crypto_IPv6_Mask_0    = CRYPTO_IPV6_MASK_0;
+  GLOBALS.Crypto_IPv6_Mask_1    = CRYPTO_IPV6_MASK_1;
+  GLOBALS.Crypto_IPv6_Mask_2    = CRYPTO_IPV6_MASK_2;
+  GLOBALS.Crypto_IPv6_Mask_3    = CRYPTO_IPV6_MASK_3;
 #endif
 }
 
@@ -109,6 +114,11 @@ void PrintGlobals (void)
   fprintf (fp_stdout,"\tDNS_Cache_Size = %d\n",GLOBALS.DNS_Cache_Size);
 #ifdef SUPPORT_IPV6
   fprintf (fp_stdout,"\tDNS_Cache_Size_IPv6 = %d\n",GLOBALS.DNS_Cache_Size_IPv6);
+  
+  fprintf (fp_stdout,"\tCrypto_IPv6_Mask_0 = 0x%08x\n",GLOBALS.Crypto_IPv6_Mask_0);
+  fprintf (fp_stdout,"\tCrypto_IPv6_Mask_1 = 0x%08x\n",GLOBALS.Crypto_IPv6_Mask_1);
+  fprintf (fp_stdout,"\tCrypto_IPv6_Mask_2 = 0x%08x\n",GLOBALS.Crypto_IPv6_Mask_2);
+  fprintf (fp_stdout,"\tCrypto_IPv6_Mask_3 = 0x%08x\n",GLOBALS.Crypto_IPv6_Mask_3);
 #endif
 
   fprintf (fp_stdout,"\tRuntime_Config_Idle = %f\n",GLOBALS.Runtime_Config_Idle);
@@ -591,6 +601,42 @@ void globals_parse_ini_arg(char *param_name, param_value param_value)
        if (param_value.type == INTEGER && param_value.value.ivalue > 0) 
         {
 	  GLOBALS.DNS_Cache_Size_IPv6 = param_value.value.ivalue;
+        }
+       else
+	 croak_global_integer(param_name);
+     }
+    else if (strcasecmp(param_name,"crypto_ipv6_mask_0") == 0) 
+     {
+       if (param_value.type == INTEGER) 
+        {
+	  GLOBALS.Crypto_IPv6_Mask_0 = param_value.value.ivalue;
+        }
+       else
+	 croak_global_integer(param_name);
+     }
+    else if (strcasecmp(param_name,"crypto_ipv6_mask_1") == 0) 
+     {
+       if (param_value.type == INTEGER) 
+        {
+	  GLOBALS.Crypto_IPv6_Mask_1 = param_value.value.ivalue;
+        }
+       else
+	 croak_global_integer(param_name);
+     }
+    else if (strcasecmp(param_name,"crypto_ipv6_mask_2") == 0) 
+     {
+       if (param_value.type == INTEGER) 
+        {
+	  GLOBALS.Crypto_IPv6_Mask_2 = param_value.value.ivalue;
+        }
+       else
+	 croak_global_integer(param_name);
+     }
+    else if (strcasecmp(param_name,"crypto_ipv6_mask_3") == 0) 
+     {
+       if (param_value.type == INTEGER) 
+        {
+	  GLOBALS.Crypto_IPv6_Mask_3 = param_value.value.ivalue;
         }
        else
 	 croak_global_integer(param_name);

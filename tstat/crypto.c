@@ -464,14 +464,11 @@ void encrypt_ipv6(struct in6_addr *enc_addr,struct in6_addr *orig_addr)
    addresses like ::1 or with a lot of adjacent :0:0: would be immediately identified.
    For this reason we actually XOR a different bit-pattern to each dword. 
    This should in any case maintain the prefix-preservation property.
-   The least significant dword is encrypted without the XOR, 
-   so the IPv4 address x.y.z.w and the IPv6 address ::x.y.z.w will share the 
-   same encoding in the last dword.
   */
-  enc_addr->s6_addr32[0] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[0] ^ 0xffff )));
-  enc_addr->s6_addr32[1] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[1] ^ 0xf0f0 )));
-  enc_addr->s6_addr32[2] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[2] ^ 0x0f0f )));
-  enc_addr->s6_addr32[3] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[3] ^ 0x0000 )));
+  enc_addr->s6_addr32[0] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[0] ^ GLOBALS.Crypto_IPv6_Mask_0 )));
+  enc_addr->s6_addr32[1] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[1] ^ GLOBALS.Crypto_IPv6_Mask_1 )));
+  enc_addr->s6_addr32[2] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[2] ^ GLOBALS.Crypto_IPv6_Mask_2 )));
+  enc_addr->s6_addr32[3] = htonl(encrypt_ip(htonl(orig_addr->s6_addr32[3] ^ GLOBALS.Crypto_IPv6_Mask_3 )));
 }
 
 void store_crypto_ipv6(struct in6_addr *address)

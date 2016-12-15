@@ -1470,7 +1470,7 @@ C<tstat-conf/globals.conf>. We report here a simplified list of the available pa
     max_internal_ethers = 20    # Max number of Ethernet addresses for internal traffic (-M)
     max_crypto_cache_size = 130000	# Size of the LRU cache used in address encryption
     dns_cache_size = 100000	# Size of the IPv4 DNS cache used by the DNhunter module 
-    dns_cache_size_ipv6 = 1000	# Size of the IPv6 DNS cache used by the DNhunter module 
+    dns_cache_size_ipv6 = 1000	# Size of the IPv6 DNS cache used by the DNhunter module
 
     # Change to tailor the logging activity
     runtime_config_idle = 21.0	# Check interval for runtime.conf file (-T) 
@@ -1486,11 +1486,17 @@ C<tstat-conf/globals.conf>. We report here a simplified list of the available pa
     entropy_threshold = 3.7	# Entropy threshold used for encryption detection
     min_delta_t_tcp_dup_pkt = 2000.0 	# Interarrival time for TCP DUP detection [microseconds]
     min_delta_t_udp_dup_pkt = 1000.0 	# Interarrival time for UDP DUP detection [microseconds]
+    crypto_ipv6_mask_0 = 0xffffffff	# Mask used when encrypting dword 0 of IPv6 addresses
+    crypto_ipv6_mask_1 = 0xf0f0f0f0	# Mask used when encrypting dword 1 of IPv6 addresses
+    crypto_ipv6_mask_2 = 0x0f0f0f0f	# Mask used when encrypting dword 2 of IPv6 addresses
+    crypto_ipv6_mask_3 = 0x00000000	# Mask used when encrypting dword 3 of IPv6 addresses
     
 Parameter names are case-insensitive. Values in the C<[globals]> section can have integer or 
-floating point value. Types are loosely enforced, i.e. integer values can be provided to floating point parameters,
-but not the opposite. A warning or an error message is generated when the value or the type of
-a parameter is not correct or cannot be safely converted to the right type.
+floating point value. Integer values can also be provided in hexadecimal format, prefixing 
+the value with '0x'. Types are loosely enforced, i.e. integer values can be provided to 
+floating point parameters, but not the opposite. A warning or an error message is generated 
+when the value or the type of a parameter is not correct or cannot be safely converted to 
+the right type.
 
 
 =head1 DPMI Module

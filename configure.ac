@@ -6,8 +6,8 @@
 # define variables for version numbers
 m4_define([_version_major], [3])
 m4_define([_version_minor], [1])
-m4_define([_version_bugfix], [5])
-m4_define([_version_date], ["Thu Nov 24 17:44:44 CET 2016"])
+m4_define([_version_bugfix], [6])
+m4_define([_version_date], ["Wed Dec 14 16:32:38 CET 2016"])
 m4_define([_version_flavor], ["Hindenburg"])
 m4_define([_libtstat_version], [1.0.0])
 
