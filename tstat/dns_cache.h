@@ -18,9 +18,14 @@
 
 #include "dnscache/DNSCache.h"
 #include "dnscache/DNSEntry.h"
-#ifdef SUPPORT_IPV6
+
+#if defined(SUPPORT_IPV6)
 #include "dnscache/DNSCache_ipv6.h"
 #include "dnscache/DNSEntry_ipv6.h"
+#endif
+
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+#include "dnscache/DNSCache_mixed.h"
 #endif
 
 struct DNS_data* get_dns_entry(
@@ -29,12 +34,24 @@ struct DNS_data* get_dns_entry(
 
 unsigned char* reverse_lookup(unsigned long int client_ip, unsigned long int server_ip);
 
-#ifdef SUPPORT_IPV6
+#if defined(SUPPORT_IPV6)
 struct DNS_data_IPv6* get_dns_entry_ipv6(
 		struct in6_addr *client_ip,
 		struct in6_addr *server_ip);
 
 unsigned char* reverse_lookup_ipv6(struct in6_addr *client_ip, struct in6_addr *server_ip);
+#endif
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+void map_4to6(unsigned long int ip_src4, struct in6_addr *ip_dest6);
+unsigned long int map_6to4(struct in6_addr *ip_src6);
+
+struct DNS_data_IPv6* get_dns_entry_ipv4_dns6(
+		unsigned long int client_ip,
+		unsigned long int server_ip);
+struct DNS_data_IPv6* get_dns_entry_ipv6_dns4(
+		struct in6_addr *client_ip,
+		struct in6_addr *server_ip);
+
 #endif
 
 /*

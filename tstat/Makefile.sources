@@ -36,6 +36,8 @@ HDR_FILES = \
     $(top_srcdir)/tstat/dnscache/DNSCache.h\
     $(top_srcdir)/tstat/dnscache/DNSEntry_ipv6.h\
     $(top_srcdir)/tstat/dnscache/DNSCache_ipv6.h\
+    $(top_srcdir)/tstat/dnscache/DNSCache_mixed.h\
+    $(top_srcdir)/tstat/mapping_ipv6.h\
     $(top_srcdir)/tstat/tstat_android_ether.h\
     $(top_srcdir)/tstat/tstat_android_tcp.h\
     $(top_srcdir)/tstat/crypto.h\
@@ -91,6 +93,8 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/dnscache/DNSCache.cpp\
        $(top_srcdir)/tstat/dnscache/DNSEntry_ipv6.cpp\
        $(top_srcdir)/tstat/dnscache/DNSCache_ipv6.cpp\
+       $(top_srcdir)/tstat/dnscache/DNSCache_mixed.cpp\
+       $(top_srcdir)/tstat/mapping_ipv6.c\
        $(top_srcdir)/tstat/dump.c\
        $(top_srcdir)/tstat/options.c\
        $(top_srcdir)/tstat/inireader.c\

@@ -444,6 +444,20 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
      }
+#ifdef SUPPORT_MIXED_DNS
+    else {
+      // Look for a DNS6 query from an equivalent IPv4 addresses
+      struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv6_dns4(&(PIP_V6(pip)->ip6_saddr), &(PIP_V6(pip)->ip6_daddr));
+      if(dns_data!=NULL){
+	 ptp->dns_name = dns_data->hostname;
+	 // The DNS Server was IPv4, stored in the DNSCache IP4->6 format
+	 ptp->dns_server.addr_vers = 4;
+	 ptp->dns_server.un.ip4.s_addr = map_6to4(&(dns_data->dns_server));
+	 ptp->request_time = dns_data->request_time;
+	 ptp->response_time = dns_data->response_time;
+       }
+    }
+#endif /* SUPPORT_MIXED_DNS */
     if(debug >1)
      {
        fprintf (fp_stdout, "got DNS reverse %s %s ", ptp->dns_name, HostName (ptp->addr_pair.a_address));
@@ -451,9 +465,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
      }
      }
     else
-#endif
+#endif /* SUPPORT_IPV6 */
      {
-    struct DNS_data* dns_data =  get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+    struct DNS_data* dns_data =  get_dns_entry(pip->ip_src.s_addr, pip->ip_dst.s_addr);
     if(dns_data!=NULL){
 	 ptp->dns_name = dns_data->hostname;
 	 ptp->dns_server.addr_vers = 4;
@@ -461,6 +475,20 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
      }
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+    else {
+      // Look for a DNS4 query from an equivalent IPv6 addresses
+      struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv4_dns6(pip->ip_src.s_addr, pip->ip_dst.s_addr);
+      if(dns_data!=NULL){
+	 ptp->dns_name = dns_data->hostname;
+	 // The DNS Server was IPv6
+	 ptp->dns_server.addr_vers = 6;
+	 memcpy((&ptp->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
+	 ptp->request_time = dns_data->request_time;
+	 ptp->response_time = dns_data->response_time;
+       }
+    }
+#endif /* SUPPORT_IPV6 && SUPPORT_MIXED_DNS */
     if(debug >1)
      {
        fprintf (fp_stdout, "got DNS reverse %s %s ", ptp->dns_name, HostName (ptp->addr_pair.a_address));

@@ -22,6 +22,7 @@
 #include "tstat.h"
 
 #include "dns_cache.h"
+#include "mapping_ipv6.h"
 
 #define MAX_RECURSION 25
 #define MAX_DNS_ENTRIES 30  /* max number of entries to be cached */
@@ -54,10 +55,32 @@ void dns_cache_init()
 {
   /* init the cache */
   cacheInitialize(GLOBALS.DNS_Cache_Size);
-#ifdef SUPPORT_IPV6
+
+#if defined(SUPPORT_IPV6)
   cacheInitialize_ipv6(GLOBALS.DNS_Cache_Size_IPv6);
 #endif
+
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+  cacheInitialize_ipv4_dns6(GLOBALS.DNS_Cache_Size_IPv4_DNS6);
+  cacheInitialize_ipv6_dns4(GLOBALS.DNS_Cache_Size_IPv6_DNS4);
+#endif
 }
+
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+void map_4to6(unsigned long int ip_src4, struct in6_addr *ip_dest6)
+{
+  ip_dest6->s6_addr32[0] = 0;
+  ip_dest6->s6_addr32[1] = 0;
+  ip_dest6->s6_addr32[2] = 0;
+  ip_dest6->s6_addr32[3] = ip_src4;
+  return;
+}
+
+unsigned long int map_6to4(struct in6_addr *ip_src6)
+{
+  return(ip_src6->s6_addr32[3]);
+}
+#endif
 
 void *check_dns_response(struct udphdr *pudp, int tproto, void *pdir, void *plast)
 {
@@ -206,6 +229,9 @@ void dns_response_processing(
      _Bool aaaa_records = FALSE;
      unsigned long int servers[MAX_DNS_ENTRIES];
      struct in6_addr servers_ipv6[MAX_DNS_ENTRIES];
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+     struct in6_addr servers_ipv4_dns6[MAX_DNS_ENTRIES];
+#endif
      int n_servers = 0;
      int n_servers_ipv6 = 0;
      unsigned int client_ip = 0;
@@ -244,28 +270,27 @@ void dns_response_processing(
   	   a_records = TRUE;
   	   u_char i;
 	   if (PIP_ISV4(pip))
-  	      client_ip = ntohl(pip->ip_dst.s_addr);
+  	      client_ip = pip->ip_dst.s_addr;
 	   else
 	      memcpy(&client_ipv6,&(PIP_V6(pip)->ip6_daddr),sizeof(struct in6_addr));
   	   for (i=0;i<rdlen/4 && n_servers < MAX_DNS_ENTRIES;i++)
 	    {
-	      host_addr = ntohl(get_u32(dns_payload,offset));
+	      host_addr = get_u32(dns_payload,offset);
   	      if (debug >0)
 	       {
 	         char address_mem[INET6_ADDRSTRLEN];
+	         inet_ntop(AF_INET,&host_addr,address_mem,sizeof(address_mem));
+  	   	 fprintf(fp_stderr, "DNS A entry: %s ",address_mem);
 		 if (PIP_ISV4(pip))
 	           inet_ntop(AF_INET,&(pip->ip_dst.s_addr),address_mem,sizeof(address_mem));
 		 else
 	           inet_ntop(AF_INET6,&client_ipv6,address_mem,sizeof(address_mem));
-		 
-  	   	     fprintf(fp_stderr, "DNS entry: %lu.%lu.%lu.%lu %s %s\n",
-		             (host_addr & 0xff000000)>>24,
-  	   	   	     (host_addr & 0x00ff0000)>>16,
-  	   	   	     (host_addr & 0x0000ff00)>>8,
-  	   	   	     (host_addr & 0x000000ff),
-  	   	   	     qquery,address_mem);
+  	   	 fprintf(fp_stderr, "%s %s\n", qquery,address_mem);
 	       }
   	      servers[n_servers] = host_addr;
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+	      map_4to6(host_addr,&(servers_ipv4_dns6[n_servers]));
+#endif
   	      n_servers++;
   	      offset+=4;
   	    }
@@ -284,7 +309,7 @@ void dns_response_processing(
 	   struct in6_addr entry_ipv6;
 	   
 	   if (PIP_ISV4(pip))
-  	      client_ip = ntohl(pip->ip_dst.s_addr);
+  	      client_ip = pip->ip_dst.s_addr;
 	   else
 	      memcpy(&client_ipv6,&(PIP_V6(pip)->ip6_daddr),sizeof(struct in6_addr));
 	   for (i=0;i<rdlen/16;i++)
@@ -298,13 +323,12 @@ void dns_response_processing(
 	       {
 	         char address_mem[INET6_ADDRSTRLEN];
 	         inet_ntop(AF_INET6,&entry_ipv6,address_mem,sizeof(address_mem));
-	         fprintf(fp_stderr, "DNS AAAA entry: %s",address_mem);
+	         fprintf(fp_stderr, "DNS AAAA entry: %s ",address_mem);
 		 if (PIP_ISV4(pip))
 	           inet_ntop(AF_INET,&(pip->ip_dst.s_addr),address_mem,sizeof(address_mem));
 		 else
 	           inet_ntop(AF_INET6,&client_ipv6,address_mem,sizeof(address_mem));
-	         fprintf(fp_stderr, " for %s",address_mem);
-                 fprintf(fp_stderr," about %s\n",qquery);
+	         fprintf(fp_stderr, "%s %s\n",qquery,address_mem);
 	       }
 
 	      memcpy(&(servers_ipv6[n_servers_ipv6]),&entry_ipv6,sizeof(struct in6_addr));
@@ -336,7 +360,7 @@ void dns_response_processing(
 	   // fprintf(fp_stderr,"\nDNS cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
       }
-#ifdef SUPPORT_IPV6
+#if defined(SUPPORT_IPV6)
      else if (aaaa_records && PIP_ISV6(pip))
       {
         // We store only IPv6 entries contained in IPv6 DNS queries
@@ -355,6 +379,56 @@ void dns_response_processing(
 	if (rval > 0)
 	 {
 	   fprintf(fp_stderr,"\nDNS IPv6 cache (size=%d) full at %s\n",rval,Timestamp());
+	 }
+      }
+#endif
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+     else if (aaaa_records && PIP_ISV4(pip))
+      {
+        // IPv6 entries contained in IPv4 DNS queries
+        int rval;
+	struct my_in6_addr my_client_ipv6_dns4;
+	struct in6_addr dns_address6_dns4;
+	map_4to6(client_ip,&(my_client_ipv6_dns4.address));
+	map_4to6(pip->ip_src.s_addr,&dns_address6_dns4);
+
+        rval = insert_ipv6_dns4(
+			qquery,
+			my_client_ipv6_dns4,
+			(struct my_in6_addr*)servers_ipv6,
+			n_servers_ipv6*sizeof(servers_ipv6[0]),
+			dns_address6_dns4,
+			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
+			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
+	// printf("Inserting IPv6 AAAA records for IPv4\n");
+
+	if (rval > 0)
+	 {
+	   fprintf(fp_stderr,"\nDNS IPv6_DNS4 cache (size=%d) full at %s\n",rval,Timestamp());
+	 }
+      }
+     else if (a_records && PIP_ISV6(pip))
+      {
+        // IPv4 entries contained in IPv6 DNS queries
+        int rval;
+	struct my_in6_addr my_client_ipv4_dns6;
+	struct in6_addr norm_client_ipv4_dns6;
+	
+        normalize_6to4(&client_ipv6,&norm_client_ipv4_dns6);
+        
+	memcpy(&my_client_ipv4_dns6,&norm_client_ipv4_dns6,sizeof(struct my_in6_addr));
+        rval = insert_ipv4_dns6(
+			qquery,
+			my_client_ipv4_dns6,
+			(struct my_in6_addr*)servers_ipv4_dns6,
+			n_servers*sizeof(servers_ipv4_dns6[0]),
+			PIP_V6(pip)->ip6_saddr,
+			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
+			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
+      //printf("Inserting IPv4 A records for IPv6\n");
+	if (rval > 0)
+	 {
+	   fprintf(fp_stderr,"\nDNS IPv4_DNS6 cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
       }
 #endif
@@ -380,7 +454,7 @@ struct DNS_data* get_dns_entry(
 	}
 }
 
-#ifdef SUPPORT_IPV6
+#if defined(SUPPORT_IPV6)
 unsigned char* reverse_lookup_ipv6(struct in6_addr *client_ip, struct in6_addr *server_ip)
 {
   struct my_in6_addr my_client_ip,my_server_ip;
@@ -405,6 +479,60 @@ struct DNS_data_IPv6* get_dns_entry_ipv6(
 	}
 }
 #endif
+
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+// Lookup an IPv6 entry from the associate IPv4->6 DNS Cache
+struct DNS_data_IPv6* get_dns_entry_ipv4_dns6(
+		unsigned long int client_ip,
+		unsigned long int server_ip)
+{
+	struct DNS_data_IPv6* dns_data;
+	struct in6_addr client_ip6, server_ip6;
+
+	struct my_in6_addr my_client_ip,my_server_ip;
+	
+        // 1. Map the IPv4 addresses to the DNSCache IPv4->6 format
+	map_4to6(client_ip,&client_ip6);
+	map_4to6(server_ip,&server_ip6);
+
+        memcpy(&my_client_ip,&client_ip6,sizeof(struct my_in6_addr));
+        memcpy(&my_server_ip,&server_ip6,sizeof(struct my_in6_addr));
+	dns_data = getEntry_ipv4_dns6(my_client_ip, my_server_ip);
+	if(dns_data!=NULL){
+		return dns_data;
+	}else{
+		return NULL;
+	}
+}
+
+// Lookup an IPv6 entry from the associate IPv4->6 DNS Cache
+struct DNS_data_IPv6* get_dns_entry_ipv6_dns4(
+		struct in6_addr *client_ip,
+		struct in6_addr *server_ip)
+{
+	struct DNS_data_IPv6* dns_data;
+	struct my_in6_addr my_client_ip,my_server_ip;
+	
+	struct in_addr ip4_mapped;
+	struct in6_addr ip6_mapped;
+	
+        // 1. Map 6 to 4
+        correlate_6to4(client_ip,&ip4_mapped);
+        // 2. Map this ip4 address to the DNSCache IP4->6 format
+	map_4to6(ip4_mapped.s_addr,&ip6_mapped);
+	
+        // 3. Now lookup the destination IPv6 addresses
+        memcpy(&my_client_ip,&ip6_mapped,sizeof(struct my_in6_addr));
+        memcpy(&my_server_ip,server_ip,sizeof(struct my_in6_addr));
+	dns_data = getEntry_ipv6_dns4(my_client_ip, my_server_ip);
+	if(dns_data!=NULL){
+		return dns_data;
+	}else{
+		return NULL;
+	}
+}
+#endif
+
 /*
 unsigned long int dns_server(unsigned long int client_ip, unsigned long int server_ip)
 {

@@ -189,19 +189,47 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 	 pup->request_time = dns_data->request_time;
 	 pup->response_time = dns_data->response_time;
      }
+#ifdef SUPPORT_MIXED_DNS
+    else {
+      // Look for a DNS6 query from an equivalent IPv4 addresses
+      struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv6_dns4(&(PIP_V6(pip)->ip6_saddr), &(PIP_V6(pip)->ip6_daddr));
+      if(dns_data!=NULL){
+	 pup->dns_name = dns_data->hostname;
+	 // The DNS Server was IPv4, stored in the DNSCache IP4->6 format
+	 pup->dns_server.addr_vers = 4;
+	 pup->dns_server.un.ip4.s_addr = map_6to4(&(dns_data->dns_server));
+	 pup->request_time = dns_data->request_time;
+	 pup->response_time = dns_data->response_time;
+       }
+    }
+#endif /* SUPPORT_MIXED_DNS */
      }
     else
-#endif
+#endif /* SUPPORT_IPV6 */
     {
     /* Do reverse lookup */
-    struct DNS_data* dns_data = get_dns_entry(ntohl(pip->ip_src.s_addr), ntohl(pip->ip_dst.s_addr));
+    struct DNS_data* dns_data = get_dns_entry(pip->ip_src.s_addr, pip->ip_dst.s_addr);
     if(dns_data!=NULL){
 	  pup->dns_name = dns_data->hostname;
-	  pup->dns_server.addr_vers = 6;
+	  pup->dns_server.addr_vers = 4;
 	  memcpy((&pup->dns_server.un.ip4),&(dns_data->dns_server),sizeof(struct in_addr));
 	  pup->request_time = dns_data->request_time;
 	  pup->response_time = dns_data->response_time;
      }
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+    else {
+      // Look for a DNS4 query from an equivalent IPv6 addresses
+      struct DNS_data_IPv6* dns_data =  get_dns_entry_ipv4_dns6(pip->ip_src.s_addr, pip->ip_dst.s_addr);
+      if(dns_data!=NULL){
+	 pup->dns_name = dns_data->hostname;
+	 // The DNS Server was IPv6
+	 pup->dns_server.addr_vers = 6;
+	 memcpy((&pup->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
+	 pup->request_time = dns_data->request_time;
+	 pup->response_time = dns_data->response_time;
+       }
+    }
+#endif /* SUPPORT_IPV6 && SUPPORT_MIXED_DNS */
     }
   }
  else

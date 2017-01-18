@@ -185,6 +185,10 @@ Increase this number on high speed network will help ...*/
 #define DNS_CACHE_SIZE 100000   /* 500,000 used on large probes */
 #ifdef SUPPORT_IPV6
 #define DNS_CACHE_SIZE_IPV6 1000   /* possibly a small cache  */
+#ifdef SUPPORT_MIXED_DNS
+#define DNS_CACHE_SIZE_IPV4_DNS6  1000   /* possibly a small cache  */
+#define DNS_CACHE_SIZE_IPV6_DNS4 10000   /* possibly a small cache  */
+#endif
 #endif
 
 /* Masks for the encryption of IPv6 addresses */
@@ -195,3 +199,4 @@ Increase this number on high speed network will help ...*/
 #define CRYPTO_IPV6_MASK_2	0x0f0f0f0fL
 #define CRYPTO_IPV6_MASK_3	0x00000000L
 #endif
+

@@ -1255,6 +1255,8 @@ struct global_parameters {
  int DNS_Cache_Size;
 #ifdef SUPPORT_IPV6 
  int DNS_Cache_Size_IPv6;
+ int DNS_Cache_Size_IPv4_DNS6;
+ int DNS_Cache_Size_IPv6_DNS4;
  
  int Crypto_IPv6_Mask_0;
  int Crypto_IPv6_Mask_1;

@@ -634,7 +634,11 @@ Version (void)
 #else
   fprintf (fp_stderr, ANSI_BOLD " without " ANSI_RESET);
 #endif
-  fprintf (fp_stderr, "IPv6 support\n\n");
+  fprintf (fp_stderr, "IPv6 support");
+#if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
+  fprintf (fp_stderr, " (mixed DNS)");
+#endif
+  fprintf (fp_stderr, "\n\n");
 }
 
 
