@@ -28,6 +28,7 @@
 #define MAX_DNS_ENTRIES 30  /* max number of entries to be cached */
 
 extern FILE *fp_stderr;
+extern Bool report_dnscache;
 
 #define get_u8(X,O)   (*(tt_uint8  *)(X + O))
 #define get_u16(X,O)  (*(tt_uint16 *)(X + O))
@@ -355,9 +356,9 @@ void dns_response_processing(
 			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
 			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
 
-	if (rval > 0)
+	if (rval > 0 && report_dnscache)
 	 {
-	   // fprintf(fp_stderr,"\nDNS cache (size=%d) full at %s\n",rval,Timestamp());
+	   fprintf(fp_stderr,"\nDNS cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
       }
 #if defined(SUPPORT_IPV6)
@@ -376,7 +377,7 @@ void dns_response_processing(
 			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
 			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
 
-	if (rval > 0)
+	if (rval > 0 && report_dnscache)
 	 {
 	   fprintf(fp_stderr,"\nDNS IPv6 cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
@@ -402,7 +403,7 @@ void dns_response_processing(
 			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
 	// printf("Inserting IPv6 AAAA records for IPv4\n");
 
-	if (rval > 0)
+	if (rval > 0 && report_dnscache)
 	 {
 	   fprintf(fp_stderr,"\nDNS IPv6_DNS4 cache (size=%d) full at %s\n",rval,Timestamp());
 	 }
@@ -426,7 +427,7 @@ void dns_response_processing(
 			((struct ucb*)thisdir)->pup->c2s.last_pkt_time,
 			((struct ucb*)thisdir)->pup->s2c.last_pkt_time);
       //printf("Inserting IPv4 A records for IPv6\n");
-	if (rval > 0)
+	if (rval > 0 && report_dnscache)
 	 {
 	   fprintf(fp_stderr,"\nDNS IPv4_DNS6 cache (size=%d) full at %s\n",rval,Timestamp());
 	 }

@@ -24,7 +24,9 @@
     Makefile.conf, it requires to know the rules mapping the customer IPv4 addresses to IPv6 
     and viceversa. These rules must defined in the mapping_ipv6.c source file.
   * Reworked some dns_cache.c internals to make the storage of the addresses consistent: now every 
-    address (both IPv4 and IPv6) is stored as read from the packet (so in network order). 
+    address (both IPv4 and IPv6) is stored as read from the packet (so in network order).
+  * Added -Q command line option to enable the report of the DN-Hunter caches wrap-around events
+  * Added marker columns for QUIC CHLO and REJ in log_udp_complete (enabled by QUIC_DETAILS)
 
 17/09/15 - MMM
 - Main changes since 3.0

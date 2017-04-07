@@ -246,6 +246,8 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 
   pup->quic_sni_name = NULL;
   pup->quic_ua_string = NULL;
+  pup->quic_chlo = 0;
+  pup->quic_rej = 0;
   
   return (utp[num_udp_pairs]);
 }
@@ -693,6 +695,8 @@ void get_QUIC_tags(unsigned char *base, int data_len, ucb *thisdir)
      int base_tags= 8 + quic_hdr_size + 12 + 12;
      int i;
      int last_tag = 0;
+     
+      thisdir->pup->quic_chlo  = 1 ;
 
      // Check the packet is long enough to include all the tags
      if (  data_len < base_tags + tag_nb * 8 )
@@ -744,6 +748,10 @@ void get_QUIC_tags(unsigned char *base, int data_len, ucb *thisdir)
        last_tag = tag_value_last_byte;
      } // Close for
    } // Close if (CHLO)
+  else if ( memcmp ( &base[base_string_index - 2], "REJ", 3) == 0 )
+   {
+     thisdir->pup->quic_rej = 1 ;
+   }
 
   return;
 }

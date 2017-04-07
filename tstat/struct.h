@@ -1092,6 +1092,8 @@ struct sudp_pair
   /* QUIC info */
   char *quic_sni_name;
   char *quic_ua_string;
+  Bool quic_chlo;                                                                                                           
+  Bool quic_rej;                                                                                                       
 
 };
 typedef struct sudp_pair udp_pair;

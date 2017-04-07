@@ -237,7 +237,7 @@ Tstat primary usage is as a command-line tool; the synopsis of
 the command is the following:
 
     Usage:
-        tstat [-htuvwpgSL0] [-d[-d]]
+        tstat [-htuvwpgSLQX0] [-d[-d]]
               [-s dir]
               [-N file]
               [-C file]
@@ -362,7 +362,8 @@ the command is the following:
         -A mask: enable XOR-based anonymization for internal IPv4 addresses.
                  'mask' is a decimal, octal, or hexadecimal value.
         -6: disable the L4 processing of IPv6 datagrams                          
-        -X: disable the DN-Hunter DNS engine 
+        -X: disable the DN-Hunter DNS engine
+        -Q: enable report of wrap-around events in the DN-Hunter caches
         -F file: specify the file name which contains the
                  list of DNS domains to be included/excluded from the
                  TCP traffic dump. Activated in the runtime configuration (-T)

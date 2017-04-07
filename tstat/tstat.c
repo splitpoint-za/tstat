@@ -228,6 +228,8 @@ Bool zlib_dump = FALSE;   /* -P */
 
 Bool strict_privacy = FALSE;   /* -0 */
 
+Bool report_dnscache = FALSE;
+
 int log_version = 2;            /* -1 */
 
 int log_level = TCP_LOG_ALL;
@@ -391,7 +393,7 @@ Help (void)
   fprintf (fp_stderr,
     "Usage:\n"
 #ifdef DNS_CACHE_PROCESSOR
-    "\ttstat [-htuvwgSLX0] [-d[-d]]\n"
+    "\ttstat [-htuvwgSLQX0] [-d[-d]]\n"
 #else
     "\ttstat [-htuvwgSL0] [-d[-d]]\n"
 #endif
@@ -541,6 +543,7 @@ Help (void)
 #endif
 #ifdef DNS_CACHE_PROCESSOR
     "\t-X: disable the DN-Hunter DNS engine\n"
+    "\t-Q: enable report of wrap-around events in the DN-Hunter caches\n"
     "\t-F file: specify the file name which contains the\n"
     "\t         list of DNS domains to be included/excluded from the\n"
     "\t         TCP traffic dump. Activated in the runtime configuration (-T)\n"
@@ -1210,6 +1213,8 @@ void write_log_header(FILE *fp, int log_type)
 #ifdef QUIC_DETAILS      
      wfprintf (fp, " quic_SNI:%d", col++);
      wfprintf (fp, " quic_UA:%d", col++);
+     wfprintf (fp, " quic_CHLO:%d", col++);
+     wfprintf (fp, " quic_REJ:%d", col++);
 #endif      
      wfprintf (fp, "\n");
    }
@@ -3183,7 +3188,7 @@ CheckArguments (int *pargc, char *argv[])
 #define GLOBAL_OPTS "A:B:G:N:M:C:Y:W:H:s:T:z:gdhtucSLvw320"
 
 #ifdef DNS_CACHE_PROCESSOR
-#define DNS_FILTER_OPT "XF:"
+#define DNS_FILTER_OPT "QXF:"
 #else
 #define DNS_FILTER_OPT ""
 #endif
@@ -3438,6 +3443,10 @@ ParseArgs (int *pargc, char *argv[])
 	case 'X':
 	  dns_enabled = FALSE;
 	  fprintf (fp_stdout, ANSI_BOLD "DNS engine disabled" ANSI_RESET "\n");
+	  break;
+	case 'Q':
+	  report_dnscache = TRUE;
+	  fprintf (fp_stdout, ANSI_BOLD "DNS engine cache wrap-around report enabled" ANSI_RESET "\n");
 	  break;
 	case 'F':
 	  {
