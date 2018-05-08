@@ -57,6 +57,7 @@ extern int yt_stream;
 
 regex_t re_ssl_subject,re_ssl_clean;
 char cname[80];
+char tls_version_list[80];
 
 enum http_content YTMAP(enum http_content X)
 {
@@ -165,6 +166,7 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
   char *base;
   int idx,all_ext_len,ext_type,ext_len,name_len,data_limit;
   int ii,j,next;
+  int tls_message_version;
   
   if (  *(char *)pdata == 0x16 &&  //fixed value
       *(char *)(pdata + 1) == 0x03 && 
@@ -181,6 +183,15 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
       // Lenght of the Hello Message, including 5 bytes for the TLS header
       int message_length = 5 + ntohs(*(tt_uint16 *)(base+3));
       
+      /* TLS version in the message */
+      tls_message_version = ntohs(*(tt_uint16 *)(base+9));
+
+      sprintf(tls_version_list,"%04x",tls_message_version);
+      if (ptp->ssl_client_tls==NULL) 
+	 ptp->ssl_client_tls = strdup(tls_version_list);
+
+     // printf("C <- %s\n",ptp->ssl_client_tls);
+     
       // All tests must be limited to the Hello Message, so
       // we define the minimum between the Message Lenght and the 
       // actual data available in the segment
@@ -305,6 +316,41 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
                   ii += ext_len;
                   break;
 
+           case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
+             if (idx + ii + 2 >= data_limit) 
+               return TRUE;
+             {
+               int versions_lenght = *(base+idx+ii);
+               int j;
+	       int tls_version_item;
+	       static char scratch[8];
+	       
+	       if (idx + ii + 1 + versions_lenght >= data_limit) 
+                  return TRUE;
+
+	       strcpy(tls_version_list,"");
+               for (j=0;j<versions_lenght;j+=2)
+                {
+		   tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii+1+j));
+		   if (j==0)
+		     sprintf(tls_version_list,"%04x",tls_version_item);
+		   else
+		    {
+		     sprintf(scratch,",%04x",tls_version_item);
+		     strncat(tls_version_list,scratch,79);
+		    }
+                }
+                
+               /* Must overwrite the message version*/ 
+               if (ptp->ssl_client_tls!=NULL) 
+		 free(ptp->ssl_client_tls);
+	       ptp->ssl_client_tls = strdup(tls_version_list);
+               // printf("C -> %s\n",ptp->ssl_client_tls);
+	       
+             }
+                  ii += ext_len;
+             break;
+
               default:
                   ii += ext_len;
                   break;
@@ -344,11 +390,21 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
      
      int idx = 43; // sessionID length
      int ii, all_ext_len, ext_len, ext_type, data_limit;
+     int tls_message_version;
      char *base = (char *)pdata;
 
       // Lenght of the Hello Message, including 5 bytes for the TLS header
      int message_length = 5 + ntohs(*(tt_uint16 *)(base+3));
       
+     /* TLS version in the message */
+     tls_message_version = ntohs(*(tt_uint16 *)(base+9));
+
+     sprintf(tls_version_list,"%04x",tls_message_version);
+     if (ptp->ssl_server_tls==NULL) 
+	 ptp->ssl_server_tls = strdup(tls_version_list);
+
+     // printf("S <- %s\n",ptp->ssl_server_tls);
+
      // All tests must be limited to the Hello Message, so
      // we define the minimum between the Message Lenght and the 
      // actual data available in the segment
@@ -410,6 +466,26 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
              ext_len = ntohs(*(tt_uint16 *)(base+idx+ii));
              ii += 2; 
              ptp->ssl_server_npnalpn |= ssl_parse_npnalpn_extension(base, idx, ii, data_limit, ext_len, FALSE);
+             break;
+
+           case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
+             if (idx + ii + 2 >= data_limit) 
+               return TRUE;
+             {
+	       int tls_version_item;
+	       
+	       tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii));
+
+	       sprintf(tls_version_list,"%04x",tls_version_item);
+	       
+	                      /* Must overwrite the message version*/ 
+               if (ptp->ssl_server_tls!=NULL) 
+		 free(ptp->ssl_server_tls);
+	       ptp->ssl_server_tls = strdup(tls_version_list);
+	       
+	      // printf("S -> %s\n",ptp->ssl_server_tls);
+
+             }
              break;
         // default:
         //   if (idx+next >= data_length) return TRUE;

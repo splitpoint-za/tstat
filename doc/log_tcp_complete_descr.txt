@@ -186,6 +186,9 @@ status of the other stat sets). All the other columns will be relative to K.
 # K+19      # DNS response time         # ms    # unixtime (in ms) of the DNS response 
 # K+20      # HTTP Hostname             # -     # Content of the HTTP request "Host:" header field (for HTTP connections)
 ###############################################################################
+# K+21      # TLS Client Supported Versions # - # For TLS flows, sequence of supported TLS versions advertized by the Client (TLS 1.3)
+# K+22      # TLS Server Supported Version  # - # For TLS flows, supported TLS version declared by the Server (TLS 1.3)
+###############################################################################
 
 NPN (Next Protocol Negotiation) is the old TLS mechanism to negotiate the application layer 
 to be used over TLS, identified by the code 0x3374 followed, possibly, by a list of supported 
@@ -206,6 +209,10 @@ The NPN/ALPN bitmap possible values are the following:
 ||____________ ALPN used, SPDY negotiated
 |_____________ ALPN used, HTTP/2 negotiated
 
+TLS 1.3 introduced the "Supported Versions" extension (0x002b). If TLS 1.3 is used, the Client supported version indicates the
+preferred TLS versions supported by the client, and the Server indicates the one chosen by the server, as contained in the 
+"Supported Versions" extension (0x002b). If a previous TLS version is used, the Version field of the "Client Hello" and 
+"Server Hello" message are reported.
 
 [*] For Facebook Zero flows, the "TLS Client Hello SNI" contains the SNI included in the CHLO opening frame.
 

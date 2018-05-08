@@ -617,8 +617,8 @@ void globals_parse_ini_arg(char *param_name, param_value param_value)
         }
        else
 	 croak_global_integer(param_name);
-     }
 #endif     
+     }
     else if (strcasecmp(param_name,"dns_cache_size_ipv4_dns6") == 0) 
      {
 #if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)

@@ -981,6 +981,9 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
        wfprintf(fp, " res_tm:%d", col++);        // absolute dns response time
 #endif
        wfprintf(fp, " http_hostname:%d", col++); // first HTTP hostname (from Host:) if collected and present
+       
+       wfprintf(fp, " c_TLSvers:%d", col++); // first HTTP hostname (from Host:) if collected and present
+       wfprintf(fp, " s_TLSvers:%d", col++); // first HTTP hostname (from Host:) if collected and present
        break;
      case TCP_LOG_P2P:
        wfprintf(fp, " p2p_st:%d", col++);	 // 103: p2p subtype

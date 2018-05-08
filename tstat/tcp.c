@@ -521,6 +521,9 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->ssl_client_subject = NULL;
   ptp->ssl_server_subject = NULL;
 
+  ptp->ssl_client_tls = NULL;
+  ptp->ssl_server_tls = NULL;
+
   ptp->ssl_client_npnalpn = TLS_EMPTY;
   ptp->ssl_server_npnalpn = TLS_EMPTY;
 
@@ -2596,6 +2599,11 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
   /* first collected HTTP hostname (from Host:), if any */
   wfprintf(fp," %s",ptp_save->http_hostname!=NULL?ptp_save->http_hostname:"-");
 
+  /* TLS Version */
+  wfprintf(fp," %s",ptp_save->ssl_client_tls!=NULL?ptp_save->ssl_client_tls:"-");
+  wfprintf(fp," %s",ptp_save->ssl_server_tls!=NULL?ptp_save->ssl_server_tls:"-");
+
+  
  /*  Uncomment if we need to trace which TLS connections are popular and not classified */
 //  wfprintf(fp," %d",(ptp_save->tls_service); 
 

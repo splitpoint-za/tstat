@@ -760,6 +760,8 @@ struct stcp_pair
   
   char   *ssl_client_subject;
   char   *ssl_server_subject;
+  char   *ssl_client_tls;
+  char   *ssl_server_tls;
   enum npnalpn ssl_client_npnalpn;
   enum npnalpn ssl_server_npnalpn;
   timeval ssl_client_data_time;
