@@ -172,7 +172,7 @@ status of the other stat sets). All the other columns will be relative to K.
 # K+6       # TLS Server Hello SCN      # -     # For TLS flows, the subject CN name indicated by the server in its certificate 
 # K+7       # TLS Client NPN/ALPN       # -     # For TLS flows, a bitmap representing the usage of NPN/ALPN for HTTP2/SPDY negotiation 
 # K+8       # TLS Server NPN/ALPN       # -     # For TLS flows, a bitmap representing the usage of NPN/ALPN for HTTP2/SPDY negotiation
-# K+9       # TLS Client ID reuse       # -     # For TLS flows, indicates that the Client Hello carries an old Session ID
+# K+9       # TLS Session Status        # -     # For TLS flows, a bitmap representing TLS Session management information
 # K+10      # TLS Client Last Handshake # ms    # For TLS flows, time of Client last packet seen before first Application Data (relative)
 # K+11      # TLS Server Last Handshake # ms    # For TLS flows, time of Server last packet seen before first Application Data (relative)
 # K+12      # TLS Client App Data Time  # ms    # For TLS flows, time between the Client first Application Data message and the first flow segment
@@ -209,10 +209,27 @@ The NPN/ALPN bitmap possible values are the following:
 ||____________ ALPN used, SPDY negotiated
 |_____________ ALPN used, HTTP/2 negotiated
 
+
+-- TLS 1.3 Support
+
 TLS 1.3 introduced the "Supported Versions" extension (0x002b). If TLS 1.3 is used, the Client supported version indicates the
 preferred TLS versions supported by the client, and the Server indicates the one chosen by the server, as contained in the 
 "Supported Versions" extension (0x002b). If a previous TLS version is used, the Version field of the "Client Hello" and 
 "Server Hello" message are reported.
+
+Field K+9 (TLS Session Status) is a bitmap encoding various aspects of Session Reuse introduced by TLS 1.3.
+Previously it was either 0 (the Client Hello is not carrying a session ID), or 1 (the Client is trying to resume an old session).
+These are the only values possible for TLS versions <=1.2. 
+Starting TLS 1.3, the original Session ID field is a legacy one, alwas carrying e generic opaque value, while 
+the actual negotiation is done using other Extension Fields, whose presence is what is encoded in the bitmap. 
+
+0000 0000
+   ^ ^^^^
+   | ||||_____ Client Hello carried a Session ID (0/1 for TLS<=1.2, always 1 for TLS 1.3)
+   | |||______ Client Hello carried a Pre-Shared Key Extension (TLS 1.3 only)
+   | ||_______ Client Hello carried a Early Data Indication Extension (TLS 1.3 only)
+   | |________ Server Hello carried a Pre-Shared Key Extension (TLS 1.3 only)
+   |__________ Server Hello indicated a Hello Retry Request (TLS 1.3 only)
 
 [*] For Facebook Zero flows, the "TLS Client Hello SNI" contains the SNI included in the CHLO opening frame.
 

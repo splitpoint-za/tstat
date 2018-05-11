@@ -760,8 +760,6 @@ struct stcp_pair
   
   char   *ssl_client_subject;
   char   *ssl_server_subject;
-  char   *ssl_client_tls;
-  char   *ssl_server_tls;
   enum npnalpn ssl_client_npnalpn;
   enum npnalpn ssl_server_npnalpn;
   timeval ssl_client_data_time;
@@ -775,10 +773,12 @@ struct stcp_pair
   Bool    ssl_sessionid_reuse;
 
   /* TLS 1.3 session related fields */
-  Bool ssl_client_PSK; /* Client Hello contained PSK extension */
-  Bool ssl_server_PSK; /* Server Hello contained PSK extension */
-  Bool ssl_client_early_data; /* Client Hello contained early_data extension */
-  Bool ssl_server_hello_retry; /* Server answered with HelloRetry message - NOT IMPLEMENTED YET */
+  char   *ssl_client_tls_version;
+  char   *ssl_server_tls_version;
+  Bool ssl_client_PSK;         /* Client Hello contained PSK extension */
+  Bool ssl_server_PSK;         /* Server Hello contained PSK extension */
+  Bool ssl_client_early_data;  /* Client Hello contained early_data extension */
+  Bool ssl_server_hello_retry; /* Server answered with HelloRetry message */
 
   enum tls_category tls_service;
 

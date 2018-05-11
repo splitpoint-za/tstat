@@ -157,16 +157,16 @@ tp_release (tcp_pair * released_tcp_pair)
      released_tcp_pair->ssl_server_subject=NULL;
    }
 
-  if (released_tcp_pair->ssl_client_tls!=NULL)
+  if (released_tcp_pair->ssl_client_tls_version!=NULL)
    {
-     free(released_tcp_pair->ssl_client_tls);
-     released_tcp_pair->ssl_client_tls=NULL;
+     free(released_tcp_pair->ssl_client_tls_version);
+     released_tcp_pair->ssl_client_tls_version=NULL;
    }
 
-  if (released_tcp_pair->ssl_server_tls!=NULL)
+  if (released_tcp_pair->ssl_server_tls_version!=NULL)
    {
-     free(released_tcp_pair->ssl_server_tls);
-     released_tcp_pair->ssl_server_tls=NULL;
+     free(released_tcp_pair->ssl_server_tls_version);
+     released_tcp_pair->ssl_server_tls_version=NULL;
    }
    
   if (released_tcp_pair->dns_name!=NULL)

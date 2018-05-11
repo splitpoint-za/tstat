@@ -958,9 +958,9 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
        wfprintf(fp, " c_tls_SNI:%d", col++);      // server name of TLS client hello message
        wfprintf(fp, " s_tls_SCN:%d", col++);      // subject name in TLS server certificate
 
-       wfprintf(fp, " c_npnalpn:%d", col++);     // TLS Client Hello NPN/ALPN protocols bitmask
-       wfprintf(fp, " s_npnalpn:%d", col++);     // TLS Server Hello NPN/ALPN protocols bitmask
-       wfprintf(fp, " c_tls_sesid:%d", col++);    // TLS Client Hello carries or not a old session id
+       wfprintf(fp, " c_npnalpn:%d", col++);     // TLS Client Hello NPN/ALPN protocols bitmap
+       wfprintf(fp, " s_npnalpn:%d", col++);     // TLS Server Hello NPN/ALPN protocols bitmap
+       wfprintf(fp, " tls_session_stat:%d", col++);  // TLS Client/Server session negotiation bitmap
 
        wfprintf(fp, " c_last_handshakeT:%d", col++); // TLS client last packet seen before first Application Data time
        wfprintf(fp, " s_last_handshakeT:%d", col++); // TLS server last packet seen before first Application Data time

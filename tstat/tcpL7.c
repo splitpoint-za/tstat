@@ -187,10 +187,10 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
       tls_message_version = ntohs(*(tt_uint16 *)(base+9));
 
       sprintf(tls_version_list,"%04x",tls_message_version);
-      if (ptp->ssl_client_tls==NULL) 
-	 ptp->ssl_client_tls = strdup(tls_version_list);
+      if (ptp->ssl_client_tls_version==NULL) 
+	 ptp->ssl_client_tls_version = strdup(tls_version_list);
 
-     // printf("C <- %s\n",ptp->ssl_client_tls);
+     // printf("C <- %s\n",ptp->ssl_client_tls_version);
      
       // All tests must be limited to the Hello Message, so
       // we define the minimum between the Message Lenght and the 
@@ -342,10 +342,10 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
                 }
                 
                /* Must overwrite the message version*/ 
-               if (ptp->ssl_client_tls!=NULL) 
-		 free(ptp->ssl_client_tls);
-	       ptp->ssl_client_tls = strdup(tls_version_list);
-               // printf("C -> %s\n",ptp->ssl_client_tls);
+               if (ptp->ssl_client_tls_version!=NULL) 
+		 free(ptp->ssl_client_tls_version);
+	       ptp->ssl_client_tls_version = strdup(tls_version_list);
+               // printf("C -> %s\n",ptp->ssl_client_tls_version);
 	       
              }
                   ii += ext_len;
@@ -410,10 +410,10 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
      tls_message_version = ntohs(*(tt_uint16 *)(base+9));
 
      sprintf(tls_version_list,"%04x",tls_message_version);
-     if (ptp->ssl_server_tls==NULL) 
-	 ptp->ssl_server_tls = strdup(tls_version_list);
+     if (ptp->ssl_server_tls_version==NULL) 
+	 ptp->ssl_server_tls_version = strdup(tls_version_list);
 
-     // printf("S <- %s\n",ptp->ssl_server_tls);
+     // printf("S <- %s\n",ptp->ssl_server_tls_version);
 
      /* Look for special value of ServerHello indicating a Client Hello Retry*/
      if ( payload_len > 11+32 ) /* Verify enough data is available */
@@ -497,11 +497,11 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 	       sprintf(tls_version_list,"%04x",tls_version_item);
 	       
 	                      /* Must overwrite the message version*/ 
-               if (ptp->ssl_server_tls!=NULL) 
-		 free(ptp->ssl_server_tls);
-	       ptp->ssl_server_tls = strdup(tls_version_list);
+               if (ptp->ssl_server_tls_version!=NULL) 
+		 free(ptp->ssl_server_tls_version);
+	       ptp->ssl_server_tls_version = strdup(tls_version_list);
 	       
-	      // printf("S -> %s\n",ptp->ssl_server_tls);
+	      // printf("S -> %s\n",ptp->ssl_server_tls_version);
 
              }
              break;
