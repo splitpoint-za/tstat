@@ -534,6 +534,11 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
   ptp->ssl_server_data_byte = 0;
   
   ptp->tls_service = TLS_OTHER;
+
+  ptp->ssl_client_PSK = FALSE;
+  ptp->ssl_server_PSK = FALSE;
+  ptp->ssl_client_early_data = FALSE;
+  ptp->ssl_server_hello_retry = FALSE;
   
   return (&ttp[num_tcp_pairs]);
 }
@@ -1553,7 +1558,7 @@ trace_done (void)
 	continue;
 
       // do not consider this flow for the stats
-      make_conn_stats (ptp, FALSE);
+      make_conn_stats (ptp, TRUE);
       tot_conn_TCP--;
     }
 }
@@ -2549,8 +2554,22 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
   /* TLS NPN / ALPN bitmask recording the usage of SPDY and HTTP2 */
   wfprintf(fp," %d %d",ptp_save->ssl_client_npnalpn, ptp_save->ssl_server_npnalpn);
 
-  /* Record if the TLS Client Hello carries an old Session ID */
-  wfprintf(fp," %d",ptp_save->ssl_sessionid_reuse);
+  /* TLS session-related fields coded as a BitMap
+        0000 0000
+           ^ ^^^^
+           | ||||_____ Client Hello carried a Session ID (Always 1 for TLS 1.3)
+           | |||______ Client Hello carried a Pre-Shared Key Extension (only for TLS 1.3)
+           | ||_______ Client Hello carried a Early Data Indication Extension (only for TLS 1.3)
+           | |________ Server Hello carried a Pre-Shared Key Extension (only for TLS 1.3)
+           |__________ Server Hello indicated a Hello Retry Request (only for TLS 1.3)
+  */
+  u_int16_t reuse_bitmap =   ( ptp_save->ssl_sessionid_reuse ) +
+                             ( ptp_save->ssl_client_PSK << 1 ) + 
+                             ( ptp_save->ssl_client_early_data << 2 ) + 
+                             ( ptp_save->ssl_server_PSK << 3 ) +
+                             ( ptp_save->ssl_server_hello_retry << 4 ) ;
+
+  wfprintf(fp," %d", reuse_bitmap);
 
 /* Record time of the end of the SSL handshake */
   

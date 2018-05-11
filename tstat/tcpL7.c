@@ -351,7 +351,17 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
                   ii += ext_len;
              break;
 
-              default:
+           case 0x0029: /* Client PSK extension present */
+             ptp->ssl_client_PSK = TRUE;
+                  ii += ext_len;
+             break;
+
+           case 0x002a: /* Client Early Data extension present */
+             ptp->ssl_client_early_data = TRUE;
+                  ii += ext_len;
+             break;
+
+           default:
                   ii += ext_len;
                   break;
            }
@@ -404,6 +414,14 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 	 ptp->ssl_server_tls = strdup(tls_version_list);
 
      // printf("S <- %s\n",ptp->ssl_server_tls);
+
+     /* Look for special value of ServerHello indicating a Client Hello Retry*/
+     if ( payload_len > 11+32 ) /* Verify enough data is available */
+      {
+       char * tls_server_random =(char *)(base+11);
+       if (memcmp (tls_server_random, TLS13_SERVER_HELLO_RETRY_REQUEST_MAGIC, 32) == 0 )
+         ptp->ssl_server_hello_retry = TRUE; /* Set TRUE if Random = Magic */
+      }
 
      // All tests must be limited to the Hello Message, so
      // we define the minimum between the Message Lenght and the 
@@ -487,6 +505,11 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 
              }
              break;
+
+           case 0x0029: /* Server PSK extension present */
+             ptp->ssl_server_PSK = TRUE;
+             break;
+
         // default:
         //   if (idx+next >= data_length) return TRUE;
          }
