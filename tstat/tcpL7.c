@@ -487,7 +487,8 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
              break;
 
            case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
-             if (idx + ii + 2 >= data_limit) 
+
+             if (idx + ii + 1 >= data_limit) 
                return TRUE;
              {
 	       int tls_version_item;
@@ -495,8 +496,8 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
 	       tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii));
 
 	       sprintf(tls_version_list,"%04x",tls_version_item);
-	       
-	                      /* Must overwrite the message version*/ 
+
+	       /* Must overwrite the message version*/ 
                if (ptp->ssl_server_tls_version!=NULL) 
 		 free(ptp->ssl_server_tls_version);
 	       ptp->ssl_server_tls_version = strdup(tls_version_list);
