@@ -316,52 +316,60 @@ Bool ssl_client_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
                   ii += ext_len;
                   break;
 
-           case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
-             if (idx + ii + 2 >= data_limit) 
-               return TRUE;
-             {
-               int versions_lenght = *(base+idx+ii);
-               int j;
-	       int tls_version_item;
-	       static char scratch[8];
+              case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
+	          if (ext_len != 0) 
+		   {
+                     int versions_length;
+                     int j;
+	             int tls_version_item;
+	             static char scratch[8];
+		     
+                     if (idx + ii + 2 >= data_limit) 
+                       return TRUE;
+		     
+                     versions_length = *(base+idx+ii);
 	       
-	       if (idx + ii + 1 + versions_lenght >= data_limit) 
-                  return TRUE;
+	             if (versions_length < 0)
+		       return TRUE;
+	       
+	             if (idx + ii + 1 + versions_length >= data_limit) 
+                       return TRUE;
 
-	       strcpy(tls_version_list,"");
-               for (j=0;j<versions_lenght;j+=2)
-                {
-		   tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii+1+j));
-		   if (j==0)
-		     sprintf(tls_version_list,"%04x",tls_version_item);
-		   else
-		    {
-		     sprintf(scratch,",%04x",tls_version_item);
-		     strncat(tls_version_list,scratch,79);
-		    }
-                }
+	             strcpy(tls_version_list,"");
+                     for (j=0;j<versions_length;j+=2)
+                      {
+		        tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii+1+j));
+		        if (j==0)
+		           sprintf(tls_version_list,"%04x",tls_version_item);
+		        else
+		         {
+		           sprintf(scratch,",%04x",tls_version_item);
+			   if (strlen(tls_version_list)<74)
+		             strcat(tls_version_list,scratch);
+		         }
+                      }
                 
-               /* Must overwrite the message version*/ 
-               if (ptp->ssl_client_tls_version!=NULL) 
-		 free(ptp->ssl_client_tls_version);
-	       ptp->ssl_client_tls_version = strdup(tls_version_list);
-               // printf("C -> %s\n",ptp->ssl_client_tls_version);
-	       
-             }
-                  ii += ext_len;
-             break;
+                    /* Must overwrite the message version*/ 
+                     if (ptp->ssl_client_tls_version!=NULL) 
+		       free(ptp->ssl_client_tls_version);
+	             ptp->ssl_client_tls_version = strdup(tls_version_list);
+                    // printf("C -> %s\n",ptp->ssl_client_tls_version);
+                   }
 
-           case 0x0029: /* Client PSK extension present */
-             ptp->ssl_client_PSK = TRUE;
                   ii += ext_len;
-             break;
+                  break;
 
-           case 0x002a: /* Client Early Data extension present */
-             ptp->ssl_client_early_data = TRUE;
+              case 0x0029: /* Client PSK extension present */
+                  ptp->ssl_client_PSK = TRUE;
                   ii += ext_len;
-             break;
+                  break;
 
-           default:
+              case 0x002a: /* Client Early Data extension present */
+                  ptp->ssl_client_early_data = TRUE;
+                  ii += ext_len;
+                  break;
+
+              default:
                   ii += ext_len;
                   break;
            }
@@ -487,24 +495,27 @@ Bool ssl_server_check(tcp_pair *ptp, void *pdata, int payload_len, int data_leng
              break;
 
            case 0x002b: /* Supported Versions (TLS Version Negotiation)*/
-
-             if (idx + ii + 1 >= data_limit) 
-               return TRUE;
-             {
-	       int tls_version_item;
+             if (ext_len!=0)
+	     {
+               if (idx + ii + 1 >= data_limit) 
+                 return TRUE;
+               else 
+	        {
+	          int tls_version_item;
 	       
-	       tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii));
+	          tls_version_item = ntohs(*(tt_uint16 *)(base+idx+ii));
 
-	       sprintf(tls_version_list,"%04x",tls_version_item);
+	          sprintf(tls_version_list,"%04x",tls_version_item);
 
-	       /* Must overwrite the message version*/ 
-               if (ptp->ssl_server_tls_version!=NULL) 
-		 free(ptp->ssl_server_tls_version);
-	       ptp->ssl_server_tls_version = strdup(tls_version_list);
+	          /* Must overwrite the message version*/ 
+                  if (ptp->ssl_server_tls_version!=NULL) 
+		    free(ptp->ssl_server_tls_version);
+	          ptp->ssl_server_tls_version = strdup(tls_version_list);
 	       
-	      // printf("S -> %s\n",ptp->ssl_server_tls_version);
+	          // printf("S -> %s\n",ptp->ssl_server_tls_version);
 
-             }
+                }
+	     }
              break;
 
            case 0x0029: /* Server PSK extension present */
