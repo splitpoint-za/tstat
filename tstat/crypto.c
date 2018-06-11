@@ -537,3 +537,95 @@ char *HostNameEncrypted(ipaddr ipaddress)
       return (adr);
     }
 }
+
+char *StringEncryptedBase64(char *string)
+{
+  /* 
+   * Encrypts the argument string using the Rijndael cypher (ECB) and the key already defined 
+   * for CryptoPAn. Not particularly strong, but it's the solution requiring the minimum effort,
+   * since all the code is already there. Actually, only the first 128 bits of the CryptoPAn key
+   * are used, since CryptoPAn uses the other 128 bits to initialize the internal pad used 
+   * by the algorithm. This means that you must use only half of the key for decryption. 
+   */
+  extern Bool enc_string_set;
+
+  /*
+   * Instead of using fixed sized static buffers, we pre-allocate one of reasonable size, then
+   * we increase it if needed. The buffer increase should not happen more than once or twice
+   * during the program lifetime.
+   */
+#define SE_BUFFER_SIZE       80  /* Possibly >16 bytes that is the minimum encryption block size */
+#define SE_BUFFER_SIZE_B64  120  /* At least SE_BUFFER_SIZE * 4/3, so we keep it to 1.5 times    */
+  
+  static char *in_buffer = NULL;       /* Buffer pointers */
+  static char *enc_out_buffer = NULL;
+  static char *b64_result = NULL;
+  static int  in_buffer_size = 0;      /* Current buffer sizes */
+  static int  enc_out_buffer_size = 0;
+  static int  b64_result_size = 0;
+ 
+  int input_len, padded_len, retval,flen;
+  char *b64_enc_string;
+
+  if (in_buffer==NULL) {
+    // Initializazion
+    in_buffer = (char *)malloc(SE_BUFFER_SIZE*sizeof(char));
+    in_buffer_size = SE_BUFFER_SIZE;
+    
+    enc_out_buffer = (char *)malloc(SE_BUFFER_SIZE*sizeof(char));
+    enc_out_buffer_size = SE_BUFFER_SIZE;
+    
+    b64_result = (char *)malloc(SE_BUFFER_SIZE_B64*sizeof(char));
+    b64_result_size = SE_BUFFER_SIZE_B64;
+  }
+  
+  if (enc_string_set==TRUE) {
+    /* Only do the work if the encrytion environment has been initialized (-Y) */
+
+    input_len = strlen(string);
+    
+      // Since we work with blocks of 16 bytes, the buffer must contain the string
+      // even if padded to the next multiple of 16 bytes.
+    if ( (input_len + 15) > in_buffer_size ) {
+      // Reallocate the static buffers: it should't happen too often.
+      int times = 1 + (input_len+15)/SE_BUFFER_SIZE;
+
+      if (in_buffer!=NULL) free(in_buffer);
+      if (enc_out_buffer!=NULL) free(enc_out_buffer);
+      if (b64_result!=NULL) free(b64_result);
+
+      in_buffer = (char *)malloc(times*SE_BUFFER_SIZE*sizeof(char));
+      in_buffer_size=times*SE_BUFFER_SIZE;
+      
+      enc_out_buffer = (char *)malloc(times*SE_BUFFER_SIZE*sizeof(char));
+      enc_out_buffer_size = times*SE_BUFFER_SIZE;
+      
+      b64_result = (char *)malloc(times*SE_BUFFER_SIZE_B64*sizeof(char));
+      b64_result_size = times*SE_BUFFER_SIZE_B64;
+      
+    }
+    
+    memset(in_buffer,'\0',in_buffer_size*sizeof(char));
+    memset(enc_out_buffer,'\0',enc_out_buffer_size*sizeof(char));
+    memset(b64_result,'\0',b64_result_size*sizeof(char));
+    
+    strncpy(in_buffer,string,in_buffer_size-1);
+    
+    padded_len = input_len%16==0 ? input_len : 16*(1+input_len/16);
+    
+    retval = blockEncrypt((UINT8 *)in_buffer,padded_len*8,(UINT8 *)enc_out_buffer);
+
+    b64_enc_string = (char *)base64(enc_out_buffer,retval/8,&flen);
+    strncpy(b64_result,b64_enc_string,b64_result_size-1);
+    
+    if (b64_enc_string!=NULL)
+      free(b64_enc_string);
+    
+    return(b64_result);    
+  }
+  else {
+    /* Return the unmodified argument */
+    return string;
+  }
+  
+}

@@ -242,7 +242,8 @@ the command is the following:
               [-N file]
               [-C file]
               [-Y file]
-              [--keyvalue key | --keyfile file | --keybase64 file]                                                              
+              [--keyvalue key | --keyfile file | --keybase64 file]
+              [--enc]
               [-W file]
               [-B bayes.conf]
               [-T runtime.conf]
@@ -323,6 +324,10 @@ the command is the following:
                  key for address anonymization.                                 
                  Valid only if the -Y option is also specified. Only one option 
                  among --keyvalue, --keyfile, and --keybase64 can be used.      
+
+        --enc:   all hostnames in the log files are encrypted using the current key
+                 and Base64 encoded.
+                 Valid only if the -Y option is also specified.
 
         -W file: specify the file name which contains the
                  description of the whitelisted hosts/networks.
@@ -977,10 +982,21 @@ IP addresses.
 
 Beside the privacy issues related to the IP addresses, logs contain information that 
 might be considered sensitive, i.e. the URLs information in C<log_http_complete> and 
-the YouTube VideoIDs in C<log_video_complete>. The command line option C<-0> make Tstat 
+the YouTube VideoIDs in C<log_video_complete>. The command line option C<-0> makes Tstat 
 run in privacy mode: in this mode, the runtime.conf option C<httplog_full_url> is forced 
 to 0, so that full URLs cannot be logged in C<log_http_complete>, and the YouTube 
 Video IDs in C<log_video_complete> are masked as C<'XXX'>.
+
+Finally, logs can contain information about the contacted servers, in the form of the SNI and
+the certificate information for TLS connections, the DNS name for the contacted server,
+and the Hostname for plain text HTTP connections. This information normally is included 
+in C<log_tcp_complete> when Layer7 logging is enabled, and in C<log_udp_complete>.
+When address encryption is enabled (C<-Y>), using the command line option C<--enc> 
+all hostnames are encrypted and Base64-encoded before being written in the logs.
+For the sake of simplicity, the Rijndael ECB cryptographical function used by Crypto-PAn
+and the first 16 bytes of the key provided for C<-Y> are used: this makes the solution weak
+from the cryptographic point of view, so other forms of encryption might be needed in more 
+sensitive scenarios.
 
 [*] L<http://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/>
 

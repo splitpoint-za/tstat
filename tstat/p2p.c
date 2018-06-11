@@ -766,13 +766,13 @@ make_p2p_conn_stats (void * flow, int tproto)
 #endif
 
 #ifdef DNS_CACHE_PROCESSOR
-  wfprintf (fp_udp_logc, " %s",thisflow->dns_name!=NULL?thisflow->dns_name:"-");
+  wfprintf (fp_udp_logc, " %s",thisflow->dns_name!=NULL?StringEncryptedBase64(thisflow->dns_name):"-");
 #endif
 
   // wfprintf (fp_udp_logc, " %d %d",thisC2S->is_QUIC,thisS2C->is_QUIC);
 #ifdef QUIC_DETAILS      
-  wfprintf (fp_udp_logc, " %s",thisflow->quic_sni_name!=NULL?thisflow->quic_sni_name:"-");
-  wfprintf (fp_udp_logc, " %s",thisflow->quic_ua_string!=NULL?thisflow->quic_ua_string:"-");
+  wfprintf (fp_udp_logc, " %s",thisflow->quic_sni_name!=NULL?StringEncryptedBase64(thisflow->quic_sni_name):"-");
+  wfprintf (fp_udp_logc, " %s",thisflow->quic_ua_string!=NULL?StringEncryptedBase64(thisflow->quic_ua_string):"-");
   wfprintf (fp_udp_logc, " %d",thisflow->quic_chlo);
   wfprintf (fp_udp_logc, " %d",thisflow->quic_rej);
 #endif      

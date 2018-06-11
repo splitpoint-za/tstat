@@ -336,6 +336,7 @@ Bool eth_conf = FALSE;
 int  crypto_source = CPKEY_RANDOM;
 char *crypto_value = NULL;
 int  key_modes_set = 0;
+Bool enc_string_set = FALSE;
 
 int  globals_set = 0;
 
@@ -403,6 +404,7 @@ Help (void)
     "\t      [-C file]\n"
     "\t      [-Y file]\n"
     "\t      [--keyvalue key | --keyfile file | --keybase64 file]\n"
+    "\t      [--enc]\n"
     "\t      [-W file]\n"
     "\t      [-B bayes.conf]\n"
     "\t      [-T runtime.conf]\n"
@@ -496,6 +498,10 @@ Help (void)
     "\t         key for address anonymization.\n"
     "\t         Valid only if the -Y option is also specified. Only one option\n"
     "\t         among --keyvalue, --keyfile, and --keybase64 can be used.\n"
+    "\n"
+    "\t--enc:   all hostnames in the log files are encrypted using the current key\n"
+    "\t         and Base64 encoded.\n"
+    "\t         Valid only if the -Y option is also specified.\n"
     "\n"
     "\t-W file: specify the file name which contains the\n"
     "\t         description of the whitelisted IPv4 hosts/networks.\n"
@@ -3148,6 +3154,13 @@ CheckArguments (int *pargc, char *argv[])
                "         networks have been defined with the -Y option.\n");
      }
 
+    if (crypto_conf == FALSE && enc_string_set == TRUE )
+     {
+       fprintf(fp_stdout, 
+               ANSI_BOLD "Warning:" ANSI_RESET " The encryption of all relevant hostnames has been requested, but\n"
+               "         no encrypted networks have been defined with the -Y option. The option is ignored\n");
+       enc_string_set = FALSE;
+     }
 }
 
 #ifdef GROK_DPMI
@@ -3215,13 +3228,17 @@ ParseArgs (int *pargc, char *argv[])
   static int has_keyfile;
   static int has_keybase64;
   static int has_keyvalue;
+  static int has_enc;
   static struct option long_options[] = {
     /* {option_name,has_arg(0=none,1=recquired,2=optional),flag,return_value} */
     /* see man getopt for details                                             */
+#ifdef GROK_ERF_LIVE
     {"dag", optional_argument, 0, 1},
+#endif
     {"keyfile", required_argument, &has_keyfile, 1},
     {"keybase64", required_argument, &has_keybase64, 1},
     {"keyvalue", required_argument, &has_keyvalue, 1},
+    {"enc", no_argument, &has_enc, 1},
     {0, 0, 0, 0}
   };
 
@@ -3700,6 +3717,7 @@ ParseArgs (int *pargc, char *argv[])
 
     case 0: /* long options with flags */
         key_modes_set = has_keyfile + has_keybase64 + has_keyvalue;
+	enc_string_set = (has_enc==1?TRUE:FALSE);
 	
 	if (key_modes_set > 1)
 	 {
@@ -3709,17 +3727,17 @@ ParseArgs (int *pargc, char *argv[])
 	      exit (1);
 	 }
 
-        if (has_keyfile==1)
+        if (has_keyfile==1 && optarg)
 	 { /* --keyfile */
 	   crypto_value = strdup (optarg);
 	   crypto_source = CPKEY_FILE;
 	 }
-        else if (has_keybase64==1)
+        else if (has_keybase64==1 && optarg)
 	 { /* --keyfile */
 	   crypto_value = strdup (optarg);
 	   crypto_source = CPKEY_FILE64;
 	 }
-	else if (has_keyvalue==1)
+	else if (has_keyvalue==1 && optarg)
 	 {
 	   crypto_value = strdup (optarg);
 	   crypto_source = CPKEY_CLI;

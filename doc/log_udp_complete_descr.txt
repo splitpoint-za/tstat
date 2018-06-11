@@ -25,18 +25,20 @@ are separated by spaces.
 #  8  # 17  # Anonymized             # 0/1   # 1 = IP address is CryptoPAN anonymized 
 #  9  # 18  # UDP Type               # -     # Protocol type (see also the udp_type enum in struct.h)
 ############################################################################
-#  19       # FQDN                   # -     # Fully Qualified Domain Name recovered using DNHunter
+#  19       # FQDN                   # -     # Fully Qualified Domain Name recovered using DNHunter [$]
 
 If enabled at compile time by QUIC_DETAILS, some information related to QUIC flows
 is included 
 ############################################################################
-#  20       # QUIC SNI               # -     # SNI requested by QUIC connections
-#  21       # QUIC User Agent        # -     # User Agent reported by QUIC connections [+]
+#  20       # QUIC SNI               # -     # SNI requested by QUIC connections [$]
+#  21       # QUIC User Agent        # -     # User Agent reported by QUIC connections [+][$]
 #  22       # QUIC CHLO              # 0/1   # CHLO message seen
 #  23       # QUIC REJ               # 0/1   # REJ message seen 
 
 [+] The QUIC User Agent is printed as a percent-encoded (URL-encoded) string
 (https://en.wikipedia.org/wiki/Percent-encoding).
+[$] If the --enc command line option was used, this field contains an encrypted Base64-encoded value
+
 
 UDP type - col. 9, 18 (see struct.h)
 #########################################################################

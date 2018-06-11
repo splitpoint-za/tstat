@@ -11,6 +11,7 @@ uint32_t  encrypt_ip(uint32_t );
 void      store_crypto_ip(struct in_addr *);
 in_addr_t retrieve_crypto_ip(struct in_addr *);
 char      *HostNameEncrypted(ipaddr );
+char      *StringEncryptedBase64(char *);
 
 #ifdef SUPPORT_IPV6
 void      encrypt_ipv6(struct in6_addr *,struct in6_addr *);

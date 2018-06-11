@@ -2546,10 +2546,10 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
   wfprintf(fp," %d %d",ptp_save->c2s.msg_count,ptp_save->s2c.msg_count);
 
   /* TLS SNI required by the client, if any */
-  wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?ptp_save->ssl_client_subject:"-");
+  wfprintf(fp," %s",ptp_save->ssl_client_subject!=NULL?StringEncryptedBase64(ptp_save->ssl_client_subject):"-");
 
   /* TLS Server Certificate Name SCN, if any */   
-  wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?ptp_save->ssl_server_subject:"-");
+  wfprintf(fp," %s",ptp_save->ssl_server_subject!=NULL?StringEncryptedBase64(ptp_save->ssl_server_subject):"-");
 
   /* TLS NPN / ALPN bitmask recording the usage of SPDY and HTTP2 */
   wfprintf(fp," %d %d",ptp_save->ssl_client_npnalpn, ptp_save->ssl_server_npnalpn);
@@ -2602,7 +2602,7 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
 #ifdef DNS_CACHE_PROCESSOR
   if (ptp_save->dns_name!=NULL)
    {
-     wfprintf(fp, " %s",ptp_save->dns_name);
+     wfprintf(fp, " %s",StringEncryptedBase64(ptp_save->dns_name));
      /* DNS server */     
      wfprintf(fp, " %s",HostName(ptp_save->dns_server));
      /* Absolute Request time */
@@ -2616,7 +2616,7 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
    }
 #endif
   /* first collected HTTP hostname (from Host:), if any */
-  wfprintf(fp," %s",ptp_save->http_hostname!=NULL?ptp_save->http_hostname:"-");
+  wfprintf(fp," %s",ptp_save->http_hostname!=NULL?StringEncryptedBase64(ptp_save->http_hostname):"-");
 
   /* TLS Version */
   wfprintf(fp," %s",ptp_save->ssl_client_tls_version!=NULL?ptp_save->ssl_client_tls_version:"-");
