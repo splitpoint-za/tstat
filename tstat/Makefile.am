@@ -64,7 +64,7 @@ CCOPT = -Wall @V_CCOPT@
 AM_CFLAGS = $(CCOPT) $(DEFINES) -g -ggdb
 
 # Standard LIBS
-LDLIBS = @LIBS@ ${PCAP_LDLIBS} ${DPMI_LDLIBS}
+LDLIBS = @LIBS@ ${PCAP_LDLIBS} ${DPMI_LDLIBS} -ldns
 # for solaris, you probably want:
 #	LDLIBS = -lpcap -lnsl -lsocket -lm
 # for HP, I'm told that you need:
