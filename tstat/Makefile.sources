@@ -45,8 +45,7 @@ HDR_FILES = \
     $(top_srcdir)/tstat/base64.h\
     $(top_srcdir)/tstat/rijndael.h\
     $(top_srcdir)/tstat/uthash.h\
-    $(top_srcdir)/tstat/globals.h\
-    $(top_srcdir)/tstat/log_dns.h
+    $(top_srcdir)/tstat/globals.h
 
 CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/etherpeek.c \
@@ -104,5 +103,4 @@ CFILES=$(top_srcdir)/tstat/compress.c \
        $(top_srcdir)/tstat/panon.c\
        $(top_srcdir)/tstat/crypto.c\
        $(top_srcdir)/tstat/globals.c\
-       $(top_srcdir)/tstat/tls_services.c\
-       $(top_srcdir)/tstat/log_dns.c
+       $(top_srcdir)/tstat/tls_services.c

@@ -143,13 +143,6 @@ proto_init ()
 #endif
 
 
-#ifdef LOG_DNS
-  proto_register (PROTOCOL_UDP, "LOG_DNS", "Log DNS generator",
-		  (void *) check_dns,
-		  (void *) dns_flow_stat,
-          NULL,
-          NULL);
-#endif
 
 
 
