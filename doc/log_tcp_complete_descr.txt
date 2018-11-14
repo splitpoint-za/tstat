@@ -189,6 +189,8 @@ status of the other stat sets). All the other columns will be relative to K.
 # K+21      # TLS Client Supported Versions # - # For TLS flows, sequence of supported TLS versions advertized by the Client (TLS 1.3)
 # K+22      # TLS Server Supported Version  # - # For TLS flows, supported TLS version declared by the Server (TLS 1.3)
 ###############################################################################
+# K+23      # DNS resolver encrypted    # -     # 1 if the IP address of the DNS resolver is encrypted, 0 otherwise
+###############################################################################
 
 NPN (Next Protocol Negotiation) is the old TLS mechanism to negotiate the application layer 
 to be used over TLS, identified by the code 0x3374 followed, possibly, by a list of supported 

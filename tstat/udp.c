@@ -188,6 +188,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 	 memcpy((&pup->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
 	 pup->request_time = dns_data->request_time;
 	 pup->response_time = dns_data->response_time;
+	 pup->crypto_dns = crypto_ipv6(pup->dns_server.un.ip6);
      }
 #ifdef SUPPORT_MIXED_DNS
     else {
@@ -200,6 +201,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 	 pup->dns_server.un.ip4.s_addr = map_6to4(&(dns_data->dns_server));
 	 pup->request_time = dns_data->request_time;
 	 pup->response_time = dns_data->response_time;
+	 pup->crypto_dns = crypto_ip(pup->dns_server.un.ip4);
        }
     }
 #endif /* SUPPORT_MIXED_DNS */
@@ -215,6 +217,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 	  memcpy((&pup->dns_server.un.ip4),&(dns_data->dns_server),sizeof(struct in_addr));
 	  pup->request_time = dns_data->request_time;
 	  pup->response_time = dns_data->response_time;
+	  pup->crypto_dns = crypto_ip(pup->dns_server.un.ip4);
      }
 #if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
     else {
@@ -227,6 +230,7 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
 	 memcpy((&pup->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
 	 pup->request_time = dns_data->request_time;
 	 pup->response_time = dns_data->response_time;
+	 pup->crypto_dns = crypto_ipv6(pup->dns_server.un.ip6);
        }
     }
 #endif /* SUPPORT_IPV6 && SUPPORT_MIXED_DNS */

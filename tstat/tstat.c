@@ -67,9 +67,9 @@ static int LoadWhiteNets (char *file);
 static void ProcessFile (char *filename, Bool last);
 #endif
 
-static Bool internal_ip (struct in_addr adx);
-static Bool cloud_ip (struct in_addr adx);
-static Bool crypto_ip (struct in_addr adx);
+// static Bool internal_ip (struct in_addr adx);
+// static Bool cloud_ip (struct in_addr adx);
+// static Bool crypto_ip (struct in_addr adx);
 /*
 static Bool internal_ip_string (char *adx);
 */
@@ -990,6 +990,9 @@ int  write_tcplog_header_block(FILE *fp, int block, int base_column)
        
        wfprintf(fp, " c_TLSvers:%d", col++); // first HTTP hostname (from Host:) if collected and present
        wfprintf(fp, " s_TLSvers:%d", col++); // first HTTP hostname (from Host:) if collected and present
+#ifdef DNS_CACHE_PROCESSOR
+       wfprintf(fp, " dns_enc:%d", col++);       // dns server ip address is encrypted
+#endif
        break;
      case TCP_LOG_P2P:
        wfprintf(fp, " p2p_st:%d", col++);	 // 103: p2p subtype

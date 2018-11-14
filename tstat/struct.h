@@ -787,6 +787,7 @@ struct stcp_pair
   ipaddr  dns_server;
   timeval request_time;
   timeval response_time;
+  Bool    crypto_dns;  /* DNS Server matches the crypto requirements */
   
   /* Exclude packets from this flow when generating the tcp_complete.pcap */
    Bool stop_dumping_tcp;
@@ -1096,6 +1097,7 @@ struct sudp_pair
   ipaddr  dns_server;
   timeval request_time;
   timeval response_time;
+  Bool    crypto_dns;  /* DNS Server matches the crypto requirements */
   
   /* QUIC info */
   char *quic_sni_name;

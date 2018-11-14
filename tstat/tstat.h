@@ -806,6 +806,10 @@ void log_parse_ini_arg(char *param_name, param_value param_value);
 void log_parse_end_section(void);
 void log_parse_start_section(void);
 
+Bool internal_ip (struct in_addr adx);
+Bool cloud_ip (struct in_addr adx);
+Bool crypto_ip (struct in_addr adx);
+
 /* PROFILE VARIABLES */
 #include <sys/times.h>
 /* PROFILE VARIABLES */

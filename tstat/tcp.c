@@ -443,6 +443,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 memcpy((&ptp->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
+	 ptp->crypto_dns = crypto_ipv6(ptp->dns_server.un.ip6);
      }
 #ifdef SUPPORT_MIXED_DNS
     else {
@@ -455,6 +456,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 ptp->dns_server.un.ip4.s_addr = map_6to4(&(dns_data->dns_server));
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
+	 ptp->crypto_dns = crypto_ip(ptp->dns_server.un.ip4);
        }
     }
 #endif /* SUPPORT_MIXED_DNS */
@@ -474,6 +476,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 memcpy((&ptp->dns_server.un.ip4),&(dns_data->dns_server),sizeof(struct in_addr));
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
+	 ptp->crypto_dns = crypto_ip(ptp->dns_server.un.ip4);
      }
 #if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
     else {
@@ -486,6 +489,7 @@ NewTTP_2 (struct ip *pip, struct tcphdr *ptcp)
 	 memcpy((&ptp->dns_server.un.ip6),&(dns_data->dns_server),sizeof(struct in6_addr));
 	 ptp->request_time = dns_data->request_time;
 	 ptp->response_time = dns_data->response_time;
+	 ptp->crypto_dns = crypto_ipv6(ptp->dns_server.un.ip6);
        }
     }
 #endif /* SUPPORT_IPV6 && SUPPORT_MIXED_DNS */
@@ -2604,7 +2608,10 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
    {
      wfprintf(fp, " %s",StringEncryptedBase64(ptp_save->dns_name));
      /* DNS server */     
-     wfprintf(fp, " %s",HostName(ptp_save->dns_server));
+     if (ptp_save->crypto_dns==FALSE)
+       wfprintf(fp, " %s",HostName(ptp_save->dns_server));
+     else
+       wfprintf(fp, " %s",HostNameEncrypted(ptp_save->dns_server));
      /* Absolute Request time */
      wfprintf(fp, " %f", time2double(ptp_save->request_time) / 1000.);
       /* Absolute Response time */
@@ -2621,6 +2628,18 @@ void print_tcp_stats_layer7(FILE *fp, tcp_pair *ptp_save, tcb *pab, tcb *pba)
   /* TLS Version */
   wfprintf(fp," %s",ptp_save->ssl_client_tls_version!=NULL?ptp_save->ssl_client_tls_version:"-");
   wfprintf(fp," %s",ptp_save->ssl_server_tls_version!=NULL?ptp_save->ssl_server_tls_version:"-");
+
+  #ifdef DNS_CACHE_PROCESSOR
+  // Additional column to indicate if the DNS server address is encrypted
+  if (ptp_save->dns_name!=NULL && ptp_save->crypto_dns!=FALSE)
+   {
+     wfprintf(fp, " 1");
+   }
+  else
+   {
+     wfprintf(fp, " 0");
+   }
+#endif
 
   
  /*  Uncomment if we need to trace which TLS connections are popular and not classified */
