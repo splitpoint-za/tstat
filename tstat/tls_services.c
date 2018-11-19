@@ -21,9 +21,9 @@
 #include <regex.h>
 
 /* Patterns for TLS classifications*/
-regex_t services_tls_sni_re[30];
-regex_t services_tls_cn_re[30];
-regex_t services_fqdn_re[30];
+regex_t services_tls_sni_re[50];
+regex_t services_tls_cn_re[50];
+regex_t services_fqdn_re[50];
 
 void init_tls_patterns();
 void init_services_tls_sni_patterns();
@@ -35,6 +35,7 @@ Bool is_tls_netflix(tcp_pair *ptp_save);
 Bool is_tls_dropbox(tcp_pair *ptp_save);
 Bool is_tls_microsoft(tcp_pair *ptp_save);
 Bool is_tls_apple(tcp_pair *ptp_save);
+Bool is_tls_instagram(tcp_pair *ptp_save);
 
 enum service_names {
     FACEBOOK_S = 0,
@@ -44,6 +45,7 @@ enum service_names {
     NETFLIX_S,
     MICROSOFT_S,
     APPLE_S,
+    INSTAGRAM_S,
     LAST_S
 };
 
@@ -106,22 +108,31 @@ void init_services_tls_sni_patterns()
   /* Microsoft */
   
   tls_sni_s_index[MICROSOFT_S] = i;
+  regcomp(&services_tls_sni_re[i++],"^officecdn$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.live\\.com$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.microsoft\\.com$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.windows\\.net$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.live\\.net$",REG_NOSUB);
+  regcomp(&services_tls_sni_re[i++],"\\.sharepoint\\.com$",REG_NOSUB);
   tls_sni_e_index[MICROSOFT_S] = i-1;
 
   /* Apple */
   
   tls_sni_s_index[APPLE_S] = i;
+  regcomp(&services_tls_sni_re[i++],"\\.icloud-content\\.com$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.apple\\.com$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.icloud\\.com$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.apple\\.com\\.$",REG_NOSUB);
   regcomp(&services_tls_sni_re[i++],"\\.icloud\\.com\\.$",REG_NOSUB);
-  regcomp(&services_tls_sni_re[i++],"\\.icloud-content\\.com$",REG_NOSUB);
   tls_sni_e_index[APPLE_S] = i-1;
 
+  /* Instagram */
+  
+  tls_sni_s_index[INSTAGRAM_S] = i;
+  regcomp(&services_tls_sni_re[i++],"\\.cdninstagram\\.com$",REG_NOSUB);
+  regcomp(&services_tls_sni_re[i++],"\\.instagram\\.com$",REG_NOSUB);
+  regcomp(&services_tls_sni_re[i++],"^instagram\\..*\\.fbcdn\\.net$",REG_NOSUB);
+  tls_sni_e_index[INSTAGRAM_S] = i-1;
 }
 
 void init_services_tls_cn_patterns()
@@ -309,12 +320,40 @@ Bool is_tls_dropbox(tcp_pair *ptp_save)
  return FALSE;
 }
 
+Bool is_tls_instagram(tcp_pair *ptp_save)
+{
+  int idx;
+
+  if (!(ptp_save->con_type & SSL_PROTOCOL))
+    return FALSE;
+
+  if (ptp_save->ssl_client_subject!=NULL)
+   {
+     for (idx = tls_sni_s_index[INSTAGRAM_S]; idx <= tls_sni_e_index[INSTAGRAM_S]; idx++)
+      {
+        if (regexec(&services_tls_sni_re[idx],ptp_save->ssl_client_subject,0,NULL,0)==0) 
+          return TRUE;
+      }
+   }
+   
+ return FALSE;
+}
+
 void map_tls_service(tcp_pair *ptp)
 {
 //  printf("Yeah, TLS! %s!\n",(ptp->ssl_client_subject!=NULL ? ptp->ssl_client_subject:"--"));
-  if (is_tls_facebook(ptp))
+  if (is_tls_instagram(ptp))
+    /* Instagram before Facebook because an Instagram rule can match also a Facebook one */
+   {
+     ptp->tls_service = TLS_INSTAGRAM;
+   }
+  else if (is_tls_facebook(ptp))
    {
      ptp->tls_service = TLS_FACEBOOK;
+   }
+  else if (is_tls_microsoft(ptp))
+   {
+     ptp->tls_service = TLS_MICROSOFT;
    }
   else if (is_tls_google(ptp))
    {
@@ -328,10 +367,6 @@ void map_tls_service(tcp_pair *ptp)
    {
      ptp->tls_service = TLS_DROPBOX;
    }
-  else if (is_tls_microsoft(ptp))
-   {
-     ptp->tls_service = TLS_MICROSOFT;
-   }
   else if (is_tls_apple(ptp))
    {
      ptp->tls_service = TLS_APPLE;
@@ -342,7 +377,7 @@ void map_tls_service(tcp_pair *ptp)
    }
 /* 
   Another possible idea: there might be a catch-all matching for CDNs like Akamai to be matched if 
-  everithing else failed (if we ever decide to have an Akamai category)
+  everything else failed (if we ever decide to have an Akamai category)
 */
   else
    {

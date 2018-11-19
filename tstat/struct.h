@@ -646,6 +646,7 @@ enum tls_category
   TLS_DROPBOX,        /* 5 - Dropbox 					*/
   TLS_MICROSOFT,      /* 6 - Microsoft services (Live.com) 		*/
   TLS_APPLE,          /* 7 - Apple and iCloud 				*/
+  TLS_INSTAGRAM,      /* 8 - Instagram 					*/
   TLS_LAST_TYPE
 };
 
