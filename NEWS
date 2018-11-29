@@ -1,4 +1,4 @@
-News in 3.1.9
+News in 3.2.0
 -------------
 * Improved and reworked IPv6 management:
     - IPv6 datagrams will respect the direction (internal/external) determined by the MAC 

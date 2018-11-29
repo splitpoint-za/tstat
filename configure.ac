@@ -5,10 +5,10 @@
 
 # define variables for version numbers
 m4_define([_version_major], [3])
-m4_define([_version_minor], [1])
-m4_define([_version_bugfix], [9])
-m4_define([_version_date], ["Mon Jun 11 15:34:27 CEST 2018"])
-m4_define([_version_flavor], ["Hindenburg"])
+m4_define([_version_minor], [2])
+m4_define([_version_bugfix], [0])
+m4_define([_version_date], ["Thu Nov 29 18:35:05 CET 2018"])
+m4_define([_version_flavor], ["Krakatoa"])
 m4_define([_libtstat_version], [1.0.0])
 
 AC_INIT([tstat], 
@@ -243,13 +243,35 @@ fi
 
 #####################
 ## LDNS library
-
-AC_CHECK_LIB([ldns], [ldns_wire2pkt], [AC_CHECK_HEADERS(ldns/ldns.h, have_ldns=yes, have_ldns=no)], [have_ldns=no])
-if test "x$have_ldns" = "xyes"; then
+## --enable-ldns option
+ENABLE_LDNS=no
+AC_ARG_ENABLE(ldns, 
+    AS_HELP_STRING([--enable-ldns], [enable generation of DNS log files (requires ldns and ldns-devel packages)]),
+    ENABLE_LDNS=$enableval)
+AM_CONDITIONAL([LDNS], [test "x$ENABLE_LDNS" = "xyes"])
+if test ".${ENABLE_LDNS}" = ".yes"; then
+  AC_CHECK_LIB([ldns], [ldns_wire2pkt], [AC_CHECK_HEADERS(ldns/ldns.h, have_ldns=yes, have_ldns=no)], [have_ldns=no])
+  if test "x$have_ldns" = "xyes"; then
     V_DEFINES="$V_DEFINES -DHAVE_LDNS"
     LIBS="$LIBS -lldns"
+  else
+    echo
+    echo "*******************************************************************"
+    echo "*"
+    echo "* ERROR: LDNS libraries or headers are not installed"
+    echo "*"
+    echo "*>>> No way to proceed."
+    echo "*"
+    echo "*???     1. Install ldns and ldns-devel and rerun ./configure"
+    echo "*???  or 2. Do not use the --enable-ldns option"
+    echo "*"
+    echo "*******************************************************************"
+    echo
+    AC_MSG_ERROR(Unable to continue... aborting ./configure)
+  fi
+else
+  have_ldns=no
 fi
-
 
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
