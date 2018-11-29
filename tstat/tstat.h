@@ -795,6 +795,12 @@ void make_tcpL7_rate_stats (tcp_pair *thisflow, int len);
 void make_udpL7_rate_stats (ucb * thisflow, int len);
 void mse_protocol_check(tcp_pair *thisflow);
 
+/* DNS log */
+#ifdef HAVE_LDNS
+void * check_dns(struct udphdr *pudp, int tproto, void *pdir, void *plast);
+void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir, int dir, void *hdr, void *plast);
+#endif // HAVE_LDNS
+
 /* web */
 enum http_content classify_http_get(void *pdata,int data_length);
 enum http_content classify_http_post(void *pdata,int data_length);
@@ -835,6 +841,9 @@ extern  long log_bitmask;
 #define LOG_HTTP_COMPLETE       0x0200
 #define LOG_CHAT_MSNOTHER       0x1000  
 #define LOG_L3_BITRATE          0x2000  // -3 command line option (disabled by default)
+#ifdef HAVE_LDNS
+#define LOG_DNS_COMPLETE        0x0400
+#endif //HAVE_LDNS
 // overall mask
 #define LOG_ALL                 (((1<<9)-1))
 

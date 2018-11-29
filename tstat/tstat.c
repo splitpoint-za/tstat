@@ -316,6 +316,10 @@ FILE *fp_video_logc = NULL;
 
 FILE *fp_http_logc = NULL;
 
+#ifdef HAVE_LDNS
+FILE *fp_dns_logc = NULL;
+#endif // HAVE_LDNS
+
 long log_bitmask = LOG_ALL;
 
 /* discriminate Direction */
@@ -1372,6 +1376,36 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp, "\n");
    }
 
+#ifdef HAVE_LDNS
+  else if (log_type == LOG_DNS_COMPLETE) 
+   {
+    col = 1;
+    wfprintf (fp,"#c_ip:%d",col++);	
+    wfprintf (fp," c_port:%d",col++);	
+    wfprintf (fp," c_isint:%d",col++);	
+    wfprintf (fp," c_iscrypto:%d",col++);	
+    wfprintf (fp," s_ip:%d",col++);	
+    wfprintf (fp," s_port:%d",col++);	
+    wfprintf (fp," s_isint:%d",col++);	
+    wfprintf (fp," s_iscrypto:%d",col++);	
+    wfprintf (fp," time:%d",col++);	
+    wfprintf (fp," entry:%d",col++);	
+    wfprintf (fp," trans_id:%d",col++);	
+    wfprintf (fp," query:%d",col++);	
+    wfprintf (fp," ttl:%d",col++);	
+    wfprintf (fp," class:%d",col++);	
+    wfprintf (fp," type:%d",col++);	
+    wfprintf (fp," answer:%d",col++);	
+    wfprintf (fp," flags:%d",col++);	
+    wfprintf (fp," qdcount:%d",col++);	
+    wfprintf (fp," ancount:%d",col++);	
+    wfprintf (fp," nscount:%d",col++);	
+    wfprintf (fp," arcount:%d",col++);	
+    wfprintf (fp," pkt_size:%d",col++);	
+    wfprintf(fp, "\n");
+   }
+#endif
+
     /**************************************************
      * LOG_CHAT_MESSAGES
      **************************************************/
@@ -1580,6 +1614,13 @@ create_new_outfiles (char *input_filename, Bool reuse_dir)
   }
 #endif
 
+#ifdef HAVE_LDNS
+  if (LOG_IS_ENABLED(LOG_DNS_COMPLETE)) {
+      reopen_logfile(&fp_dns_logc,basename,"log_dns_complete");
+      write_log_header(fp_dns_logc,LOG_DNS_COMPLETE);
+  }
+#endif
+
     if (runtime_engine)
         dump_create_outdir(basename);
 }
@@ -1622,6 +1663,10 @@ void close_all_logfiles()
 
       if (fp_http_logc != NULL) { gzclose(fp_http_logc); fp_http_logc=NULL; }
 
+#ifdef HAVE_LDNS
+      if (fp_dns_logc != NULL) { gzclose(fp_dns_logc); fp_dns_logc=NULL; }
+#endif 
+
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { gzclose(fp_dup_ooo); fp_dup_ooo=NULL; }
 #endif
@@ -1661,6 +1706,10 @@ void close_all_logfiles()
 #endif
 
       if (fp_http_logc != NULL) { fclose(fp_http_logc); fp_http_logc=NULL; }
+
+#ifdef HAVE_LDNS
+      if (fp_dns_logc != NULL) { fclose(fp_dns_logc); fp_dns_logc=NULL; }
+#endif
 
 #ifdef LOG_OOO
       if (fp_dup_ooo != NULL) { fclose(fp_dup_ooo); fp_dup_ooo=NULL; }
@@ -4441,6 +4490,11 @@ void log_parse_ini_arg(char *param_name, param_value enabled) {
 #endif
     else if (strcmp(param_name, "log_http_complete") == 0) {
         log_parse_ini_arg_log_bitmask(fp_http_logc, LOG_HTTP_COMPLETE, "log_http_complete", enabled.value.ivalue);
+    }
+    else if (strcmp(param_name, "log_dns_complete") == 0) {
+#ifdef HAVE_LDNS
+        log_parse_ini_arg_log_bitmask(fp_dns_logc, LOG_DNS_COMPLETE, "log_dns_complete", enabled.value.ivalue);
+#endif
     }
     else {
         fprintf(fp_stderr, "ini reader: '%s' - unknown keyword\n", param_name);

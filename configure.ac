@@ -241,6 +241,15 @@ else
   have_zlib=no
 fi
 
+#####################
+## LDNS library
+
+AC_CHECK_LIB([ldns], [ldns_wire2pkt], [AC_CHECK_HEADERS(ldns/ldns.h, have_ldns=yes, have_ldns=no)], [have_ldns=no])
+if test "x$have_ldns" = "xyes"; then
+    V_DEFINES="$V_DEFINES -DHAVE_LDNS"
+    LIBS="$LIBS -lldns"
+fi
+
 
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
@@ -277,6 +286,7 @@ echo \
     - pcap      yes
     - zlib      ${have_zlib}
     - rrd       ${have_rrd}
+    - ldns      ${have_ldns}
     - libtstat  ${ENABLE_LIBTSTAT}
     - rrdthread ${ENABLE_RRDTHREAD}
 --------------------------------------------------"

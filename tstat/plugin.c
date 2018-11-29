@@ -100,6 +100,14 @@ proto_init ()
 		  (void *) make_videoL7_conn_stats);
 #endif
 
+#ifdef HAVE_LDNS
+  proto_register (PROTOCOL_UDP, "LOG_DNS", "Log DNS generator",
+		  (void *) check_dns,
+		  (void *) dns_flow_stat,
+          NULL,
+          NULL);
+#endif
+
 #ifdef DNS_CACHE_PROCESSOR
    if (dns_enabled)
     {
@@ -141,11 +149,6 @@ proto_init ()
           (void *) make_skype_conn_stats);
     }
 #endif
-
-
-
-
-
 
   /* 
      example to add a new protocol analyzer:
