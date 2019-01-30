@@ -34,9 +34,9 @@
 #
 # *) verbatim paragraphs
 #          any section that begins
+=encoding utf8
 
 =pod
-
 
 
 =begin latex
@@ -717,15 +717,15 @@ packet.
 
 Therefore, when applicable, Tstat will keep track of measurements referring to
 the same measured quantity by I<appending> a specific tag (see L<"Histograms">) or using a I<flag> 
-(see L<Logs>).
+(see L<"Logs">).
 
 
 
 
-=head2 Logs 
+=head2 Logs
 
 
-=for html <a name="logs"></a>
+=for html <a name="Logs"></a>
 
 
 Tstat creates a set of TXT flow files in the main output directory: C<log_tcp_complete>,
@@ -1094,7 +1094,7 @@ analysis rate is roughly 85Kpkts/sec or 3Kflows/sec.
 In order to get Tstat RRD module working, you will need to install RRDtool first
 (refer to the homepage of RRDtool L<http://oss.oetiker.ch/rrdtool/>  to accomplish this step).
 The autoconf file C<configure> of Tstat then should automatically add the RRD support 
-if it find one (see L<Complete control of building | "Complete control of Building">).
+if it find one (see L<Complete control of Building|"Complete control of Building">).
 
 
 
@@ -1285,6 +1285,7 @@ The configuration file has an C<ini> file syntax:
     log_tcp_complete = 0            # tcp connections correctly terminated
     log_tcp_nocomplete = 0          # tcp connections not properly terminated
     log_udp_complete = 0            # udp flows
+    log_dns_complete = 0            # DNS traffic
     log_mm_complete = 0             # multimedia 
     log_skype_complete = 0          # skype traffic
     log_chat_complete = 0           # MSN/Yahoo/Jabber chat flows
@@ -1878,20 +1879,18 @@ using tstat_report data.
 
 
     Maurizio Munafo'    <maurizio.munafo@polito.it>
-    Alessandro Finamore <alessandro.finamore@telefonica.com>
+    Martino Trevisan <martino.trevisan@polito.it>
 
 =item Other active authors:
 
 
     Marco Mellia <marco.mellia@polito.it>
-    Dario Rossi  <dario.rossi@telecom-paristech.fr> 
-    Martino Trevisan <martino.trevisan@studenti.polito.it>
 
 =item Other authors:
 
 
     Andrea Carpani, Luca Muscariello, Dario Bonfiglio, Robert Birke, 
-    Vinicius Gehlen, Ignacio Bermudez
+    Vinicius Gehlen, Ignacio Bermudez, Alessandro Finamore, Dario Rossi
 
 
 =item Other links:
@@ -1923,7 +1922,7 @@ continue investing in Tstat.
 
 
 
-Copyright (c) 2001-2015 Politecnico di Torino.  All rights reserved.
+Copyright (c) 2001-2018 Politecnico di Torino.  All rights reserved.
 
  
 This program is free software; you can redistribute it and/or modify

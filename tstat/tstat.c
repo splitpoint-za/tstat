@@ -17,7 +17,7 @@
 */
 
 static char const copyright[] =
-  "@(#)Copyright (c) 2001-2009 -- Telecomunication Network Group \
+  "@(#)Copyright (c) 2001-2018 -- Telecomunication Network Group \
      -- Politecnico di Torino.  All rights reserved.\
      Tstat is based on TCPTRACE,\
     @(#)Copyright (c) 1999 -- Shawn Ostermann -- Ohio University.\n";
@@ -640,7 +640,7 @@ static void
 Version (void)
 {
   fprintf (fp_stderr, "\nVersion: %s\n", tstat_version);
-  fprintf (fp_stderr, "Compiled by <%s>, the <%s> on machine <%s>",
+  fprintf (fp_stderr, "Compiled by <%s>, on <%s> on machine <%s>",
 	   built_bywhom, built_when, built_where);
 #ifdef SUPPORT_IPV6
   fprintf (fp_stderr, ANSI_BOLD " with " ANSI_RESET);
@@ -651,6 +651,13 @@ Version (void)
 #if defined(SUPPORT_IPV6) && defined(SUPPORT_MIXED_DNS)
   fprintf (fp_stderr, " (mixed DNS)");
 #endif
+  fprintf (fp_stderr, " and");
+#ifdef HAVE_LDNS
+  fprintf (fp_stderr, ANSI_BOLD " with " ANSI_RESET);
+#else
+  fprintf (fp_stderr, ANSI_BOLD " without " ANSI_RESET);
+#endif
+  fprintf (fp_stderr, "LDNS (log_dns) support");
   fprintf (fp_stderr, "\n\n");
 }
 
