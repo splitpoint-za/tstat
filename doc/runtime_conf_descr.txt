@@ -24,6 +24,7 @@ The configuration file has an C<ini> file syntax:
     log_tcp_complete = 0            # tcp connections correctly terminated
     log_tcp_nocomplete = 0          # tcp connections not properly terminated
     log_udp_complete = 0            # udp flows
+    log_dns_complete = 0            # DNS traffic
     log_mm_complete = 0             # multimedia 
     log_skype_complete = 0          # skype traffic
     log_chat_complete = 0           # MSN/Yahoo/Jabber chat flows
