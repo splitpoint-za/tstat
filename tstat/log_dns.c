@@ -197,6 +197,10 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
         if (question[1] == '\0')      
           strcpy(question+1,"-");
 
+        // Sanitize Question
+        replace_char ( question+1, ' ',  '\t', MAX_SUB);
+        replace_char ( question+1, '\n', '\t', MAX_SUB);
+
         // Get class and type
         class_str =	rr_class2str(ldns_rr_get_class (rr));
         type_str =	rr_type2str (ldns_rr_get_type (rr));
@@ -237,6 +241,10 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
           // Replace empty string with "-"
           if (question[1] == '\0')      
             strcpy(question+1,"-");
+
+          // Sanitize Question
+          replace_char ( question+1, ' ',  '\t', MAX_SUB);
+          replace_char ( question+1, '\n', '\t', MAX_SUB);
 
           // Get class and type
           char * class_str =	rr_class2str(ldns_rr_get_class (rr));
