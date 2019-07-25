@@ -1022,6 +1022,7 @@ typedef struct ucb
   enum QUIC_udp_state QUIC_state;
   char QUIC_conn_id[8];
   int QUIC_seq_nr;
+  int QUIC_dir; /* 0 (client side) / 1 (server side) */
   Bool is_QUIC;
 
   int VOD_scrambled_sig[2];
