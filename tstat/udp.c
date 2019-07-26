@@ -675,107 +675,27 @@ void get_QUIC_tags(unsigned char *base, int data_len, ucb *thisdir)
   
   // Verify we do not exceed data_len 
   if ( !(
+          ( /* QUIC < v46 */
           ( base[8]==0x0d || base[8]==0x0c || base[8]==0x08 || base[8]==0x09 ) && 
           ( data_len > 8+14+12+4+4)
-        )
-     )
-    return; /* Minimal conditions failed */
-    
-    // If it is a 0x0d/0x0c/0x08/0x09, I know quic_hdr_size ; 
-    // check the packet is long enough to perform the check (42 bytes)
-  quic_hdr_size = ( base[8]==0x0d || base[8]==0x09 )? 14 : 10; 
-   
-    // Check if there it is a CHLO: must add UDP header, Hash, STREAM
-  base_string_index = 8 + quic_hdr_size + 12 + 4;
-    
-  if ( memcmp ( &base[base_string_index], "CHLO", 4) == 0 )
-   {
-     // Get the number of TAGs, which is exatcly after CHLO
-     int tag_nb = get_u32(base,base_string_index + 4);
- 
-     // Calculate base offset
-     int base_offset= 8 + quic_hdr_size + 12 + 12 + 8*tag_nb;
-     // Calculate where to start iterate over TAGs
-     int base_tags= 8 + quic_hdr_size + 12 + 12;
-     int i;
-     int last_tag = 0;
-     
-      thisdir->pup->quic_chlo  = 1 ;
-
-     // Check the packet is long enough to include all the tags
-     if (  data_len < base_tags + tag_nb * 8 )
-        return;
-        
-     // Iterate over tags
-     for (i=0;i<tag_nb;i++)
-      {
-        // Get where start this tag
-        int base_this_tag = base_tags + i*8;
-        // Get the offset of data pointed by this tag
-        int tag_value_last_byte = get_u32(base,base_this_tag + 4);
-                 
-        // Match SNI
-        if ( memcmp(&base[base_this_tag], "SNI", 3)==0 && last_tag!=0 )
-         {
-           // Copy SNI
-           int sni_len = tag_value_last_byte - last_tag;
-           // Check the packet is long enough to include SNI
-           if (data_len < base_offset+last_tag + sni_len)
-              return;
-           memcpy( quic_buffer, &base[base_offset+last_tag ], 
-	                        sni_len<QUIC_BUFFER_SIZE?sni_len:QUIC_BUFFER_SIZE);
-           quic_buffer[sni_len<QUIC_BUFFER_SIZE?sni_len:QUIC_BUFFER_SIZE]='\0';
-	   if (thisdir->pup->quic_sni_name==NULL)
-	    { 
-	      thisdir->pup->quic_sni_name = strdup(quic_buffer);
-	    } 
-         }
-        // Match UAID
-        if ( memcmp(&base[base_this_tag], "UAID", 4)==0 && last_tag!=0 )
-	 {
-           // Copy UAID
-           int uaid_len = tag_value_last_byte - last_tag;
-           // Check the packet is long enough to include UAID
-           if (data_len < base_offset+last_tag + uaid_len)
-              return;
-           memcpy( quic_buffer, &base[base_offset+last_tag ], 
-	                        uaid_len<QUIC_BUFFER_SIZE?uaid_len:QUIC_BUFFER_SIZE);
-           quic_buffer[uaid_len<QUIC_BUFFER_SIZE?uaid_len:QUIC_BUFFER_SIZE]='\0';
-           // URLencode the string to remove/hide unwanted chars and 
-	   // to print it as single field in the logs
-	   if (thisdir->pup->quic_ua_string==NULL)
-	    { 
-	      thisdir->pup->quic_ua_string = url_encode(quic_buffer);
-	    } 
-         }
-       // Update previous tag pointed area
-       last_tag = tag_value_last_byte;
-     } // Close for
-   } // Close if (CHLO)
-  else if ( memcmp ( &base[base_string_index - 2], "REJ", 3) == 0 )
-   {
-     thisdir->pup->quic_rej = 1 ;
-   }
-
-  return;
-}
-
-void get_QUIC_tags2(unsigned char *base, int data_len, ucb *thisdir)
-{
-  int quic_hdr_size=0;
-  int base_string_index;
-  
-  // Verify we do not exceed data_len 
-  if ( !(
-          ( base[8]==0xc3 || base[8]==0xd3) && 
+	  )
+	  ||
+          ( /* QUIC >= v46 */
+	  ( base[8]==0xc3 || base[8]==0xd3) && 
           ( data_len > 8+18+12+4+4)
+          )
         )
      )
     return; /* Minimal conditions failed */
     
-    // If it is a 0x0d/0x0c/0x08/0x09, I know quic_hdr_size ; 
+    // If it is a 0x0d/0x0c/0x08/0x09/0xc3/0xd3, I know quic_hdr_size ; 
     // check the packet is long enough to perform the check (42 bytes)
-  quic_hdr_size = ( base[8]==0xd3 || base[8]==0xc3 )? 18 : 10; 
+    if ( base[8]==0x0d || base[8]==0x09 )
+      quic_hdr_size = 14;
+    else if ( base[8]==0xd3 || base[8]==0xc3 )
+      quic_hdr_size = 18;
+    else
+      quic_hdr_size = 10;
    
     // Check if there it is a CHLO: must add UDP header, Hash, STREAM
   base_string_index = 8 + quic_hdr_size + 12 + 4;
@@ -929,25 +849,6 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
   Diversification Nonce, when present, precedes the SeqNr).
   The OPEN packets have states 0x08/0x18 (like 0x0c and 0x1c) and 0x09 (like 0x0d) but the SeqNr position is
   the same.
-  
-  Jun-Jul 2019 -
-  Starting from QUIC version 46 Google decided to change the packet header to be compatible with the IETF QUIC
-
-  We currently try to identify only Google QUIC, since the specifics for other IETF QUIC formats are not widespread.
-  
-  From the documents, the public flag should now be 
-  Long Header  11 tt rr pp 
-  Short Header 01 rrrr  pp
-
-  From the capture we have:
-  0xc3 - 4 byte SeqNr  - OPEN CID 4B V
-  0xd3 - 4 byte SeqNr  - OPEN CID 4B ?
-  0x40 - Data 1 byte SeqNr - DATA_1B
-  0x41 - Data 2 byte SeqNr - DATA_2B
-  
-  The CID is direction dependent and for Google is currenly 8 bytes
-  
-  We try to enstate the same rules than before
   
 */
      case QUIC_UNKNOWN:
@@ -1209,12 +1110,13 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
   0x40 - Data 1 byte SeqNr - DATA_1B
   0x41 - Data 2 byte SeqNr - DATA_2B
   
-  The CID is direction dependent and for Google is currenly 8 bytes
+  The CID is direction dependent and for Google is currently 8 bytes
   
   We try to enstate the same rules than before
   
   We suppose the Google logic for CID exchange, so that only the Destination CID is sent by the client, and the 
-  Source CID is always empty.
+  Source CID is always empty. We identify the flow direction (Client/Server) to be able to 
+  determine the packet number offset in the data (short header) packets.
   
 */
      case QUIC_UNKNOWN:
@@ -1234,7 +1136,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 		//printf("-- UNKNOWN->OPENV_SENT %d %d\n", thisdir->QUIC_dir , thisdir->QUIC_seq_nr);
 	      }
 #ifdef QUIC_DETAILS      
-             get_QUIC_tags2(base,data_len,thisdir);
+             get_QUIC_tags(base,data_len,thisdir);
 #endif      
 	     break;
 	  case 0x40:
@@ -1290,7 +1192,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 		 }
 	     }
 #ifdef QUIC_DETAILS      
-             get_QUIC_tags2(base,data_len,thisdir);
+             get_QUIC_tags(base,data_len,thisdir);
 #endif      
 	    break;
 	  case 0x40:
@@ -1334,7 +1236,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
 		//printf("-- DATA_SENT->OPENV_SENT %d %d\n", thisdir->QUIC_dir , thisdir->QUIC_seq_nr);
 	     }
 #ifdef QUIC_DETAILS      
-             get_QUIC_tags2(base,data_len,thisdir);
+             get_QUIC_tags(base,data_len,thisdir);
 #endif      
 	    break;
 	  case 0x40:
