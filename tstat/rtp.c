@@ -403,69 +403,81 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
     {
     case UDP_UNKNOWN:
       {
-	init_rtp (thisdir, dir, pudp, prtp, plast);
-	break;
+	    init_rtp (thisdir, dir, pudp, prtp, plast);
+	    break;
       }
     case FIRST_RTP:
       {
-	/* already got a packet ... double check it */
-	rtp_check (thisdir, prtp, dir, pip, plast);
-	break;
+	    /* already got a packet ... double check it */
+	    rtp_check (thisdir, prtp, dir, pip, plast);
+	    break;
       }
     case FIRST_RTCP:
       {
-	/* already got a packet ... double check it */
-	rtcp_check (thisdir, dir, prtp, plast);
-	break;
+	    /* already got a packet ... double check it */
+	    rtcp_check (thisdir, dir, prtp, plast);
+	    break;
       }
     case RTP:
       {
-	/* already identified the RTP flow... */
-	struct rtp *f_rtp;
-	f_rtp = &thisdir->flow.rtp;
-
-	if ((prtp->v == VALID_VERSION) && (f_rtp->ssrc == pssrc)
-	    && (prtp->pt < VALID_PT))
-	  rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-	else
-	  {
-	    /* The RTP flow is closed but not the UDP one */
-	    /* this should not happen... */
-            /* to simplify convertion to new file format removed printing RTP info */
-            /* anyeay if this happened it probably was not a RTP flow to begin with */
-	    
-	    //rtp_conn_stats (thisdir, dir);
-	    thisdir->type = UDP_UNKNOWN;
-	  }
-	break;
+	    /* already identified the RTP flow... Check if STUN or RTCP interleaved 
+	       and avoid resetting the state machine */
+	    struct rtp *f_rtp;
+	    f_rtp = &thisdir->flow.rtp;
+        u_int8_t pt_rtcp;
+        pt_rtcp = prtp->pt + (prtp->m << 7);
+        
+        /* RTP */
+	    if ((prtp->v == VALID_VERSION) && (f_rtp->ssrc == pssrc) && (prtp->pt < VALID_PT))
+	      rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+	    /* STUN */
+	    else if( ((char*)hdr)[0] == 0 || ((char*)hdr)[0] == 1  ){
+	      /* No action for STUN so far */
+	    }
+	    /* RTCP */
+	    else if( (prtp->v == VALID_VERSION) && (pt_rtcp >= RTCP_MIN_PT) && (pt_rtcp <= RTCP_MAX_PT)  ){
+	      /* No action for RTCP inside RTP so far */
+	    }
+	    /* OTHER -> reset status to UDP_UNKNOWN */
+	    else
+	      {
+	        /* The RTP flow is closed but not the UDP one */
+	        /* this should not happen... */
+                /* to simplify convertion to new file format removed printing RTP info */
+                /* anyeay if this happened it probably was not a RTP flow to begin with */
+	        //rtp_conn_stats (thisdir, dir);
+	        thisdir->type = UDP_UNKNOWN;
+	      }
+	    break;
       }
 
     case RTCP:
       {
-	/* already identified the RTCP flow... */
-	struct rtcp *f_rtcp;
-	struct sudp_pair *pup;
-	f_rtcp = &thisdir->flow.rtcp;
-	pup = thisdir->pup;
-	u_int8_t pt_rtcp = prtp->pt + (prtp->m << 7);
+	    /* already identified the RTCP flow... */
+	    struct rtcp *f_rtcp;
+	    struct sudp_pair *pup;
+	    f_rtcp = &thisdir->flow.rtcp;
+	    pup = thisdir->pup;
+	    u_int8_t pt_rtcp = prtp->pt + (prtp->m << 7);
 
-	if ((prtp->v == VALID_VERSION) && (f_rtcp->ssrc == pts) &&
-	    (pt_rtcp >= RTCP_MIN_PT) &&
-	    (pt_rtcp <= RTCP_MAX_PT) &&
-	    ((pup->addr_pair.a_port & 1) == 1) &&
-	    (pup->addr_pair.a_port > 1024))
-	  rtcp_stat (thisdir, dir, prtp, plast);
-	else
-	  {
-	    /* The RTCP flow is closed but not the UDP one */
-            /* to simplify convertion to new file format removed printing RTP info */
-            /* anyeay if this happened it probably was not a RTP flow to begin with */
-	    
-	    //rtcp_conn_stats (thisdir, dir);
-	    thisdir->type = UDP_UNKNOWN;
-	  }
-	break;
-
+	    if ((prtp->v == VALID_VERSION) && (f_rtcp->ssrc == pts) &&
+	        (pt_rtcp >= RTCP_MIN_PT) &&
+	        (pt_rtcp <= RTCP_MAX_PT) &&
+	        ((pup->addr_pair.a_port & 1) == 1) &&
+	        (pup->addr_pair.a_port > 1024))
+	      rtcp_stat (thisdir, dir, prtp, plast);
+	    else
+	      {
+	        /* The RTCP flow is closed but not the UDP one */
+                /* to simplify convertion to new file format removed printing RTP info */
+                /* anyeay if this happened it probably was not a RTP flow to begin with */
+	        
+	        //rtcp_conn_stats (thisdir, dir);
+	        thisdir->type = UDP_UNKNOWN;
+	      }
+	    break;
+      }
+      
     case SKYPE_E2E:
     case SKYPE_OUT:
     case SKYPE_SIG:

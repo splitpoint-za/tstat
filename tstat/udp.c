@@ -253,6 +253,8 @@ NewUTP (struct ip *pip, struct udphdr *pudp)
   pup->quic_chlo = 0;
   pup->quic_rej = 0;
   
+  pup->is_stun_initiated = 0;
+  
   return (utp[num_udp_pairs]);
 }
 

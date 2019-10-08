@@ -64,6 +64,7 @@ enum dump_proto_index{
     DUMP_UDP_COMPLETE,
     DUMP_TCP_VIDEOSTREAMING,
     DUMP_TCP_COMPLETE,
+    DUMP_UDP_STUN,
     DUMP_PROTOS
 };
 struct dump_file proto2dump[DUMP_PROTOS];
@@ -349,6 +350,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, DUMP_UDP_COMPLETE, "udp_complete");
     dump_reset_dump_file(proto2dump, DUMP_TCP_VIDEOSTREAMING, "tcp_videostreaming");
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
+    dump_reset_dump_file(proto2dump, DUMP_UDP_STUN, "udp_stun");
 }
 
 /*
@@ -618,6 +620,21 @@ void dump_flow_stat (struct ip *pip,
                )
              dump_to_file(&proto2dump[P2P_UTP], pip, plast);
          }
+        /* dump STUN INITIATED */
+        if (proto2dump[DUMP_UDP_STUN].enabled)
+         {
+
+           /* Check if it must be classified as a STUN flow */
+           if ( (mydir->pup->packets == 1) && is_stun(pip, pproto, plast)){
+             mydir->pup->is_stun_initiated = 1;
+           }
+           
+           /* Check if it a stun flow */
+           if ( mydir->pup->is_stun_initiated ){
+             dump_to_file(&proto2dump[DUMP_UDP_STUN], pip, plast);
+           }
+           
+         }
         if (proto2dump[UDP_QUIC].enabled)
          {
             /* 
@@ -804,3 +821,27 @@ void dump_ini_end_section(void) {
             Timestamp(), (dump_engine) ? "Enabling" : "Disabling");
     }
 }
+
+
+/* Check STUN headers */
+int is_stun(void *pip, void *pproto, void *plast){
+
+    void * pdata = pproto + sizeof(struct udphdr);
+    int data_length = plast - pdata + 1;
+    
+    /* Chech min len is 20 */
+    if ( data_length < 20 )
+        return 0;
+    /* Check Binding Request: 0x0001 */
+    if ( ntohs(*((u_int16_t *) pdata)) != 0x0001 )
+        return 0;
+    
+    /* Check Message Length */
+    u_int16_t stun_length = ntohs(*((u_int16_t *) (pdata+2) )) ;
+    if (stun_length + 20 != data_length )
+        return 0;
+        
+    return 1;
+}
+
+

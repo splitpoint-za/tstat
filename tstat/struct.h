@@ -1104,8 +1104,11 @@ struct sudp_pair
   /* QUIC info */
   char *quic_sni_name;
   char *quic_ua_string;
-  Bool quic_chlo;                                                                                                           
-  Bool quic_rej;                                                                                                       
+  Bool quic_chlo;
+  Bool quic_rej;
+
+  /* Has STUN, for dump */
+  Bool is_stun_initiated;
 
 };
 typedef struct sudp_pair udp_pair;

@@ -29,5 +29,8 @@ void dump_ini_start_section (void);
 void dump_ini_end_section (void);
 void dump_ip(void *pip, void *plast);
 
+/* Check for STUN binding Requests */
+int is_stun(void *pip, void *pproto, void *plast);
+
 extern Bool dump_engine;
 #endif
