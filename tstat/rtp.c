@@ -483,7 +483,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
     case SKYPE_SIG:
     default:
 	break;
-      }
+      
     }
 }
 
