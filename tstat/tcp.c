@@ -43,7 +43,6 @@ extern unsigned long int f_RTP_tunneled_TCP_count;
 extern struct L3_bitrates L3_bitrate;
 extern struct L4_bitrates L4_bitrate;
 /* end TOPIX */
-extern int log_version;
 extern int log_level;
 extern int video_level;
 
@@ -86,7 +85,6 @@ static u_int SynCount (tcp_pair * ptp);
 /*
 static u_int FinCount (tcp_pair * ptp);
 */
-void update_conn_log_mm_v1 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 void update_conn_log_mm_v2 (tcp_pair *tcp_save, tcb *pab, tcb *pba);
 
 #if defined(VIDEO_DETAILS) || defined(STREAMING_CLASSIFIER) 
@@ -3727,10 +3725,8 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))
       return;
-   if(log_version == 1)
-      update_conn_log_mm_v1(ptp_save,pab,pba);
-   else
-      update_conn_log_mm_v2(ptp_save,pab,pba);
+      
+    update_conn_log_mm_v2(ptp_save,pab,pba);
 }
 
 Bool is_video(tcp_pair *ptp_save)

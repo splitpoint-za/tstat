@@ -1030,11 +1030,11 @@ typedef struct ucb
   Bool first_VOD;
   Bool is_VOD;
 
-  union
+  struct
   {
-    rtp rtp;
-    rtcp rtcp;
-  } flow;
+    rtp *rtp_ptr;
+    rtcp *rtcp_ptr;
+  } flow_ptr;
   /* statistics added */
   u_llong data_bytes;
   u_llong packets;

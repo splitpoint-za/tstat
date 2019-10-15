@@ -16,110 +16,7 @@
  *
 */
 
-/***************************************************************
-* NOTE: LEGACY DESCRIPTION, since is now enabled only v2
-****************************************************************/
-
 /* Log file format:
- * 2 formats are avaialable v1 and v2
- * v2 is default
- * use -1 option to switch to v1
- * V1
- * - used in tstat < 2.0
- * - 1 flow per line using the following fields
- * The meaning of the fields 9-X depend on the protocol used
- * +-------+--------------------------------------------------------------
- * | Comon Fields
- * +-------+--------------------------------------------------------------
- * | Field | Description
- * +-------+--------------------------------------------------------------
- * |    01 | L4 Protocol: 1 = TCP, 2 = UDP
- * |    02 | Protocol: 4 = RTP, 16 = RTCP
- * |    03 | Source IP address
- * |    04 | Source port number
- * |    05 | Destination IP address
- * |    06 | Destination port number
- * |    07 | Number of packets Tstat has seen belonging to the flow
- * |    08 | Inter Packet Gap (IPG) (average) [ms]
- * +-------+--------------------------------------------------------------
- * | RTP Fields
- * +-------+--------------------------------------------------------------
- * | Field | Description
- * +-------+--------------------------------------------------------------
- * |    09 | Jitter (computed as in RFC 3550 by Tstat) (average) [ms]
- * |    10 | Jitter (computed as in RFC 3550 by Tstat) (max) [ms]
- * |    11 | Jitter (computed as in RFC 3550 by Tstat) (min) [ms]
- * |    12 | Internal source? (computed using the -N netmask_file)
- * |    13 | Internal destination? (computed using the -N netmask_file)
- * |    14 | Time to live (TTL) (average) 
- * |    15 | Time to live (TTL) (max)
- * |    16 | Time to live (TTL) (min)
- * |    17 | Start time (EPOCH format) [s]
- * |    18 | Duration [s]
- * |    19 | Data transfered [bytes]
- * |    20 | Average speed [bit/s]
- * |    21 | RTP SSRC
- * |    22 | Lost packets computed by Tstat
- * |    23 | Out of sequence packets computed by Tstat
- * |    24 | Duplicate packets computed by Tstat
- * |    25 | Late packets computed by Tstat
- * |    26 | RTP payload type
- * |    27 | Bogus reset
- * +-------+--------------------------------------------------------------
- * | RTCP Fields
- * +-------+--------------------------------------------------------------
- * | Field | Description
- * +-------+--------------------------------------------------------------
- * |    09 | Jitter of the associated RTP (extracted from the RTCP header) (average) [codec timestamps units]
- * |    10 | Jitter of the associated RTP (extracted from the RTCP header) (max) [codec timestamps units]
- * |    11 | Jitter of the associated RTP (extracted from the RTCP header) (min) [codec timestamps units]
- * |    12 | Internal source? (computed using the -N netmask_file)
- * |    13 | Internal destination? (computed using the -N netmask_file)
- * |    14 | Time to live (TTL) (average) 
- * |    15 | Time to live (TTL) (max)
- * |    16 | Time to live (TTL) (min)
- * |    17 | Start time (EPOCH format) [s]
- * |    18 | Duration [s]
- * |    19 | Data transfered [bytes]
- * |    20 | Average speed [bit/s] 
- * |    21 | RTCP SSRC
- * |    22 | Each lost packets increments this counter, each duplicated packets decrements it from RTCP
- * |    23 | Fraction of lost packets (computed by RTCP) [%]
- * |    24 | Associated RTP flow length [packets]
- * |    25 | Associated RTP flow length [bytes]
- * |    26 | Round Trip Time (RTT) (average) [ms]
- * |    27 | Round Trip Time (RTT) (max) [ms]
- * |    28 | Round Trip Time (RTT) (min) [ms]
- * |    29 | Round Trip Time (RTT) (# of samples)
- * |    30 | Truncated header
- * +-------+--------------------------------------------------------------
- * | TCP Fields
- * +-------+--------------------------------------------------------------
- * | Field | Description
- * +-------+--------------------------------------------------------------
- * |    09 | Jitter (average) [ms]
- * |    10 | Jitter (max) [ms]
- * |    11 | Jitter (min) [ms]
- * |    12 | Internal source? (computed using the -N netmask_file)
- * |    13 | Internal destination? (computed using the -N netmask_file)
- * |    14 | Time to live (TTL) (average) 
- * |    15 | Time to live (TTL) (max)
- * |    16 | Time to live (TTL) (min)
- * |    17 | Start time (EPOCH format) [s]
- * |    18 | Duration [s]
- * |    19 | Data transfered [bytes]
- * |    20 | Average speed [bit/s] 
- * |    21 | First HTTP packet (EPOCH format) [s]
- * |    22 | First RTSP packet (EPOCH format) [s]
- * |    23 | Out of sequence packets 
- * |    24 | Retrasmitted packets
- * |    25 | First RTP packet (EPOCH format) [s]
- * |    26 | Round Trip Time (RTT) (average) [ms]
- * |    27 | Round Trip Time (RTT) (max) [ms]
- * |    28 | Round Trip Time (RTT) (min) [ms]
- * |    29 | Round Trip Time (RTT) (# of samples)
- * |    30 | Round Trip Time (RTT) (variance) [ms]
- * |    31 | First ICY packet (EPOCH format) [s]
  * V2
  * - request and response on the same line
  * - values not available are substituted by zeroes
@@ -326,7 +223,6 @@
 extern unsigned long int f_RTP_count;
 extern unsigned long int f_RTCP_count;
 extern FILE *fp_rtp_logc;
-extern int log_version;
 
 #define RTP_DEBUG_LEVEL 1
 #define RTP_DEBUG (debug>=RTP_DEBUG_LEVEL)
@@ -346,10 +242,7 @@ u_int16_t pseq;
 
 
 void update_rtp_conn_histo (ucb * thisdir, int dir);
-void update_rtp_conn_log_v1 (ucb * thisdir, int dir);
 void update_rtcp_conn_histo (ucb * thisdir, int dir);
-void update_rtcp_conn_log_v1 (ucb * thisdir, int dir);
-//void update_conn_log_v1(udp_pair *flow); LEGACY
 void update_conn_log_v2(udp_pair *flow);
 
 
@@ -423,7 +316,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    /* already identified the RTP flow... Check if STUN or RTCP interleaved 
 	       and avoid resetting the state machine */
 	    struct rtp *f_rtp;
-	    f_rtp = &thisdir->flow.rtp;
+	    f_rtp = thisdir->flow_ptr.rtp_ptr;
         u_int8_t pt_rtcp;
         pt_rtcp = prtp->pt + (prtp->m << 7);
         
@@ -456,7 +349,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    /* already identified the RTCP flow... */
 	    struct rtcp *f_rtcp;
 	    struct sudp_pair *pup;
-	    f_rtcp = &thisdir->flow.rtcp;
+	    f_rtcp = thisdir->flow_ptr.rtcp_ptr;
 	    pup = thisdir->pup;
 	    u_int8_t pt_rtcp = prtp->pt + (prtp->m << 7);
 
@@ -520,7 +413,13 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
       unsigned char rc = prtp->cc + (prtp->x << 4);
       char *pdecode = (char *) prtp;
 
-      f_rtcp = &thisdir->flow.rtcp;
+      if (thisdir->flow_ptr.rtcp_ptr!=NULL)
+        free(thisdir->flow_ptr.rtcp_ptr);
+      
+      thisdir->flow_ptr.rtcp_ptr = malloc(sizeof(struct rtcp));
+      f_rtcp = thisdir->flow_ptr.rtcp_ptr;
+      
+      // f_rtcp = &thisdir->flow.rtcp;
 
       /* to be sure ... */
       memset (f_rtcp, 0, sizeof (struct rtcp));
@@ -593,12 +492,12 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 	  if (otherdir->type == RTCP || otherdir->type == FIRST_RTCP)	/* must be bidirectional RTCP */
 	    if (swap32 (RR->lsr) != 0)	/* must be different from 0   */
 	      {
-		if (swap32 (RR->lsr) == otherdir->flow.rtcp.last_SR_id)	/* do we have the correct SR ? */
+		if (swap32 (RR->lsr) == otherdir->flow_ptr.rtcp_ptr->last_SR_id)	/* do we have the correct SR ? */
 		  {
 		    double rtt;
 
 		    rtt =
-		      elapsed (otherdir->flow.rtcp.last_SR,
+		      elapsed (otherdir->flow_ptr.rtcp_ptr->last_SR,
 			       current_time) / 1000.0 -
 		      swap32 (RR->dlsr) * 1000.0 / 65536.0;
 		    if (rtt < 0)
@@ -621,7 +520,14 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 	   ((pup->addr_pair.a_port & 1) == 0) && (pup->addr_pair.a_port > 1024) &&
            ((pup->addr_pair.b_port & 1) == 0) && (pup->addr_pair.b_port > 1024))
     {
-      f_rtp = &thisdir->flow.rtp;
+    
+      if (thisdir->flow_ptr.rtp_ptr!=NULL)
+        free(thisdir->flow_ptr.rtp_ptr);
+      
+      thisdir->flow_ptr.rtp_ptr = malloc(sizeof(struct rtp));
+      f_rtp = thisdir->flow_ptr.rtp_ptr;
+    
+      // f_rtp = &thisdir->flow.rtp;
 
       /* to be sure */
       memset (f_rtp, 0, sizeof (struct rtp));
@@ -649,7 +555,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 void
 rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
 {
-  struct rtp *f_rtp = &thisdir->flow.rtp;
+  struct rtp *f_rtp = thisdir->flow_ptr.rtp_ptr;
 
   if ((prtp->v == VALID_VERSION) && (f_rtp->ssrc == pssrc) &&
       (f_rtp->initial_seqno + (u_int16_t) f_rtp->pnum == pseq) &&
@@ -698,7 +604,7 @@ rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *pl
 void
 rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast)
 {
-  struct rtcp *f_rtcp = &thisdir->flow.rtcp;
+  struct rtcp *f_rtcp = thisdir->flow_ptr.rtcp_ptr;
 
   if ((prtp->v == VALID_VERSION) && (f_rtcp->ssrc == pts) &&
       ((prtp->pt + (prtp->m << 7)) >= RTCP_MIN_PT) &&
@@ -1223,7 +1129,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 void
 rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
 {
-  struct rtcp *f_rtcp = &thisdir->flow.rtcp;
+  struct rtcp *f_rtcp = thisdir->flow_ptr.rtcp_ptr;
   struct sudp_pair *pup = thisdir->pup;
   struct ucb *otherdir;
 
@@ -1362,10 +1268,10 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
       if (otherdir->type == RTCP || otherdir->type == FIRST_RTCP)	/* must be bidirectional RTCP */
 	if (swap32 (RR->lsr) != 0)	/* must be different from 0   */
 	  {
-	    if (swap32 (RR->lsr) == otherdir->flow.rtcp.last_SR_id)	/* do we have the correct SR ? */
+	    if (swap32 (RR->lsr) == otherdir->flow_ptr.rtcp_ptr->last_SR_id)	/* do we have the correct SR ? */
 	      {
 		rtt =
-		  elapsed (otherdir->flow.rtcp.last_SR,
+		  elapsed (otherdir->flow_ptr.rtcp_ptr->last_SR,
 			   current_time) / 1000.0 -
 		  swap32 (RR->dlsr) * 1000.0 / 65536.0;
 		if (rtt >= 0)
@@ -1535,11 +1441,6 @@ make_rtp_conn_stats (void * thisflow, int tproto)
   if (!LOG_IS_ENABLED(LOG_MM_COMPLETE) || fp_rtp_logc == NULL)
     return;
 
-/* LEGACY
-if(log_version == 1)
-    update_conn_log_v1(flow);
-  else
-*/
     update_conn_log_v2(flow);
 }
 
@@ -1569,7 +1470,7 @@ update_conn_log_v2(udp_pair *flow)
   if (flow->c2s.type == RTP)
   {
      struct rtp *f_rtp;
-     f_rtp = &(flow->c2s.flow.rtp);
+     f_rtp = (flow->c2s.flow_ptr.rtp_ptr);
      double etime;
 
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
@@ -1611,7 +1512,7 @@ update_conn_log_v2(udp_pair *flow)
   else if (flow->c2s.type == RTCP)
   {
      struct rtcp *f_rtcp;
-     f_rtcp = &(flow->c2s.flow.rtcp);
+     f_rtcp = (flow->c2s.flow_ptr.rtcp_ptr);
      double etime;
      uint64_t data_bytes;
 
@@ -1674,7 +1575,7 @@ update_conn_log_v2(udp_pair *flow)
   if (flow->s2c.type == RTP)
   {
      struct rtp *f_rtp;
-     f_rtp = &(flow->s2c.flow.rtp);
+     f_rtp = (flow->s2c.flow_ptr.rtp_ptr);
      double etime;
 
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
@@ -1716,7 +1617,7 @@ update_conn_log_v2(udp_pair *flow)
   else if (flow->s2c.type == RTCP)
   {
      struct rtcp *f_rtcp;
-     f_rtcp = &(flow->s2c.flow.rtcp);
+     f_rtcp = (flow->s2c.flow_ptr.rtcp_ptr);
      double etime;
      uint64_t data_bytes;
 
@@ -1764,22 +1665,6 @@ update_conn_log_v2(udp_pair *flow)
   wfprintf (fp_rtp_logc, "\n");
 }
 
-/* LEGACY
-void
-update_conn_log_v1 (udp_pair *flow)
-{
-  if (flow->c2s.type == RTP)
-      update_rtp_conn_log_v1 (&(flow->c2s), C2S);
-  if (flow->s2c.type == RTP)
-      update_rtp_conn_log_v1 (&(flow->s2c), S2C);
-  
-  if (flow->c2s.type == RTCP)
-      update_rtcp_conn_log_v1 (&(flow->c2s), C2S);
-  if (flow->s2c.type == RTCP)
-      update_rtcp_conn_log_v1 (&(flow->s2c), S2C);
-}
-*/
-
 void
 update_rtp_conn_histo (ucb * thisdir, int dir)
 {
@@ -1794,7 +1679,7 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
 #endif
   extern unsigned int ip_obfuscate_mask;
 
-  f_rtp = &thisdir->flow.rtp;
+  f_rtp = thisdir->flow_ptr.rtp_ptr;
   pup = thisdir->pup;
 
   /* Calculus of the RTP flow length in milliseconds */
@@ -2142,84 +2027,6 @@ update_rtp_conn_histo (ucb * thisdir, int dir)
     }
 }
 
-
-void
-update_rtp_conn_log_v1 (ucb * thisdir, int dir)
-{
-  struct sudp_pair *pup;
-  struct rtp *f_rtp;
-  double etime;
-
-  f_rtp = &thisdir->flow.rtp;
-  pup = thisdir->pup;
-
-  /* Calculus of the RTP flow length in milliseconds */
-  etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
-  
-  if (dir == C2S)
-    {
-      if (pup->crypto_src==FALSE)
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTP_PROTOCOL,
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      else
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTP_PROTOCOL,
-	       HostNameEncrypted (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      if (pup->crypto_dst==FALSE)
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      else
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostNameEncrypted (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-    }
-  else
-    {
-      if (pup->crypto_dst==FALSE)
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTP_PROTOCOL,
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      else
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTP_PROTOCOL,
-	       HostNameEncrypted (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      if (pup->crypto_src==FALSE)
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      else
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostNameEncrypted (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-    }
-
-
-  wfprintf (fp_rtp_logc, " %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", f_rtp->pnum, (f_rtp->sum_delta_t / f_rtp->n_delta_t), f_rtp->jitter, f_rtp->jitter_max, f_rtp->jitter_min == MAXFLOAT ? 0 : f_rtp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtp->first_time.tv_sec + (double) f_rtp->first_time.tv_usec / 1000000.0, etime / 1000.0,	/* [s] */
-	   f_rtp->data_bytes,
-	   (double) f_rtp->data_bytes / (etime / 1000.0) * 8);
-
-
-  wfprintf (fp_rtp_logc, " %u %ld %ld %ld %ld %u %d",
-	   f_rtp->ssrc, f_rtp->n_lost,
-	   f_rtp->n_out_of_sequence, f_rtp->n_dup, f_rtp->n_late,
-	   f_rtp->pt, f_rtp->bogus_reset_during_flow);
-
-  /* write stat to file */
-  wfprintf (fp_rtp_logc, "\n");
-}
-
-
-
 /******** function used to update the RTCP histograms *********/
 
 void
@@ -2230,7 +2037,7 @@ update_rtcp_conn_histo (ucb * thisdir, int dir)
   double etime;
   uint64_t data_bytes;
 
-  f_rtcp = &thisdir->flow.rtcp;
+  f_rtcp = thisdir->flow_ptr.rtcp_ptr;
   pup = thisdir->pup;
 
   etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000000.0;
@@ -2307,87 +2114,6 @@ update_rtcp_conn_histo (ucb * thisdir, int dir)
 		 (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum);
     }
 }
-
-void
-update_rtcp_conn_log_v1 (ucb * thisdir, int dir)
-{
-  struct sudp_pair *pup;
-  struct rtcp *f_rtcp;
-  double etime;
-  uint64_t data_bytes;
-  
-  f_rtcp = &thisdir->flow.rtcp;
-  pup = thisdir->pup;
-
-  etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000000.0;
-
-  data_bytes =
-    thisdir->data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
-
-  if (dir == C2S)
-    {
-      if (pup->crypto_src==FALSE)
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTCP_PROTOCOL,
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      else
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTCP_PROTOCOL,
-	       HostNameEncrypted (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      if (pup->crypto_dst==FALSE)
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      else
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostNameEncrypted (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-    }
-  else
-    {
-      if (pup->crypto_dst==FALSE)
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTCP_PROTOCOL,
-	       HostName (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      else
-         wfprintf (fp_rtp_logc, "%d %d %s %s",
-	       PROTOCOL_UDP,
-	       RTCP_PROTOCOL,
-	       HostNameEncrypted (pup->addr_pair.b_address),
-	       ServiceName (pup->addr_pair.b_port));
-      if (pup->crypto_dst==FALSE)
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostName (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-      else
-         wfprintf (fp_rtp_logc, " %s %s",
-	       HostNameEncrypted (pup->addr_pair.a_address),
-	       ServiceName (pup->addr_pair.a_port));
-    }
-
-  wfprintf (fp_rtp_logc, " %lu %g %g %g %g %d %d %g %u %u %f %f %llu %g", f_rtcp->pnum, (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples, f_rtcp->jitter_max, f_rtcp->jitter_min, pup->internal_src, pup->internal_dst, (double) thisdir->ttl_tot / (double) thisdir->packets, thisdir->ttl_max, thisdir->ttl_min, (double) f_rtcp->first_time.tv_sec + (double) f_rtcp->first_time.tv_usec / 1000000.0, etime,	/* [s] */
-	   data_bytes, (double) data_bytes / etime * 8);
-
-
-  wfprintf (fp_rtp_logc, " %u %d %g %u %u %g %g %g %u %u",
-	   f_rtcp->ssrc,
-	   f_rtcp->c_lost,
-	   (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, f_rtcp->tx_p, f_rtcp->tx_b,
-	   (float) f_rtcp->rtt_sum / (float) f_rtcp->rtt_samples,
-	   f_rtcp->rtt_max, f_rtcp->rtt_min, f_rtcp->rtt_samples,
-	   f_rtcp->rtcp_header_error);
-
-  /* write stat to file*/
-  wfprintf (fp_rtp_logc, "\n");
-}
-
-
 
 /* function used to interprete the 16 bit values whether in the BIG ENDIAN case
 or in the  LITTLE ENDIAN one */

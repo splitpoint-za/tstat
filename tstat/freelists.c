@@ -506,6 +506,30 @@ utp_release (udp_pair * rel_udp_pair)
      free(rel_udp_pair->quic_ua_string);
      rel_udp_pair->quic_ua_string=NULL;
    }
+   
+  if (rel_udp_pair->c2s.flow_ptr.rtp_ptr!=NULL)
+   {
+     free(rel_udp_pair->c2s.flow_ptr.rtp_ptr);
+     rel_udp_pair->c2s.flow_ptr.rtp_ptr=NULL;
+   }
+   
+  if (rel_udp_pair->c2s.flow_ptr.rtcp_ptr!=NULL)
+   {
+     free(rel_udp_pair->c2s.flow_ptr.rtcp_ptr);
+     rel_udp_pair->c2s.flow_ptr.rtcp_ptr=NULL;
+   }
+   
+  if (rel_udp_pair->s2c.flow_ptr.rtp_ptr!=NULL)
+   {
+     free(rel_udp_pair->s2c.flow_ptr.rtp_ptr);
+     rel_udp_pair->s2c.flow_ptr.rtp_ptr=NULL;
+   }
+
+  if (rel_udp_pair->s2c.flow_ptr.rtcp_ptr!=NULL)
+   {
+     free(rel_udp_pair->s2c.flow_ptr.rtcp_ptr);
+     rel_udp_pair->s2c.flow_ptr.rtcp_ptr=NULL;
+   }
 
   if (rel_udp_pair->c2s.skype!=NULL)
    {

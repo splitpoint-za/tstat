@@ -230,8 +230,6 @@ Bool strict_privacy = FALSE;   /* -0 */
 
 Bool report_dnscache = FALSE;
 
-int log_version = 2;            /* -1 */
-
 int log_level = TCP_LOG_ALL;
 // int log_level = TCP_LOG_CORE;  /* Basic TCP log level */
 int video_level = VIDEO_LOG_ALL;
@@ -534,7 +532,6 @@ Help (void)
     "\t-g: Enable global histo engine\n"
     "\t-S: No histo engine: do not create histograms files \n"
     "\t-L: No log engine: do not create log_* files \n"
-    //"\t-1: Use old (v1) log_mm format\n"
 	"\t-B Bayes_Dir: enable Bayesian traffic classification\n"
     "\t              configuration files from Bayes_Dir\n"
     "\t-T runtime.conf: configuration file to enable/disable dumping\n"
@@ -3697,11 +3694,8 @@ ParseArgs (int *pargc, char *argv[])
 	case 'L':
 	  log_bitmask = 0;
 	  break;
-//        case '1':
-//          log_version = 1;
-	  break;
 #ifdef L3_BITRATE
-        case '3':
+      case '3':
           log_bitmask |= LOG_L3_BITRATE;
 	  break;
 #endif
