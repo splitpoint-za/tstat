@@ -1482,6 +1482,13 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," c_ip:%d", col++);		 // 3:  client ip
      wfprintf(fp," c_port:%d", col++);		 // 4:  client port
      wfprintf(fp," c_internal:%d", col++);	 // 5:  client is internal
+     wfprintf(fp," s_proto:%d", col++);		 // 
+     wfprintf(fp," s_ip:%d", col++);		 // 
+     wfprintf(fp," s_port:%d", col++);		 // 
+     wfprintf(fp," s_internal:%d", col++);	 // 
+     /* */
+     wfprintf(fp," direction:%d", col++);		 // 2:  Client Protocol
+     /* */
      wfprintf(fp," c_packets:%d", col++);	 // 6:  client packets
      wfprintf(fp," c_ipg:%d", col++);		 // 7:  client Inter Packet Gap
      wfprintf(fp," c_jitter_avg:%d", col++);	 // 8:  client jitter (average)
@@ -1499,7 +1506,8 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," c_oos:%d", col++);		 // 20: client RTP out-of-sequence
      wfprintf(fp," c_dup:%d", col++);		 // 21: client RTP duplicates
      wfprintf(fp," c_late:%d", col++);		 // 22: client RTP lage
-     wfprintf(fp," c_pt:%d", col++);		 // 23: client RTP Packet Type
+     wfprintf(fp," c_pt_id:%d", col++);		 // 23: client RTP Packet Type
+     wfprintf(fp," c_pt_counters:%d", col++);		 // 23: client RTP Packet Type
      wfprintf(fp," c_bogus:%d", col++);		 // 24: client bocus reset
      wfprintf(fp," c_rtcp_losses:%d", col++);	 // 25: client RTCP cumulative loss
      wfprintf(fp," c_rtcp_fraclost:%d", col++);	 // 26: client RTCP fraction lost
@@ -1515,6 +1523,7 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," c_first_rtp:%d", col++);	 // 36: client first RTP packet
      wfprintf(fp," c_first_icy:%d", col++);	 // 37: client first ICY packet           
 /* Server Info */
+/*
      wfprintf(fp," s_proto:%d", col++);		 // 
      wfprintf(fp," s_ip:%d", col++);		 // 
      wfprintf(fp," s_port:%d", col++);		 // 
@@ -1551,7 +1560,7 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," s_first_rtsp:%d", col++);	 // 
      wfprintf(fp," s_first_rtp:%d", col++);	 // 
      wfprintf(fp," s_first_icy:%d", col++);	 // 
-
+*/
      wfprintf (fp, "\n");
    }
   

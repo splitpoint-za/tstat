@@ -904,8 +904,12 @@ enum udp_type
 }
 
 
+typedef struct rtp rtp;
+typedef struct rtcp rtcp;
 
-typedef struct rtp
+#define MAX_COUNT_RTP_PT 5
+
+struct rtp
 {
 
   u_int16_t packets_win[RTP_WIN];	/* the sliding window vector used to track
@@ -932,13 +936,16 @@ typedef struct rtp
   int burst;
   u_llong data_bytes;
   /* topix */
-  unsigned char pt;
+  unsigned char pt; /* LEgacy - currently only used for the histograms */
+  unsigned char pt_id[MAX_COUNT_RTP_PT];
+  int pt_counter[MAX_COUNT_RTP_PT];
   int bogus_reset_during_flow; /* some Cisco implementation reset seqno ... */
   /* end topix */
-} rtp;
+  rtp *next;
+};
 
 
-typedef struct rtcp
+struct rtcp
 {
   u_long pnum;			/* number of segments */
   u_int64_t initial_data_bytes;
@@ -966,7 +973,8 @@ typedef struct rtcp
   u_int8_t f_lost;
   double f_lost_sum;
   int rtcp_header_error;
-} rtcp;
+  rtcp *next;
+};
 
 
 enum obfuscate_udp_state
