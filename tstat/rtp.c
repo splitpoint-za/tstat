@@ -244,6 +244,7 @@ u_int16_t pseq;
 void update_rtp_conn_histo (ucb * thisdir, int dir);
 void update_rtcp_conn_histo (ucb * thisdir, int dir);
 void update_conn_log_v2(udp_pair *flow);
+void update_conn_log_v3(udp_pair *flow);
 
 /* Functions to manage the rtp/rtcp record list */
 
