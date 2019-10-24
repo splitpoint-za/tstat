@@ -235,13 +235,13 @@ extern int debug;
 #define DUP 4
 
 
-#define RFC7983_RTP  0
-#define RFC7983_RTCP 1
-#define RFC7983_STUN 2
-#define RFC7983_TURN 3
+#define RFC7983_UNK  0
+#define RFC7983_RTP  1
+#define RFC7983_RTCP 2
 #define RFC7983_DTLS 4
-#define RFC7983_ZRTP 5
-#define RFC7983_UNK 6
+#define RFC7983_STUN 8
+#define RFC7983_TURN 16
+#define RFC7983_ZRTP 32
 
 /* variables used to compute the RTP packets fields*/
 u_int32_t pssrc;
@@ -455,15 +455,20 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
   switch (thisdir->type)
     {
     case UDP_UNKNOWN:
+      {
+	    init_rtp (thisdir, dir, pudp, prtp, plast);
+	    break;      
+      }
     case UDP_DTLS:
       {
+        thisdir->multiplexed_protocols |= RFC7983_DTLS;
 	    init_rtp (thisdir, dir, pudp, prtp, plast);
 	    break;
       }
     case FIRST_RTP:
       {
 	    /* already got a packet ... double check it */
-	    rtp_check2 (thisdir, prtp, dir, pip, plast);
+	    rtp_check (thisdir, prtp, dir, pip, plast);
 	    break;
       }
     case FIRST_RTCP:
@@ -487,6 +492,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	      if (f_rtp!=NULL)
 	       {
 	         rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+	         thisdir->multiplexed_protocols |= RFC7983_RTP;
 	       }
 	      else
 	       {
@@ -517,7 +523,8 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	     }
         else if ( RFC7983_classify (hdr) != RFC7983_UNK )
         {
-            // Ignore other allowed protocols 
+            // Ignore other allowed protocols
+            thisdir->multiplexed_protocols |= RFC7983_classify (hdr);
 	    }
 	    /* OTHER -> reset status to UDP_UNKNOWN */
 	    else
@@ -543,7 +550,10 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    if ( RFC7983_classify (hdr) == RFC7983_RTCP && f_rtcp->ssrc == pts &&
 	        (pup->addr_pair.a_port > 1024)  
 	    )
-	      rtcp_stat (thisdir, dir, prtp, plast);
+	      { 
+	        thisdir->multiplexed_protocols |= RFC7983_RTCP;
+	        rtcp_stat (thisdir, dir, prtp, plast);
+	      }
 	    else
 	      {
 	        /* The RTCP flow is closed but not the UDP one */
@@ -738,54 +748,6 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 void
 rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
 {
-  struct rtp *f_rtp = thisdir->flow_ptr.rtp_ptr;
-
-  if ((prtp->v == VALID_VERSION) && (f_rtp->ssrc == pssrc) &&
-      (f_rtp->initial_seqno + (u_int16_t) f_rtp->pnum == pseq) &&
-//      (prtp->pt < VALID_PT))
-      rtp_valid_pt(prtp->pt))
-    {
-      f_RTP_count++;
-      switch (in_out_loc(thisdir->pup->internal_src,
-      thisdir->pup->internal_dst, dir))
-      {
-      case OUT_FLOW:
-            add_histo (L7_UDP_num_out, L7_FLOW_RTP);
-	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-	      {
-            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTP);
-	      }
-            break;
-      case IN_FLOW:
-            add_histo (L7_UDP_num_in, L7_FLOW_RTP);
-	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-	      {
-            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTP);
-	      }
-            break;
-      case LOC_FLOW:
-            add_histo (L7_UDP_num_loc, L7_FLOW_RTP);
-            break;
-      }
-      
-      rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-      thisdir->type = RTP;
-    }
-  else				/* is not an RTP packet */
-    thisdir->type = UDP_UNKNOWN;
-}
-
-void
-rtp_check2 (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
-{
   struct rtp *f_rtp = NULL;
   u_int8_t pt_rtcp;
   pt_rtcp = prtp->pt + (prtp->m << 7);
@@ -829,6 +791,8 @@ rtp_check2 (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *p
            }
           rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
           thisdir->type = RTP;
+          thisdir->multiplexed_protocols |= RFC7983_RTP;
+          
         }
       /* Flow located, status confirmed */
    }
@@ -864,6 +828,7 @@ rtp_check2 (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *p
      else if (RFC7983_classify ((void*)prtp) != RFC7983_UNK)
       {
         /* Ignored allowed non RTP packet */
+        thisdir->multiplexed_protocols |= RFC7983_classify ((void*)prtp);
       }
      else
       {
@@ -1951,35 +1916,39 @@ update_conn_log_v3(udp_pair *flow)
 
   /* Request C-->S */
   if (flow->crypto_src==FALSE)
-     sprintf (common_head2, "%d %d %s %s %u",
+     sprintf (common_head2, "%d %d %s %s %u %u",
           PROTOCOL_UDP,
 	  flow->c2s.type,
 	  HostName (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
-	  flow->internal_src);
+	  flow->internal_src,
+	  flow->c2s.multiplexed_protocols);
   else 
-     sprintf (common_head2, "%d %d %s %s %u",
+     sprintf (common_head2, "%d %d %s %s %u %u",
           PROTOCOL_UDP,
 	  flow->c2s.type,
 	  HostNameEncrypted (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
-	  flow->internal_src);
+	  flow->internal_src,
+	  flow->c2s.multiplexed_protocols);
 
   /* Answer C<--S */
   if (flow->crypto_dst==FALSE)
-     sprintf (common_head, "%s %d %s %s %u",
+     sprintf (common_head, "%s %d %s %s %u %u",
 	      common_head2,
 	  flow->s2c.type,
 	  HostName (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
-	  flow->internal_dst);
+	  flow->internal_dst,
+	  flow->s2c.multiplexed_protocols);
   else
-     sprintf (common_head, "%s %d %s %s %u",
+     sprintf (common_head, "%s %d %s %s %u %u",
 	      common_head2,
 	  flow->s2c.type,
 	  HostNameEncrypted (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
-	  flow->internal_dst);
+	  flow->internal_dst,
+	  flow->s2c.multiplexed_protocols);
 
   if (flow->c2s.type == RTP)
   {
@@ -2082,10 +2051,9 @@ update_conn_log_v3(udp_pair *flow)
   {
      /* we miss the request */
      
-   wfprintf (fp_rtp_logc, "%s",common_head);
-     
-     wfprintf (fp_rtp_logc, " C 0 0 0 0 0 0 0 0 0 0 0 0 0x0 0 0 0 0 - - 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
-       wfprintf (fp_rtp_logc, "\n");
+     //wfprintf (fp_rtp_logc, "%s",common_head);
+     //wfprintf (fp_rtp_logc, " C 0 0 0 0 0 0 0 0 0 0 0 0 0x0 0 0 0 0 - - 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
+     //wfprintf (fp_rtp_logc, "\n");
 
   }
 	
@@ -2188,11 +2156,10 @@ update_conn_log_v3(udp_pair *flow)
   }
   else
   {
-   wfprintf (fp_rtp_logc, "%s",common_head);
-     
+     //wfprintf (fp_rtp_logc, "%s",common_head);
      /* we miss the answer */
-     wfprintf (fp_rtp_logc, " S 0 0 0 0 0 0 0 0 0 0 0 0 0x0 0 0 0 0 - - 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
-       wfprintf (fp_rtp_logc, "\n");
+     //wfprintf (fp_rtp_logc, " S 0 0 0 0 0 0 0 0 0 0 0 0 0x0 0 0 0 0 - - 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
+     //wfprintf (fp_rtp_logc, "\n");
   }
   /* write stat to file */
 //  wfprintf (fp_rtp_logc, "\n");

@@ -941,7 +941,6 @@ struct rtp
   int pt_counter[MAX_COUNT_RTP_PT];
   int bogus_reset_during_flow; /* some Cisco implementation reset seqno ... */
   /* end topix */
-  u_int16_t multiplexed_protocols;
   rtp *next;
 };
 
@@ -1044,6 +1043,8 @@ typedef struct ucb
     rtp *rtp_ptr;
     rtcp *rtcp_ptr;
   } flow_ptr;
+  u_int16_t multiplexed_protocols; /* Bitmask for additional UDP protocols */
+  
   /* statistics added */
   u_llong data_bytes;
   u_llong packets;

@@ -1482,85 +1482,48 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," c_ip:%d", col++);		 // 3:  client ip
      wfprintf(fp," c_port:%d", col++);		 // 4:  client port
      wfprintf(fp," c_internal:%d", col++);	 // 5:  client is internal
+     wfprintf(fp," c_mux_prot:%d", col++);	 // 5:  client is internal
      wfprintf(fp," s_proto:%d", col++);		 // 
      wfprintf(fp," s_ip:%d", col++);		 // 
      wfprintf(fp," s_port:%d", col++);		 // 
      wfprintf(fp," s_internal:%d", col++);	 // 
+     wfprintf(fp," s_mux_prot:%d", col++);	 // 5:  client is internal
      /* */
      wfprintf(fp," direction:%d", col++);		 // 2:  Client Protocol
      /* */
-     wfprintf(fp," c_packets:%d", col++);	 // 6:  client packets
-     wfprintf(fp," c_ipg:%d", col++);		 // 7:  client Inter Packet Gap
-     wfprintf(fp," c_jitter_avg:%d", col++);	 // 8:  client jitter (average)
-     wfprintf(fp," c_jitter_max:%d", col++);	 // 9:  client jitter (max)
-     wfprintf(fp," c_jitter_min:%d", col++);	 // 10: client jitter (min)
-     wfprintf(fp," c_ttl_avg:%d", col++);	 // 11: client TTL (average)
-     wfprintf(fp," c_ttl_max:%d", col++);	 // 12: client TTL (max)
-     wfprintf(fp," c_ttl_min:%d", col++);	 // 13: client TTL (min)
-     wfprintf(fp," c_starttime:%d", col++);	 // 14: client start time (epoch)
-     wfprintf(fp," c_duration:%d", col++);	 // 15: client duration
-     wfprintf(fp," c_databytes:%d", col++);	 // 16: client data transfered
-     wfprintf(fp," c_speed:%d", col++);		 // 17: client average speed
-     wfprintf(fp," c_SSRC:%d", col++);		 // 18: client RTP/RTCP SSRC
-     wfprintf(fp," c_losses:%d", col++);	 // 19: client RTP lost packets
-     wfprintf(fp," c_oos:%d", col++);		 // 20: client RTP out-of-sequence
-     wfprintf(fp," c_dup:%d", col++);		 // 21: client RTP duplicates
-     wfprintf(fp," c_late:%d", col++);		 // 22: client RTP lage
-     wfprintf(fp," c_pt_id:%d", col++);		 // 23: client RTP Packet Type
-     wfprintf(fp," c_pt_counters:%d", col++);		 // 23: client RTP Packet Type
-     wfprintf(fp," c_bogus:%d", col++);		 // 24: client bocus reset
-     wfprintf(fp," c_rtcp_losses:%d", col++);	 // 25: client RTCP cumulative loss
-     wfprintf(fp," c_rtcp_fraclost:%d", col++);	 // 26: client RTCP fraction lost
-     wfprintf(fp," c_rtcp_lenpack:%d", col++);	 // 27: client RTCP flow length [packets]
-     wfprintf(fp," c_rtcp_lenbytes:%d", col++);	 // 28: client RTCP flow length [bytes]
-     wfprintf(fp," c_rtt_avg:%d", col++);	 // 29: client RTT average
-     wfprintf(fp," c_rtt_max:%d", col++);	 // 30: client RTT max
-     wfprintf(fp," c_rtt_min:%d", col++);	 // 31: client RTT min
-     wfprintf(fp," c_rtt_samples:%d", col++);	 // 32: client RTT samples
-     wfprintf(fp," c_rtcp_trunc:%d", col++);	 // 33: client RTCP truncated header
-     wfprintf(fp," c_first_http:%d", col++);	 // 34: client first HTTP packer
-     wfprintf(fp," c_first_rtsp:%d", col++);	 // 35: client first RTSP packet
-     wfprintf(fp," c_first_rtp:%d", col++);	 // 36: client first RTP packet
-     wfprintf(fp," c_first_icy:%d", col++);	 // 37: client first ICY packet           
-/* Server Info */
-/*
-     wfprintf(fp," s_proto:%d", col++);		 // 
-     wfprintf(fp," s_ip:%d", col++);		 // 
-     wfprintf(fp," s_port:%d", col++);		 // 
-     wfprintf(fp," s_internal:%d", col++);	 // 
-     wfprintf(fp," s_packets:%d", col++);	 // 
-     wfprintf(fp," s_ipg:%d", col++);		 // 
-     wfprintf(fp," s_jitter_avg:%d", col++);	 // 
-     wfprintf(fp," s_jitter_max:%d", col++);	 // 
-     wfprintf(fp," s_jitter_min:%d", col++);	 // 
-     wfprintf(fp," s_ttl_avg:%d", col++);	 // 
-     wfprintf(fp," s_ttl_max:%d", col++);	 // 
-     wfprintf(fp," s_ttl_min:%d", col++);	 // 
-     wfprintf(fp," s_starttime:%d", col++);	 // 
-     wfprintf(fp," s_duration:%d", col++);	 // 
-     wfprintf(fp," s_databytes:%d", col++);	 // 
-     wfprintf(fp," s_speed:%d", col++);		 // 
-     wfprintf(fp," s_SSRC:%d", col++);		 // 
-     wfprintf(fp," s_losses:%d", col++);	 // 
-     wfprintf(fp," s_oos:%d", col++);		 // 
-     wfprintf(fp," s_dup:%d", col++);		 // 
-     wfprintf(fp," s_late:%d", col++);		 // 
-     wfprintf(fp," s_pt:%d", col++);		 // 
-     wfprintf(fp," s_bogus:%d", col++);		 // 
-     wfprintf(fp," s_rtcp_losses:%d", col++);	 // 
-     wfprintf(fp," s_rtcp_fraclost:%d", col++);	 // 
-     wfprintf(fp," s_rtcp_lenpack:%d", col++);	 // 
-     wfprintf(fp," s_rtcp_lenbytes:%d", col++);	 // 
-     wfprintf(fp," s_rtt_avg:%d", col++);	 // 
-     wfprintf(fp," s_rtt_max:%d", col++);	 // 
-     wfprintf(fp," s_rtt_min:%d", col++);	 // 
-     wfprintf(fp," s_rtt_samples:%d", col++);	 // 
-     wfprintf(fp," s_rtcp_trunc:%d", col++);	 // 
-     wfprintf(fp," s_first_http:%d", col++);	 // 
-     wfprintf(fp," s_first_rtsp:%d", col++);	 // 
-     wfprintf(fp," s_first_rtp:%d", col++);	 // 
-     wfprintf(fp," s_first_icy:%d", col++);	 // 
-*/
+     wfprintf(fp," packets:%d", col++);	 // 6:  client packets
+     wfprintf(fp," ipg:%d", col++);		 // 7:  client Inter Packet Gap
+     wfprintf(fp," jitter_avg:%d", col++);	 // 8:  client jitter (average)
+     wfprintf(fp," jitter_max:%d", col++);	 // 9:  client jitter (max)
+     wfprintf(fp," jitter_min:%d", col++);	 // 10: client jitter (min)
+     wfprintf(fp," ttl_avg:%d", col++);	 // 11: client TTL (average)
+     wfprintf(fp," ttl_max:%d", col++);	 // 12: client TTL (max)
+     wfprintf(fp," ttl_min:%d", col++);	 // 13: client TTL (min)
+     wfprintf(fp," starttime:%d", col++);	 // 14: client start time (epoch)
+     wfprintf(fp," duration:%d", col++);	 // 15: client duration
+     wfprintf(fp," databytes:%d", col++);	 // 16: client data transfered
+     wfprintf(fp," speed:%d", col++);		 // 17: client average speed
+     wfprintf(fp," SSRC:%d", col++);		 // 18: client RTP/RTCP SSRC
+     wfprintf(fp," losses:%d", col++);	 // 19: client RTP lost packets
+     wfprintf(fp," oos:%d", col++);		 // 20: client RTP out-of-sequence
+     wfprintf(fp," dup:%d", col++);		 // 21: client RTP duplicates
+     wfprintf(fp," late:%d", col++);		 // 22: client RTP lage
+     wfprintf(fp," pt_id:%d", col++);		 // 23: client RTP Packet Type
+     wfprintf(fp," pt_counters:%d", col++);		 // 23: client RTP Packet Type
+     wfprintf(fp," bogus:%d", col++);		 // 24: client bocus reset
+     wfprintf(fp," rtcp_losses:%d", col++);	 // 25: client RTCP cumulative loss
+     wfprintf(fp," rtcp_fraclost:%d", col++);	 // 26: client RTCP fraction lost
+     wfprintf(fp," rtcp_lenpack:%d", col++);	 // 27: client RTCP flow length [packets]
+     wfprintf(fp," rtcp_lenbytes:%d", col++);	 // 28: client RTCP flow length [bytes]
+     wfprintf(fp," rtt_avg:%d", col++);	 // 29: client RTT average
+     wfprintf(fp," rtt_max:%d", col++);	 // 30: client RTT max
+     wfprintf(fp," rtt_min:%d", col++);	 // 31: client RTT min
+     wfprintf(fp," rtt_samples:%d", col++);	 // 32: client RTT samples
+     wfprintf(fp," rtcp_trunc:%d", col++);	 // 33: client RTCP truncated header
+     wfprintf(fp," first_http:%d", col++);	 // 34: client first HTTP packer
+     wfprintf(fp," first_rtsp:%d", col++);	 // 35: client first RTSP packet
+     wfprintf(fp," first_rtp:%d", col++);	 // 36: client first RTP packet
+     wfprintf(fp," first_icy:%d", col++);	 // 37: client first ICY packet           
      wfprintf (fp, "\n");
    }
   
