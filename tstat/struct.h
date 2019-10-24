@@ -936,11 +936,12 @@ struct rtp
   int burst;
   u_llong data_bytes;
   /* topix */
-  unsigned char pt; /* LEgacy - currently only used for the histograms */
+  unsigned char pt; /* Legacy - currently only used for the histograms */
   unsigned char pt_id[MAX_COUNT_RTP_PT];
   int pt_counter[MAX_COUNT_RTP_PT];
   int bogus_reset_during_flow; /* some Cisco implementation reset seqno ... */
   /* end topix */
+  u_int16_t multiplexed_protocols;
   rtp *next;
 };
 

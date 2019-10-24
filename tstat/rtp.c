@@ -540,7 +540,9 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    pup = thisdir->pup;
 	    u_int8_t pt_rtcp = prtp->pt + (prtp->m << 7);
 
-	    if ( RFC7983_classify (hdr) == RFC7983_RTCP && f_rtcp->ssrc == pts )
+	    if ( RFC7983_classify (hdr) == RFC7983_RTCP && f_rtcp->ssrc == pts &&
+	        (pup->addr_pair.a_port > 1024)  
+	    )
 	      rtcp_stat (thisdir, dir, prtp, plast);
 	    else
 	      {
@@ -581,7 +583,9 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
    */
   /* RTCP */
   pt_rtcp = prtp->pt + (prtp->m << 7);
-  if (RFC7983_classify ((void*)prtp) == RFC7983_RTCP)
+  if ( RFC7983_classify ((void*)prtp) == RFC7983_RTCP && 
+      (pup->addr_pair.a_port > 1024) && 
+      (pup->addr_pair.b_port > 1024))
     {
       ucb *otherdir;
       struct rtcp_SR *SR;
