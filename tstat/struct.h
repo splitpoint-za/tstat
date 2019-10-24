@@ -907,7 +907,7 @@ enum udp_type
 typedef struct rtp rtp;
 typedef struct rtcp rtcp;
 
-#define MAX_COUNT_RTP_PT 5
+#define MAX_COUNT_RTP_PT 10
 
 struct rtp
 {
