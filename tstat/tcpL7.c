@@ -1701,7 +1701,11 @@ tcpL7_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	 }
         break;
      case RTSP_RESPONSE:
-#ifdef RTP_CLASSIFIER
+#ifdef RTP_CLASSIFIER_DISABLED
+       /* 25/10/19 -MMM- 
+	* Disabled this code to avoid RTP over TCP potential info messing with the normal UDP
+	* RTP/RTCP streams logs
+	*/
         if (dir == S2C && ((char *) pdata + 1 <= (char *) plast))
 	 {
 	   if (*(char *) pdata == RTP_MAGICNUMBER)
