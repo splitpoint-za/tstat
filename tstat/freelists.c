@@ -514,10 +514,11 @@ utp_release (udp_pair * rel_udp_pair)
      free(this);
    }
    
-  if (rel_udp_pair->c2s.flow_ptr.rtcp_ptr!=NULL)
+  while (rel_udp_pair->c2s.flow_ptr.rtcp_ptr!=NULL)
    {
-     free(rel_udp_pair->c2s.flow_ptr.rtcp_ptr);
-     rel_udp_pair->c2s.flow_ptr.rtcp_ptr=NULL;
+     rtcp *this = rel_udp_pair->c2s.flow_ptr.rtcp_ptr;
+     rel_udp_pair->c2s.flow_ptr.rtcp_ptr = rel_udp_pair->c2s.flow_ptr.rtcp_ptr->next;
+     free(this);
    }
    
   while (rel_udp_pair->s2c.flow_ptr.rtp_ptr!=NULL)
@@ -527,10 +528,11 @@ utp_release (udp_pair * rel_udp_pair)
      free(this);
    }
 
-  if (rel_udp_pair->s2c.flow_ptr.rtcp_ptr!=NULL)
+  while (rel_udp_pair->s2c.flow_ptr.rtcp_ptr!=NULL)
    {
-     free(rel_udp_pair->s2c.flow_ptr.rtcp_ptr);
-     rel_udp_pair->s2c.flow_ptr.rtcp_ptr=NULL;
+     rtcp *this = rel_udp_pair->s2c.flow_ptr.rtcp_ptr;
+     rel_udp_pair->s2c.flow_ptr.rtcp_ptr = rel_udp_pair->s2c.flow_ptr.rtcp_ptr->next;
+     free(this);
    }
 
   if (rel_udp_pair->c2s.skype!=NULL)

@@ -973,6 +973,10 @@ struct rtcp
   u_int8_t f_lost;
   double f_lost_sum;
   int rtcp_header_error;
+  /* Track multiple PT per SSRC -MMM- */ 
+  unsigned char pt_id[MAX_COUNT_RTP_PT];
+  int pt_counter[MAX_COUNT_RTP_PT];
+  
   rtcp *next;
 };
 
