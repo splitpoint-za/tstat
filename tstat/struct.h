@@ -839,6 +839,8 @@ enum udp_type
   UDP_SIP,
   UDP_DTLS,
   UDP_QUIC,
+  FIRST_RTP_PLUS,
+  RTP_PLUS,
   LAST_UDP_PROTOCOL
 };
 
