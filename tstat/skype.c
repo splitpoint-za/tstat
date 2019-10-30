@@ -601,6 +601,7 @@ skype_conn_stats_UDP (void *thisdir)
 
   	  case FIRST_RTP:
   	  case FIRST_RTCP:
+	  case FIRST_RTP_PLUS:
   	  case UDP_UNKNOWN:
   	  default: 
   	      if ((pskype->pkt_type_num[SKYPE_E2E_DATA] > MIN_SKYPE_E2E_NUM) &&
@@ -636,7 +637,7 @@ skype_conn_stats_UDP (void *thisdir)
   	      }
   	      else
   	      {
-  		  if (thisUdir->type==FIRST_RTP || thisUdir->type==FIRST_RTCP)
+  		  if (thisUdir->type==FIRST_RTP || thisUdir->type==FIRST_RTCP || thisUdir->type==FIRST_RTP_PLUS)
   		  {
   		      thisUdir->type = UDP_UNKNOWN;
   		  }

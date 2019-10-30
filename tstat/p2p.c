@@ -789,6 +789,7 @@ int UDP_p2p_to_logtype(ucb *thisflow)
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:
+    case FIRST_RTP_PLUS:
       switch(thisflow->pup->kad_state)
         {
           case OUDP_RES52_K25:
@@ -908,6 +909,7 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:
+    case FIRST_RTP_PLUS:  
       switch(thisflow->pup->kad_state)
         {
           case OUDP_RES52_K25:

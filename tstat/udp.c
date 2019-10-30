@@ -644,6 +644,7 @@ void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
   if (thisdir->is_uTP==1 && otherdir->is_uTP==1)
    {
      if (thisdir->type==UDP_UNKNOWN ||
+    	 thisdir->type==FIRST_RTP_PLUS || 
     	 thisdir->type==FIRST_RTP || 
     	 thisdir->type==FIRST_RTCP)
       { thisdir->type=P2P_UTP; }
@@ -656,6 +657,7 @@ void check_uTP(struct ip * pip, struct udphdr * pudp, void *plast,
       }
 
      if (otherdir->type==UDP_UNKNOWN ||
+    	 otherdir->type==FIRST_RTP_PLUS || 
     	 otherdir->type==FIRST_RTP || 
     	 otherdir->type==FIRST_RTCP)
       { otherdir->type=P2P_UTP; }
@@ -1274,6 +1276,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
   if (thisdir->is_QUIC==1 && otherdir->is_QUIC==1)
    {
      if (thisdir->type==UDP_UNKNOWN ||
+    	 thisdir->type==FIRST_RTP_PLUS || 
     	 thisdir->type==FIRST_RTP || 
     	 thisdir->type==FIRST_RTCP)
       { thisdir->type=UDP_QUIC; }
@@ -1284,6 +1287,7 @@ void check_QUIC(struct ip * pip, struct udphdr * pudp, void *plast,
       }
 
      if (otherdir->type==UDP_UNKNOWN ||
+    	 otherdir->type==FIRST_RTP_PLUS || 
     	 otherdir->type==FIRST_RTP || 
     	 otherdir->type==FIRST_RTCP)
       { otherdir->type=UDP_QUIC; }

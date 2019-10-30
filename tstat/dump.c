@@ -614,7 +614,7 @@ void dump_flow_stat (struct ip *pip,
             */
             if ( ucb_type == P2P_UTP || 
                  ucb_type == P2P_UTPBT ||
-                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP || ucb_type==P2P_BT) &&
+                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP_PLUS || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP || ucb_type==P2P_BT) &&
                    (mydir->uTP_state > UTP_UNKNOWN )
                  )
                )
@@ -643,7 +643,7 @@ void dump_flow_stat (struct ip *pip,
                the identification state machine.
             */
             if ( ucb_type == UDP_QUIC || 
-                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP ) &&
+                 ( (ucb_type==UDP_UNKNOWN || ucb_type==FIRST_RTP_PLUS || ucb_type==FIRST_RTP || ucb_type==FIRST_RTCP ) &&
                    (mydir->QUIC_state > QUIC_UNKNOWN || otherdir->QUIC_state > QUIC_UNKNOWN)
                  )
                )

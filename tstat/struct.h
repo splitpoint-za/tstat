@@ -903,6 +903,10 @@ enum udp_type
  printf("UDP_DTLS = %d\n",temp); \
  temp = UDP_QUIC; \
  printf("UDP_QUIC = %d\n",temp); \
+ temp = FIRST_RTP_PLUS; \
+ printf("FIRST_RTP_PLUS = %d\n",temp); \
+ temp = RTP_PLUS; \
+ printf("RTP_PLUS = %d\n",temp); \
 }
 
 

@@ -783,7 +783,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 
       if (thisdir->flow_ptr.rtcp_ptr!=NULL)
       {
-//	  fprintf (fp_stderr, "Warning: RTCP You are not supposed to be here without a NULL pointer!\n");
+	  fprintf (fp_stderr, "Warning: RTCP You are not supposed to be here without a NULL pointer!\n");
       }
       
       if (thisdir->flow_ptr.rtcp_ptr!=NULL)
