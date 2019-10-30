@@ -814,7 +814,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
       if (thisdir->flow_ptr.rtp_ptr!=NULL)
         free(thisdir->flow_ptr.rtp_ptr);
       
-      f_rtp = new_rtp_subflow(pseq,prtp->pt,pts,pseq);
+      f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
       
       thisdir->flow_ptr.rtp_ptr = f_rtp;
       f_rtp->next = NULL;
@@ -2328,7 +2328,7 @@ update_conn_log_v3(udp_pair *flow)
    wfprintf (fp_rtp_logc, "%s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0 R",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2367,7 +2367,7 @@ update_conn_log_v3(udp_pair *flow)
      }
   }
 //  else if (flow->c2s.type == RTCP)
-  else if (flow->c2s.flow_ptr.rtcp_ptr!=NULL)
+  if (flow->c2s.flow_ptr.rtcp_ptr!=NULL)
   {
      struct rtcp *f_rtcp;
      f_rtcp = (flow->c2s.flow_ptr.rtcp_ptr);
@@ -2379,7 +2379,7 @@ update_conn_log_v3(udp_pair *flow)
 
    wfprintf (fp_rtp_logc, "%s",common_head);
      
-     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
+     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0 T",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -2438,7 +2438,7 @@ update_conn_log_v3(udp_pair *flow)
    wfprintf (fp_rtp_logc, "%s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0 R",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2477,7 +2477,7 @@ update_conn_log_v3(udp_pair *flow)
      }
   }
 //  else if (flow->s2c.type == RTCP)
-  else if (flow->s2c.flow_ptr.rtcp_ptr!=NULL)
+  if (flow->s2c.flow_ptr.rtcp_ptr!=NULL)
   {
      struct rtcp *f_rtcp;
      f_rtcp = (flow->s2c.flow_ptr.rtcp_ptr);
@@ -2489,7 +2489,7 @@ update_conn_log_v3(udp_pair *flow)
      
    wfprintf (fp_rtp_logc, "%s",common_head);
      
-     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
+     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0 T",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
