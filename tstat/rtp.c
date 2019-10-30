@@ -2374,6 +2374,9 @@ update_conn_log_v3(udp_pair *flow)
      double etime;
      uint64_t data_bytes;
 
+          while (f_rtcp!=NULL)
+     {
+
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
 
@@ -2412,6 +2415,8 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtcp_header_error);
      
        wfprintf (fp_rtp_logc, "\n");
+       f_rtcp = f_rtcp->next;
+     }
   }
   else
   {
@@ -2484,6 +2489,9 @@ update_conn_log_v3(udp_pair *flow)
      double etime;
      uint64_t data_bytes;
 
+     while (f_rtcp!=NULL)
+     {
+
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
      
@@ -2521,6 +2529,8 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtt_samples,
 	      f_rtcp->rtcp_header_error);
        wfprintf (fp_rtp_logc, "\n");
+       f_rtcp = f_rtcp->next;
+     }
   }
   else
   {
