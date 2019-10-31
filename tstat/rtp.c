@@ -248,8 +248,21 @@ u_int32_t pssrc;
 u_int32_t pts;
 u_int16_t pseq;
 
-void rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
-void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
+void rtp_plus_check (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
+void rtp_plus_stat (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
+
+rtp  *rtp_locate_ssrc (rtp *rtp_list, uint32_t ssrc);
+rtcp *rtcp_locate_ssrc (rtcp *rtcp_list, uint32_t ssrc);
+int  rtp_valid_pt (u_int8_t pt);
+void rtp_init_pt_counter (rtp * f_rtp);
+void rtcp_init_pt_counter (rtcp * f_rtcp);
+void rtp_update_pt_counter (rtp* f_rtp, u_int8_t pt);
+void rtcp_update_pt_counter (rtcp* f_rtcp, u_int8_t pt);
+char *rtp_pt_lists (rtp *f_rtp);
+char *rtcp_pt_lists (rtp *f_rtcp);
+rtp  *new_rtp_subflow (u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq);
+rtcp *new_rtcp_subflow (u_int32_t ssrc, u_int8_t pt, ulong initial_bytes);
+void rtcp_init_stats (rtcp *f_rtcp, char *payload_ptr, u_int8_t pt, unsigned char rc, void *plast, struct sudp_pair *pup, int dir);
 
 void update_rtp_conn_histo (ucb * thisdir, int dir);
 void update_rtcp_conn_histo (ucb * thisdir, int dir);
@@ -342,7 +355,6 @@ int RFC7983_classify(void * hdr)
   return RFC7983_UNK;
 }
 
-
 void rtp_init_pt_counter(rtp * f_rtp)
 {
   int i;
@@ -430,6 +442,40 @@ char *rtp_pt_lists(rtp *f_rtp)
       sprintf(tmp,"%s%d",(comma==1?",":""),f_rtp->pt_id[i]);
       strcat(pt_string,tmp);
       sprintf(tmp,"%s%d",(comma==1?",":""),f_rtp->pt_counter[i]);
+      strcat(count_string,tmp);
+      comma = 1;
+    }
+  }
+  if (comma==0)
+   {
+     strcpy(buffer,"- -");
+   }
+  else
+   {
+     sprintf(buffer,"%s %s",pt_string,count_string);
+   }
+  return(buffer); 
+}
+
+char *rtcp_pt_lists(rtp *f_rtcp)
+{
+  static char buffer[128];
+  char pt_string[64];
+  char count_string[64];
+  char tmp[20];
+  int i;
+  int comma;
+  
+  strcpy(pt_string,"");
+  strcpy(count_string,"");
+  comma = 0;
+  for (i=0;i<MAX_COUNT_RTP_PT;i++)
+  {
+    if (f_rtcp->pt_id[i]!=0)
+    {
+      sprintf(tmp,"%s%d",(comma==1?",":""),f_rtcp->pt_id[i]);
+      strcat(pt_string,tmp);
+      sprintf(tmp,"%s%d",(comma==1?",":""),f_rtcp->pt_counter[i]);
       strcat(count_string,tmp);
       comma = 1;
     }
@@ -676,8 +722,6 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    /* already identified the RTP flow... Check if STUN or RTCP interleaved 
 	       and avoid resetting the state machine */
 	    struct rtp *f_rtp;
-        u_int8_t pt_rtcp;
-        pt_rtcp = prtp->pt + (prtp->m << 7);
 	   
         /* RTP */
 	    if ( RFC7983_classify (hdr) == RFC7983_RTP )
@@ -723,7 +767,6 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    struct sudp_pair *pup;
 	    f_rtcp = thisdir->flow_ptr.rtcp_ptr;
 	    pup = thisdir->pup;
-	    u_int8_t pt_rtcp = prtp->pt + (prtp->m << 7);
 
 	    if ( RFC7983_classify (hdr) == RFC7983_RTCP && f_rtcp->ssrc == pts &&
 	        (pup->addr_pair.a_port > 1024)  
@@ -775,9 +818,6 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
       (pup->addr_pair.a_port > 1024) && 
       (pup->addr_pair.b_port > 1024))
     {
-      ucb *otherdir;
-      struct rtcp_SR *SR;
-      struct rtcp_RR *RR;
       unsigned char rc = prtp->cc + (prtp->x << 4);
       char *pdecode = (char *) prtp;
 
@@ -833,8 +873,6 @@ void
 rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
 {
   struct rtp *f_rtp = NULL;
-  u_int8_t pt_rtcp;
-  pt_rtcp = prtp->pt + (prtp->m << 7);
   
   f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
   
@@ -966,128 +1004,131 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
    packet_type = RFC7983_classify ((void*)prtp);
    
    switch(packet_type)
-   {
+    {
      case RFC7983_RTP:
        // Check RTP stuff
        
        /* locate previous SSRC record */
        f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc); 
-       // If found, update status
-       // else, allocate a new one
+
+       // If found, update status, else, allocate a new one
+
        if (f_rtp!=NULL)
          {
           /* Located a flow with the same SSRC */
           if ( (f_rtp->initial_seqno + (u_int16_t) f_rtp->pnum == pseq))
             {
-           f_RTP_count++;
-           switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst, dir))
-            {
-             case OUT_FLOW:
-                add_histo (L7_UDP_num_out, L7_FLOW_RTP);
-                if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-                  {
-                    add_histo (L7_UDP_num_c_out, L7_FLOW_RTP);
-                  }
-                else
-                  {
-                    add_histo (L7_UDP_num_nc_out, L7_FLOW_RTP);
-                  }
-                break;
-             case IN_FLOW:
-                add_histo (L7_UDP_num_in, L7_FLOW_RTP);
-                if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-                  {
-                    add_histo (L7_UDP_num_c_in, L7_FLOW_RTP);
-                  }
-                else
-                  {
-                    add_histo (L7_UDP_num_nc_in, L7_FLOW_RTP);
-                  }
-                break;
-            case LOC_FLOW:
-                add_histo (L7_UDP_num_loc, L7_FLOW_RTP);
-                break;
-           }
-          rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-          // thisdir->type = RTP;
-          thisdir->type = RTP_PLUS;
-          thisdir->multiplexed_protocols |= RFC7983_RTP;
+              f_RTP_count++;
+              switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst, dir))
+               {
+                 case OUT_FLOW:
+                   add_histo (L7_UDP_num_out, L7_FLOW_RTP);
+                   if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
+                    {
+                      add_histo (L7_UDP_num_c_out, L7_FLOW_RTP);
+                    }
+                   else
+                    {
+                      add_histo (L7_UDP_num_nc_out, L7_FLOW_RTP);
+                    }
+                   break;
+                 case IN_FLOW:
+                   add_histo (L7_UDP_num_in, L7_FLOW_RTP);
+                   if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
+                    {
+                      add_histo (L7_UDP_num_c_in, L7_FLOW_RTP);
+                    }
+                   else
+                    {
+                      add_histo (L7_UDP_num_nc_in, L7_FLOW_RTP);
+                    }
+                   break;
+                 case LOC_FLOW:
+                   add_histo (L7_UDP_num_loc, L7_FLOW_RTP);
+                   break;
+               }
+              rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+	      
+              // thisdir->type = RTP;
+              thisdir->type = RTP_PLUS;
+              thisdir->multiplexed_protocols |= RFC7983_RTP;
           
-        }
-      /* Flow located, status confirmed */
-      else
-      {
-	// Correct SSRC but wrong SeqNo?
-	printf("Wrong starting RTP seqno\n");
-      }
-   }
-  else
-   { 
-      rtp *f_rtp2;
+            }
+              /* Flow located, status confirmed */
+          else
+            {
+	     // Correct SSRC but wrong SeqNo?
+	     printf("Wrong starting RTP seqno\n");
+            }
+         }
+       else
+         { 
+           rtp *f_rtp2;
       
-      f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
 
-      f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
-      thisdir->flow_ptr.rtp_ptr = f_rtp2;
+           f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
+           thisdir->flow_ptr.rtp_ptr = f_rtp2;
       
-      thisdir->multiplexed_protocols |= RFC7983_RTP;
-      // Do not change the type, since we still do not have a full RTP confirmation
-   }
-       
+           thisdir->multiplexed_protocols |= RFC7983_RTP;
+           // Do not change the type, since we still do not have a full RTP confirmation
+         }
        break;
+
      case RFC7983_RTCP:
        // Check RTCP stuff
       /* locate previous SSRC record */
        f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts); 
 
        if (f_rtcp!=NULL)
-       {
+        {
 	 if ( f_rtcp->pnum == 1 )
-    {
-      f_RTCP_count++;
-      switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst,dir))
-      {
-      case OUT_FLOW:
-            add_histo (L7_UDP_num_out, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-	      {
-            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTCP);
-	      }
-            break;
-      case IN_FLOW:
-            add_histo (L7_UDP_num_in, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-	      {
-            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTCP);
-	      }
-            break;
-      case LOC_FLOW:
-            add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
-            break;
-      }
-      rtcp_stat (thisdir, dir, prtp, plast);
- //      thisdir->type = RTCP;
-         thisdir->type = RTP_PLUS;
-          thisdir->multiplexed_protocols |= RFC7983_RTCP;
-    }	 
-	else
-	{
-	  // Found but counter != 1
-	  	// Correct SSRC but wrong SeqNo?
-	printf("Wrong starting RTCP seqno?\n");
+           {
+             f_RTCP_count++;
+             switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst,dir))
+              {
+                case OUT_FLOW:
+                  add_histo (L7_UDP_num_out, L7_FLOW_RTCP);add_histo (L7_UDP_num_out, L7_FLOW_RTCP);
+	          if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
+	           {
+            	     add_histo (L7_UDP_num_c_out, L7_FLOW_RTCP);
+	           }
+	          else
+	           {
+            	    add_histo (L7_UDP_num_nc_out, L7_FLOW_RTCP);
+	           }
+                break;
+              case IN_FLOW:
+                 add_histo (L7_UDP_num_in, L7_FLOW_RTCP);
+	         if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
+	          {
+            	    add_histo (L7_UDP_num_c_in, L7_FLOW_RTCP);
+	          }
+	        else
+	          {
+            	    add_histo (L7_UDP_num_nc_in, L7_FLOW_RTCP);
+	          }
+                break;
+              case LOC_FLOW:
+                add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
+                break;
+             }
+            rtcp_stat (thisdir, dir, prtp, plast);
+     //      thisdir->type = RTCP;
+            thisdir->type = RTP_PLUS;
+            thisdir->multiplexed_protocols |= RFC7983_RTCP;
+           }	 
+	 else
+	   {
+	     // Found but counter != 1
+	     // Correct SSRC but wrong SeqNo?
+	     printf("Wrong starting RTCP seqno?\n");
 
-	}
+	   }   
+	  
        }
-	else
-	{
+       else
+        {
           rtcp *f_rtcp2;
           char *pdecode = (char *) prtp;
           unsigned char rc = prtp->cc + (prtp->x << 4);
@@ -1100,19 +1141,19 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
           rtcp_init_stats(f_rtcp2,pdecode,pt_rtcp,rc,plast,thisdir->pup,dir);
       
           thisdir->multiplexed_protocols |= RFC7983_RTCP;
-      // Do not change the type, since we still do not have a full RTP confirmation
-   }
+           // Do not change the type, since we still do not have a full RTP confirmation
+        }
+       break;
 
-	
-       break;
      case RFC7983_UNK:
-       // reset status
+        // reset status
         /* No minimal matching. No subflow and flow status reset */
-        thisdir->type = UDP_UNKNOWN;
+       thisdir->type = UDP_UNKNOWN;
        break;
+
      default:
-       // ignore and set flag
-       /* Ignored allowed non RTP packet */
+        // ignore and set flag
+        /* Ignored allowed non RTP packet */
        thisdir->multiplexed_protocols |= packet_type;
        break;
    }
@@ -1134,65 +1175,66 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
    {
      case RFC7983_RTP:
        // Check RTP stuff
-        f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
-        if (f_rtp!=NULL)
-          {
-            rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-            thisdir->multiplexed_protocols |= RFC7983_RTP;
-          }
-        else
-         {
-           // Allocate the new subflow
-           rtp *f_rtp2;
+       f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
+       if (f_rtp!=NULL)
+        {
+         rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+         thisdir->multiplexed_protocols |= RFC7983_RTP;
+        }
+       else
+        {
+          // Allocate the new subflow
+          rtp *f_rtp2;
   
-           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+          f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
 
-            f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
-            thisdir->flow_ptr.rtp_ptr = f_rtp2;
-          }
-        break;
+          f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
+          thisdir->flow_ptr.rtp_ptr = f_rtp2;
+        }
+       break;
        
      case RFC7983_RTCP:
        // Check RTCP stuff
-      /* locate previous SSRC record */
-      if  ( (thisdir->pup->addr_pair.a_port > 1024) && 
-            (thisdir->pup->addr_pair.b_port > 1024) )
-       {
-	 f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts);
-         if (f_rtcp!=NULL)
-	      { 
-	        thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	        rtcp_stat (thisdir, dir, prtp, plast);
-	      }
-	 else
-	  {
-	    // Allocate a new subflow
-          rtcp *f_rtcp2;
-          char *pdecode = (char *) prtp;
-          unsigned char rc = prtp->cc + (prtp->x << 4);
+       /* locate previous SSRC record */
+       if  ( (thisdir->pup->addr_pair.a_port > 1024) && 
+             (thisdir->pup->addr_pair.b_port > 1024) )
+        {
+	  f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts);
+          if (f_rtcp!=NULL)
+	   { 
+             thisdir->multiplexed_protocols |= RFC7983_RTCP;
+	     rtcp_stat (thisdir, dir, prtp, plast);
+	   }
+	  else
+	   {
+	     // Allocate a new subflow
+             rtcp *f_rtcp2;
+             char *pdecode = (char *) prtp;
+             unsigned char rc = prtp->cc + (prtp->x << 4);
  
-          f_rtcp2 = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
+             f_rtcp2 = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
 
-          f_rtcp2->next = thisdir->flow_ptr.rtcp_ptr;
-          thisdir->flow_ptr.rtcp_ptr = f_rtcp2;
+             f_rtcp2->next = thisdir->flow_ptr.rtcp_ptr;
+             thisdir->flow_ptr.rtcp_ptr = f_rtcp2;
       
-          rtcp_init_stats(f_rtcp2,pdecode,pt_rtcp,rc,plast,thisdir->pup,dir);
+             rtcp_init_stats(f_rtcp2,pdecode,pt_rtcp,rc,plast,thisdir->pup,dir);
       
-          thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	  }
-       }
+             thisdir->multiplexed_protocols |= RFC7983_RTCP;
+	   }
+        }
        else
-       {
-	 // Ports are wrong. It should have not been RTP_PLUS from the start
-           thisdir->type = UDP_UNKNOWN;
-	 
-       }
-      break;
-     case RFC7983_UNK:
-       // reset status
-        /* No minimal matching. No subflow and flow status reset */
-        thisdir->type = UDP_UNKNOWN;
+        {
+	  // Ports are wrong. It should have not been RTP_PLUS from the start
+          thisdir->type = UDP_UNKNOWN; 
+        }
        break;
+
+     case RFC7983_UNK:
+        // reset status
+        /* No minimal matching. No subflow and flow status reset */
+       thisdir->type = UDP_UNKNOWN;
+       break;
+
      default:
        // ignore and set flag
        /* Ignored allowed non RTP packet */
