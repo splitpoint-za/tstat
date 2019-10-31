@@ -261,7 +261,7 @@ void rtcp_update_pt_counter (rtcp* f_rtcp, u_int8_t pt);
 char *rtp_pt_lists (rtp *f_rtp);
 char *rtcp_pt_lists (rtp *f_rtcp);
 rtp  *new_rtp_subflow (u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq);
-rtcp *new_rtcp_subflow (u_int32_t ssrc, u_int8_t pt, ulong initial_bytes);
+rtcp *new_rtcp_subflow (u_int32_t ssrc, u_int8_t pt, u_long initial_bytes);
 void rtcp_init_stats (rtcp *f_rtcp, char *payload_ptr, u_int8_t pt, unsigned char rc, void *plast, struct sudp_pair *pup, int dir);
 
 void update_rtp_conn_histo (ucb * thisdir, int dir);
@@ -517,7 +517,7 @@ rtp *new_rtp_subflow(u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq)
   return f_rtp;
 }
 
-rtcp *new_rtcp_subflow(u_int32_t ssrc, u_int8_t pt, ulong initial_bytes)
+rtcp *new_rtcp_subflow(u_int32_t ssrc, u_int8_t pt, u_long initial_bytes)
 {
   rtcp *f_rtcp;
 
