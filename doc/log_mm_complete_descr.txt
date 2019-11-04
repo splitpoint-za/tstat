@@ -44,21 +44,25 @@ For RTCP flows, a simpler heuristic is used:
 
 If so, the flow is considered a RTCP flow and its analysis may start.
 
+Due to the current multiplexing of several protocols over the same flow, the procotols are
+currently classified as RTP+ (RTP_PLUS).
+
+
 ########################################################################################################
 # Col   # Short Description# Unit  # Long Description                                        # Protocol
 ########################################################################################################
-#  1    # L4 Proto         # 1/2   # 1 = TCP, 2 = UDP                                        # All
-#  2    # Client Protocol  # 3/4   # 3 = RTP, 4 = RTCP                                       # All
-#  3    # Client IP        # -     # Client  IP addresses                              # All
-#  4    # Client port      # -     # TCP/UDP port addresses for the Client            # All
-#  5    # C Internal       # 0/1   # 1 = internal ip                                         # All
-#  6    # C Mux Protocols  # -     # Multiplexed protocols [*] bitmask
-#  7    # Server Protocol  # 3/4   # 3 = RTP, 4 = RTCP                                       # All
-#  8    # Server IP        # -     # Server IP addresses                              # All
-#  9    # Server port      # -     # TCP/UDP port addresses for the Server            # All
-# 10    # S Internal       # 0/1   # 1 = internal ip                                         # All
-# 11    # S Mux Protocols  # -     # Multiplexed protocols [*] bitmask
-# 12    # Direction        # C/S   # Flow direction C (C->S) or S (S->C)
+#  1    # L7 Proto         # R/T   # R = RTP, T = RTCP                                        # All
+#  2    # Direction        # C/S   # Flow direction C (C->S) or S (S->C)
+#  3    # Client Protocol  # 29/0  # 29 = RTP+, 0 = Unclassified                              # All
+#  4    # Client IP        # -     # Client  IP addresses                              # All
+#  5    # Client port      # -     # TCP/UDP port addresses for the Client            # All
+#  6    # C Internal       # 0/1   # 1 = internal ip                                         # All
+#  7    # C Mux Protocols  # -     # Multiplexed protocols [*] bitmask
+#  8    # Server Protocol  # 29/0  # 29 = RTP+, 0 = Unclassified                     # All
+#  9    # Server IP        # -     # Server IP addresses                              # All
+# 10    # Server port      # -     # TCP/UDP port addresses for the Server            # All
+# 11    # S Internal       # 0/1   # 1 = internal ip                                         # All
+# 12    # S Mux Protocols  # -     # Multiplexed protocols [*] bitmask
 # 13    # Packets          # -     # Number of packets Tstat has seen belonging to the flow  # All
 # 14    # IPG              # ms    # Inter Packet Gap (IPG)                                  # All
 # 15    # Jitter AVG       # ms/ts # Jitter (average):                                       #

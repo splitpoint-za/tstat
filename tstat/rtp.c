@@ -2322,16 +2322,14 @@ update_conn_log_v3(udp_pair *flow)
 
   /* Request C-->S */
   if (flow->crypto_src==FALSE)
-     sprintf (common_head2, "%d %d %s %s %u %u",
-          PROTOCOL_UDP,
+     sprintf (common_head2, "%d %s %s %u %u",
 	  flow->c2s.type,
 	  HostName (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
 	  flow->internal_src,
 	  flow->c2s.multiplexed_protocols);
   else 
-     sprintf (common_head2, "%d %d %s %s %u %u",
-          PROTOCOL_UDP,
+     sprintf (common_head2, "%d %s %s %u %u",
 	  flow->c2s.type,
 	  HostNameEncrypted (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
@@ -2367,10 +2365,10 @@ update_conn_log_v3(udp_pair *flow)
      {
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
      
-   wfprintf (fp_rtp_logc, "%s",common_head);
+   wfprintf (fp_rtp_logc, "R C %s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0 R",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2422,9 +2420,9 @@ update_conn_log_v3(udp_pair *flow)
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
 
-   wfprintf (fp_rtp_logc, "%s",common_head);
+   wfprintf (fp_rtp_logc, "T C %s",common_head);
      
-     wfprintf (fp_rtp_logc, " C %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0 T",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -2442,9 +2440,9 @@ update_conn_log_v3(udp_pair *flow)
 	      /* f_rtp->n_lost,
 	      f_rtp->n_out_of_sequence,
 	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow); */
+	      f_rtp->n_late, */
+	      rtcp_pt_lists(f_rtcp),
+	      /* f_rtp->bogus_reset_during_flow); */
 	      /* RTCP only */
 	      f_rtcp->c_lost,
 	      (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, 
@@ -2482,10 +2480,10 @@ update_conn_log_v3(udp_pair *flow)
      {
      etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
      
-   wfprintf (fp_rtp_logc, "%s",common_head);
+   wfprintf (fp_rtp_logc, "R S %s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0 R",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2537,9 +2535,9 @@ update_conn_log_v3(udp_pair *flow)
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
      data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
      
-   wfprintf (fp_rtp_logc, "%s",common_head);
+   wfprintf (fp_rtp_logc, "T S %s",common_head);
      
-     wfprintf (fp_rtp_logc, " S %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 - - 0 %d %g %u %u %g %g %g %u %d 0 0 0 0 T",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -2557,9 +2555,9 @@ update_conn_log_v3(udp_pair *flow)
 	      /* f_rtp->n_lost,
 	      f_rtp->n_out_of_sequence,
 	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow); */
+	      f_rtp->n_late, */
+	      rtcp_pt_lists(f_rtcp),
+	      /* f_rtp->bogus_reset_during_flow); */
 	      /* RTCP only */
 	      f_rtcp->c_lost,  
 	      (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, 

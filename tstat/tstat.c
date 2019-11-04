@@ -1476,9 +1476,12 @@ void write_log_header(FILE *fp, int log_type)
    else if (log_type == LOG_MM_COMPLETE)
    {
      col = 1;
-     wfprintf(fp,"#t_proto:%d", col++);		 // 1: Transport Prototol (TCP/UDP)
+//     wfprintf(fp,"#t_proto:%d", col++);		 // 1: Transport Prototol (TCP/UDP)
+     wfprintf(fp,"#a_proto:%d", col++);		 // 1: Application Prototol (RTP/RTCP)
+     /* */
+     wfprintf(fp," direction:%d", col++);		 // 2:  Client Protocol
 /* Client Info */
-     wfprintf(fp," c_proto:%d", col++);		 // 2:  Client Protocol
+     wfprintf(fp," c_proto:%d", col++);		 // 2:  Client Protocol (RTP+/None)
      wfprintf(fp," c_ip:%d", col++);		 // 3:  client ip
      wfprintf(fp," c_port:%d", col++);		 // 4:  client port
      wfprintf(fp," c_internal:%d", col++);	 // 5:  client is internal
@@ -1488,8 +1491,6 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," s_port:%d", col++);		 // 
      wfprintf(fp," s_internal:%d", col++);	 // 
      wfprintf(fp," s_mux_prot:%d", col++);	 // 5:  client is internal
-     /* */
-     wfprintf(fp," direction:%d", col++);		 // 2:  Client Protocol
      /* */
      wfprintf(fp," packets:%d", col++);	 // 6:  client packets
      wfprintf(fp," ipg:%d", col++);		 // 7:  client Inter Packet Gap
