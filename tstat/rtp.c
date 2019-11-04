@@ -259,7 +259,7 @@ void rtcp_init_pt_counter (rtcp * f_rtcp);
 void rtp_update_pt_counter (rtp* f_rtp, u_int8_t pt);
 void rtcp_update_pt_counter (rtcp* f_rtcp, u_int8_t pt);
 char *rtp_pt_lists (rtp *f_rtp);
-char *rtcp_pt_lists (rtp *f_rtcp);
+char *rtcp_pt_lists (rtcp *f_rtcp);
 rtp  *new_rtp_subflow (u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq);
 rtcp *new_rtcp_subflow (u_int32_t ssrc, u_int8_t pt, u_long initial_bytes);
 void rtcp_init_stats (rtcp *f_rtcp, char *payload_ptr, u_int8_t pt, unsigned char rc, void *plast, struct sudp_pair *pup, int dir);
@@ -457,7 +457,7 @@ char *rtp_pt_lists(rtp *f_rtp)
   return(buffer); 
 }
 
-char *rtcp_pt_lists(rtp *f_rtcp)
+char *rtcp_pt_lists(rtcp *f_rtcp)
 {
   static char buffer[128];
   char pt_string[64];
@@ -687,18 +687,6 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	    init_rtp (thisdir, dir, pudp, prtp, plast);
 	    break;
       }
-    case FIRST_RTP:
-      {
-	    /* already got a packet ... double check it */
-	    rtp_check (thisdir, prtp, dir, pip, plast);
-	    break;
-      }
-    case FIRST_RTCP:
-      {
-	    /* already got a packet ... double check it */
-	    rtcp_check (thisdir, dir, prtp, plast);
-	    break;
-      }
     case FIRST_RTP_PLUS:
       {
 	    /* we got either a RTP or a RTCP packet ... double check until we have
@@ -717,74 +705,6 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	rtp_plus_stat(thisdir, prtp, dir, pip, pudp, plast);
 	break;
       }
-    case RTP:
-      {
-	    /* already identified the RTP flow... Check if STUN or RTCP interleaved 
-	       and avoid resetting the state machine */
-	    struct rtp *f_rtp;
-	   
-        /* RTP */
-	    if ( RFC7983_classify (hdr) == RFC7983_RTP )
-	     {
-	      f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
-	      if (f_rtp!=NULL)
-	       {
-	         rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-	         thisdir->multiplexed_protocols |= RFC7983_RTP;
-	       }
-	      else
-	       {
-	         // Allocate the new subflow
-             rtp *f_rtp2;
-  
-	     f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-
-             f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
-             thisdir->flow_ptr.rtp_ptr = f_rtp2;
-	       }
-	     }
-        else if ( RFC7983_classify (hdr) != RFC7983_UNK )
-        {
-            // Ignore other allowed protocols
-            thisdir->multiplexed_protocols |= RFC7983_classify (hdr);
-	    }
-	    /* OTHER -> reset status to UDP_UNKNOWN */
-	    else
-	      {
-	        /* The RTP flow is closed but not the UDP one */
-	        /* this should not happen... */
-            /* to simplify convertion to new file format removed printing RTP info */
-            /* anyeay if this happened it probably was not a RTP flow to begin with */
-	        thisdir->type = UDP_UNKNOWN;
-	      }
-	    break;
-      }
-
-    case RTCP:
-      {
-	    /* already identified the RTCP flow... */
-	    struct rtcp *f_rtcp;
-	    struct sudp_pair *pup;
-	    f_rtcp = thisdir->flow_ptr.rtcp_ptr;
-	    pup = thisdir->pup;
-
-	    if ( RFC7983_classify (hdr) == RFC7983_RTCP && f_rtcp->ssrc == pts &&
-	        (pup->addr_pair.a_port > 1024)  
-	    )
-	      { 
-	        thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	        rtcp_stat (thisdir, dir, prtp, plast);
-	      }
-	    else
-	      {
-	        /* The RTCP flow is closed but not the UDP one */
-            /* to simplify convertion to new file format removed printing RTP info */
-            /* anyeay if this happened it probably was not a RTP flow to begin with */
-	        thisdir->type = UDP_UNKNOWN;
-	      }
-	    break;
-      }
-      
     case SKYPE_E2E:
     case SKYPE_OUT:
     case SKYPE_SIG:
@@ -866,129 +786,6 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 
 }
 
-
-/* function used to control if the current analyzed packet is an RTP packet */
-
-void
-rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
-{
-  struct rtp *f_rtp = NULL;
-  
-  f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
-  
-  if (f_rtp!=NULL)
-   {
-      /* Located a flow with the same SSRC */
-        if (  RFC7983_classify ((void*)prtp) == RFC7983_RTP &&
-             (f_rtp->initial_seqno + (u_int16_t) f_rtp->pnum == pseq))
-         {
-           f_RTP_count++;
-           switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst, dir))
-            {
-             case OUT_FLOW:
-                add_histo (L7_UDP_num_out, L7_FLOW_RTP);
-                if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-                  {
-                    add_histo (L7_UDP_num_c_out, L7_FLOW_RTP);
-                  }
-                else
-                  {
-                    add_histo (L7_UDP_num_nc_out, L7_FLOW_RTP);
-                  }
-                break;
-             case IN_FLOW:
-                add_histo (L7_UDP_num_in, L7_FLOW_RTP);
-                if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-                  {
-                    add_histo (L7_UDP_num_c_in, L7_FLOW_RTP);
-                  }
-                else
-                  {
-                    add_histo (L7_UDP_num_nc_in, L7_FLOW_RTP);
-                  }
-                break;
-            case LOC_FLOW:
-                add_histo (L7_UDP_num_loc, L7_FLOW_RTP);
-                break;
-           }
-          rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-          thisdir->type = RTP;
-          thisdir->multiplexed_protocols |= RFC7983_RTP;
-          
-        }
-      /* Flow located, status confirmed */
-   }
-  else
-   { 
-     /* No previous flow with the same ssrc, let's see if we can make a subflow */
-     if (RFC7983_classify ((void*)prtp) == RFC7983_RTP)
-     {
-      rtp *f_rtp2;
-      
-      f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-
-      f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
-      thisdir->flow_ptr.rtp_ptr = f_rtp2;
-     }
-     
-     else if (RFC7983_classify ((void*)prtp) != RFC7983_UNK)
-      {
-        /* Ignored allowed non RTP packet */
-        thisdir->multiplexed_protocols |= RFC7983_classify ((void*)prtp);
-      }
-     else
-      {
-        /* No minimal matching. No subflow and flow status reset */
-        thisdir->type = UDP_UNKNOWN;
-      }    
-
-   }
-}
-
-/* function used to control if the current analyzed packet is an RTCP packet*/
-
-void
-rtcp_check2 (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast)
-{
-  struct rtcp *f_rtcp = thisdir->flow_ptr.rtcp_ptr;
-
-  if (RFC7983_classify ((void*)prtp) == RFC7983_RTCP && (f_rtcp->ssrc == pts) && (f_rtcp->pnum == 1))
-    {
-      f_RTCP_count++;
-      switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst,dir))
-      {
-      case OUT_FLOW:
-            add_histo (L7_UDP_num_out, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-	      {
-            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTCP);
-	      }
-            break;
-      case IN_FLOW:
-            add_histo (L7_UDP_num_in, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-	      {
-            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTCP);
-	      }
-            break;
-      case LOC_FLOW:
-            add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
-            break;
-      }
-      rtcp_stat (thisdir, dir, prtp, plast);
-      thisdir->type = RTCP;
-    }
-  else				/* is not an RTCP packet */
-    thisdir->type = UDP_UNKNOWN;
-}
 
 
 /* function used to control if the current analyzed packet is an RTP or an RTCP packet */
@@ -1113,7 +910,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
                 add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
                 break;
              }
-            rtcp_stat (thisdir, dir, prtp, plast);
+            rtcp_stat (thisdir, f_rtcp, dir, prtp, plast);
      //      thisdir->type = RTCP;
             thisdir->type = RTP_PLUS;
             thisdir->multiplexed_protocols |= RFC7983_RTCP;
@@ -1203,7 +1000,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
           if (f_rtcp!=NULL)
 	   { 
              thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	     rtcp_stat (thisdir, dir, prtp, plast);
+	     rtcp_stat (thisdir, f_rtcp, dir, prtp, plast);
 	   }
 	  else
 	   {
@@ -1244,48 +1041,6 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
   
 }
 
-void
-rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast)
-{
-  struct rtcp *f_rtcp = thisdir->flow_ptr.rtcp_ptr;
-
-  if (RFC7983_classify ((void*)prtp) == RFC7983_RTCP && (f_rtcp->ssrc == pts) && (f_rtcp->pnum == 1))
-    {
-      f_RTCP_count++;
-      switch (in_out_loc(thisdir->pup->internal_src, thisdir->pup->internal_dst,dir))
-      {
-      case OUT_FLOW:
-            add_histo (L7_UDP_num_out, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_dst) || (dir==S2C && thisdir->pup->cloud_src))
-	      {
-            	add_histo (L7_UDP_num_c_out, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_out, L7_FLOW_RTCP);
-	      }
-            break;
-      case IN_FLOW:
-            add_histo (L7_UDP_num_in, L7_FLOW_RTCP);
-	    if ( (dir==C2S && thisdir->pup->cloud_src) || (dir==S2C && thisdir->pup->cloud_dst))
-	      {
-            	add_histo (L7_UDP_num_c_in, L7_FLOW_RTCP);
-	      }
-	    else
-	      {
-            	add_histo (L7_UDP_num_nc_in, L7_FLOW_RTCP);
-	      }
-            break;
-      case LOC_FLOW:
-            add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
-            break;
-      }
-      rtcp_stat (thisdir, dir, prtp, plast);
-      thisdir->type = RTCP;
-    }
-  else				/* is not an RTCP packet */
-    thisdir->type = UDP_UNKNOWN;
-}
 
 /******* Statistics about RTP flows ********/
 
@@ -1769,9 +1524,10 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 /******* Statistics about RTCP flows ********/
 
 void
-rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
+rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prtp, void *plast)
 {
-  struct rtcp *f_rtcp = thisdir->flow_ptr.rtcp_ptr;
+
+
   struct sudp_pair *pup = thisdir->pup;
   struct ucb *otherdir;
 
@@ -1792,6 +1548,8 @@ rtcp_stat (struct ucb *thisdir, int dir, struct rtphdr *prtp, void *plast)
   /* delta_t calculus in  milliseconds */
   delta_t = elapsed (f_rtcp->last_time, current_time) / 1000.0;
   f_rtcp->sum_delta_t += delta_t;
+
+  rtcp_update_pt_counter(f_rtcp, pt_rtcp) ;
 
   /* RTCP decoding */
   pdecode += 8;

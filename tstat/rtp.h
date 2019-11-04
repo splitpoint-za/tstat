@@ -146,11 +146,10 @@ void rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
 void init_rtp (ucb * thisdir, int dir, struct udphdr *pudp,
 	       struct rtphdr *prtp, void *plast);
-void rtp_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, void *plast);
 void rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast);
 void rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	       struct ip *pip, void *plast);
-void rtcp_stat (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast);
+void rtcp_stat (ucb * thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prtp, void *plast);
 void make_rtp_conn_stats (void * thisdir, int tproto);
 
 u_int16_t swap16 (u_int16_t val);
