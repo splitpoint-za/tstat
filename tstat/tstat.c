@@ -1523,10 +1523,6 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," rtt_min:%d", col++);	 // 31: client RTT min
      wfprintf(fp," rtt_samples:%d", col++);	 // 32: client RTT samples
      wfprintf(fp," rtcp_trunc:%d", col++);	 // 33: client RTCP truncated header
-     wfprintf(fp," first_http:%d", col++);	 // 34: client first HTTP packer
-     wfprintf(fp," first_rtsp:%d", col++);	 // 35: client first RTSP packet
-     wfprintf(fp," first_rtp:%d", col++);	 // 36: client first RTP packet
-     wfprintf(fp," first_icy:%d", col++);	 // 37: client first ICY packet           
      wfprintf (fp, "\n");
    }
   
