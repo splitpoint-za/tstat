@@ -234,11 +234,6 @@ extern int debug;
 #define NOT_IN_SEQ 3		/* come reord */
 #define DUP 4
 
-/* variables used to compute the RTP packets fields*/
-u_int32_t pssrc;
-u_int32_t pts;
-u_int16_t pseq;
-
 void rtp_plus_check (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
 void rtp_plus_stat (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
 
@@ -680,10 +675,6 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
   pudp = (struct udphdr *) pproto;
   thisdir = (ucb *) pdir;
 
-  pssrc = swap32 (prtp->ssrc);
-  pts = swap32 (prtp->ts);
-  pseq = swap16 (prtp->seqno);
-
   switch (thisdir->type)
     {
     case UDP_UNKNOWN:
@@ -736,6 +727,11 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
   u_int8_t pt_rtcp;
   pup = thisdir->pup;
   int rfc7983_packet_type;
+  
+  u_int32_t pssrc = swap32 (prtp->ssrc);
+  u_int32_t pts = swap32 (prtp->ts);
+  u_int16_t pseq = swap16 (prtp->seqno);
+  
   /* this may be RTP or RTCP...
      version must be 2
      pt must be RTP valid
@@ -818,6 +814,10 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
    struct rtcp *f_rtcp = NULL;
    u_int8_t pt_rtcp;
    pt_rtcp = prtp->pt + (prtp->m << 7);
+
+   u_int32_t pssrc = swap32 (prtp->ssrc);
+   u_int32_t pts = swap32 (prtp->ts);
+   u_int16_t pseq = swap16 (prtp->seqno);
    
    rfc7983_packet_type = RFC7983_classify ((void*)prtp);
    
@@ -990,6 +990,10 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
    u_int8_t pt_rtcp;
    pt_rtcp = prtp->pt + (prtp->m << 7);
    
+   u_int32_t pssrc = swap32 (prtp->ssrc);
+   u_int32_t pts = swap32 (prtp->ts);
+   u_int16_t pseq = swap16 (prtp->seqno);
+   
    rfc7983_packet_type = RFC7983_classify ((void*)prtp);
    
    switch(rfc7983_packet_type)
@@ -1080,6 +1084,10 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
   int seg_type = IN_SEQ;
   extern FILE *fp_dup_ooo_log;
 #endif
+
+//  u_int32_t pssrc = swap32 (prtp->ssrc);
+  u_int32_t pts = swap32 (prtp->ts);
+  u_int16_t pseq = swap16 (prtp->seqno);
 
   pup = thisdir->pup;
   f_rtp->pnum++;
