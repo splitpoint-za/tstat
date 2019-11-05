@@ -556,6 +556,8 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
 	    break;
 	  pdecode += 20;	// skip sender report
 	case RTCP_PT_RR:
+          if (rc == 0)
+            break;
 	  /* Receiver Report */
 	  if (rc > 1)
 	    {
