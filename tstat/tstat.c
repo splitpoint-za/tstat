@@ -1485,11 +1485,13 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," c_ip:%d", col++);		 // 3:  client ip
      wfprintf(fp," c_port:%d", col++);		 // 4:  client port
      wfprintf(fp," c_internal:%d", col++);	 // 5:  client is internal
+     wfprintf(fp," c_iscrypto:%d", col++);	 // 5:  client is internal
      wfprintf(fp," c_mux_prot:%d", col++);	 // 5:  client is internal
      wfprintf(fp," s_proto:%d", col++);		 // 
      wfprintf(fp," s_ip:%d", col++);		 // 
      wfprintf(fp," s_port:%d", col++);		 // 
      wfprintf(fp," s_internal:%d", col++);	 // 
+     wfprintf(fp," s_iscrypto:%d", col++);	 // 
      wfprintf(fp," s_mux_prot:%d", col++);	 // 5:  client is internal
      /* */
      wfprintf(fp," packets:%d", col++);	 // 6:  client packets

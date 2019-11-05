@@ -565,8 +565,8 @@ make_p2p_conn_stats (void * flow, int tproto)
   /* log only P2P or unknown traffic. avoid RTP and SKYPE that are managed
   by their plugin */
   
-  if ( ( thisC2S->type < RTP || thisC2S->type >= SKYPE_SIG ) &&
-       ( thisS2C->type < RTP || thisS2C->type >= SKYPE_SIG ) )
+  if ( ( thisC2S->type < RTP || thisC2S->type == FIRST_RTP_PLUS || thisC2S->type >= SKYPE_SIG ) &&
+       ( thisS2C->type < RTP || thisS2C->type == FIRST_RTP_PLUS ||thisS2C->type >= SKYPE_SIG ) )
   {
      int L7type = UDP_p2p_to_L7type(thisC2S);
       
@@ -833,6 +833,19 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case RTCP:
       return L7_FLOW_RTCP;
 
+    case RTP_PLUS:
+      if ( (thisflow->multiplexed_protocols && RFC7983_RTP ) == 1 )
+	// At least one subflow is RTP, possible to have RTCP subflows
+        return L7_FLOW_RTP;
+      else if ( (thisflow->multiplexed_protocols && RFC7983_RTCP ) == 1 )
+	// At least one RTCP subflow, no RTP subflows
+        return L7_FLOW_RTCP;
+      else if ( (thisflow->multiplexed_protocols && RFC7983_DTLS ) == 1 )
+	// Should not be possible, but just in case
+        return L7_FLOW_DTLS;
+      else
+	return L7_FLOW_UNKNOWN;
+      
     case SKYPE_E2E:
       if (thisflow->skype!=NULL && 
           thisflow->skype->skype_type==L7_FLOW_SKYPE_E2E)

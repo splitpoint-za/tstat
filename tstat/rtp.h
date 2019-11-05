@@ -32,7 +32,7 @@
 #define VALID_PT      127	/* the PT must be equal or smaller than  127 */
 
 #define RTCP_MAX_PT  213	/* maximum value of PT for the RTCP packet */
-#define RTCP_MIN_PT  194	/* minimum value of PT for the RTCP packet */
+#define RTCP_MIN_PT  191	/* minimum value of PT for the RTCP packet */
 
 /* RTCP error codes */
 #define NO_ERROR 0
@@ -81,7 +81,29 @@
 #define UNKNOWN_RTP_PAYLOAD_TYPE 128
 /* end topix */
 
+/* RTCP standard Packet Types */
+#define RTCP_PT_FIR		192	/* Full Intra-frame Request */
+#define RTCP_PT_NACK		193	/* NACK */
+#define RTCP_PT_IJ		195	/* Interarrival Jitter Report */
+#define RTCP_PT_SR		200	/* Sender Report */
+#define RTCP_PT_RR		201	/* Receiver Report */
+#define RTCP_PT_SDES		202	/* Source Description */
+#define RTCP_PT_BYE		203	/* Goodbye */
+#define RTCP_PT_APP		204	/* Application-defined */
+#define RTCP_PT_RTPFB		205	/* Generic RTP Feedback */
+#define RTCP_PT_PSFB		206	/* Payload-specific Feedback */
+#define RTCP_PT_XR		207	/* Extended Report */
+
 #define RTP_LITTLE_ENDIAN 1
+
+/* RFC 7983 possible protocols multiplexed with RTP/RTCP */
+#define RFC7983_UNK  0
+#define RFC7983_RTP  1
+#define RFC7983_RTCP 2
+#define RFC7983_DTLS 4
+#define RFC7983_STUN 8
+#define RFC7983_TURN 16
+#define RFC7983_ZRTP 32
 
 struct rtphdr
 {
@@ -146,10 +168,10 @@ void rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 
 void init_rtp (ucb * thisdir, int dir, struct udphdr *pudp,
 	       struct rtphdr *prtp, void *plast);
-void rtcp_check (ucb * thisdir, int dir, struct rtphdr *prtp, void *plast);
 void rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	       struct ip *pip, void *plast);
-void rtcp_stat (ucb * thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prtp, void *plast);
+void rtcp_stat (ucb * thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int dir,
+	       void *plast);
 void make_rtp_conn_stats (void * thisdir, int tproto);
 
 u_int16_t swap16 (u_int16_t val);

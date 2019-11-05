@@ -234,15 +234,6 @@ extern int debug;
 #define NOT_IN_SEQ 3		/* come reord */
 #define DUP 4
 
-
-#define RFC7983_UNK  0
-#define RFC7983_RTP  1
-#define RFC7983_RTCP 2
-#define RFC7983_DTLS 4
-#define RFC7983_STUN 8
-#define RFC7983_TURN 16
-#define RFC7983_ZRTP 32
-
 /* variables used to compute the RTP packets fields*/
 u_int32_t pssrc;
 u_int32_t pts;
@@ -551,7 +542,7 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
 
   switch (pt)
    {
-     case 200:		/* Sender Report */
+     case RTCP_PT_SR:		/* Sender Report */
        if ((void *) (pdecode + sizeof (struct rtcp_SR)) > plast)
 	{
 	  f_rtcp->rtcp_header_error |= E_TRUNCATED;
@@ -569,7 +560,7 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
 	  if (rc == 0)
 	    break;
 	  pdecode += 20;	// skip sender report
-	case 201:
+	case RTCP_PT_RR:
 	  /* Receiver Report */
 	  if (rc > 1)
 	    {
@@ -594,6 +585,11 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
 	  f_rtcp->jitter_sum = f_rtcp->jitter_max = f_rtcp->jitter_min = swap32 (RR->jitter);	/* TODO: conversion */
 	  f_rtcp->jitter_samples++;
 	  /* c_lost */
+//           printf("RTCP SSRC 0x%x PT %d C %s %s",pts,pt,HostName(pup->addr_pair.a_address),ServiceName(pup->addr_pair.a_port));
+//           printf(" S %s %s - ",HostName(pup->addr_pair.b_address),ServiceName(pup->addr_pair.b_port));
+
+//	  printf("RR Record %02x %02x %02x %02x\n",(unsigned char)*(pdecode),(unsigned char)*(pdecode+1),
+//						   (unsigned char)*(pdecode+2),(unsigned char)*(pdecode+3));
 	  f_rtcp->c_lost = swap24 (RR->c_lost);
 	  f_rtcp->f_lost = (unsigned char) RR->f_lost;
 	  f_rtcp->f_lost_sum += (unsigned char) RR->f_lost;
@@ -603,27 +599,41 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
 	  else
 	    otherdir = &pup->c2s;
 
-	  if (otherdir->type == RTCP || otherdir->type == FIRST_RTCP)	/* must be bidirectional RTCP */
-	    if (swap32 (RR->lsr) != 0)	/* must be different from 0   */
+          if ( ( otherdir->type == RTP_PLUS || otherdir->type == FIRST_RTP_PLUS )
+	       && otherdir->flow_ptr.rtcp_ptr!=NULL )	/* must be bidirectional RTCP */
+           /* The other direction is RTC_PLUS and I've seen at least one RTCP packet */
+	   {
+	     u_int32_t RR_lst = swap32 (RR->lsr);
+	     if (RR_lst != 0)	/* must be different from 0   */
 	      {
-		if (swap32 (RR->lsr) == otherdir->flow_ptr.rtcp_ptr->last_SR_id)	/* do we have the correct SR ? */
-		  {
-		    double rtt;
-
-		    rtt =
-		      elapsed (otherdir->flow_ptr.rtcp_ptr->last_SR,
-			       current_time) / 1000.0 -
-		      swap32 (RR->dlsr) * 1000.0 / 65536.0;
-		    if (rtt < 0)
+	        /* Should locate the correct RTCP subflow in the opposite direction */
+	        rtcp *matched_record;
+	        matched_record = otherdir->flow_ptr.rtcp_ptr;
+	        while (matched_record!=NULL)
+	         {
+	           if ( RR_lst == matched_record->last_SR_id ) /* do we have the correct SR ? */
+		    {
+		      double rtt;
+		      rtt =
+		        elapsed (matched_record->last_SR,current_time) / 1000.0 -
+		              swap32 (RR->dlsr) * 1000.0 / 65536.0;
+		      if (rtt >= 0)
+		       {
+		          if (f_rtcp->rtt_min > rtt || f_rtcp->rtt_sum == 0)
+		             f_rtcp->rtt_min = rtt;
+		          if (f_rtcp->rtt_max < rtt || f_rtcp->rtt_sum == 0)
+		             f_rtcp->rtt_max = rtt;
+		          f_rtcp->rtt_sum += rtt;
+		          f_rtcp->rtt_samples++;
+		       }
 		      break;
-		    if (f_rtcp->rtt_min > rtt || f_rtcp->rtt_sum == 0)
-		      f_rtcp->rtt_min = rtt;
-		    if (f_rtcp->rtt_max < rtt || f_rtcp->rtt_sum == 0)
-		      f_rtcp->rtt_max = rtt;
-		    f_rtcp->rtt_sum += rtt;
-		    f_rtcp->rtt_samples++;
-		  }
+		    }
+		   matched_record = matched_record->next;
+	         }
 	      }
+	   }
+	  break;
+        default: /* Any other RTCP_PT_XXX type */
 	  break;
 	}
   
@@ -683,7 +693,7 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
       }
     case UDP_DTLS:
       {
-        thisdir->multiplexed_protocols |= RFC7983_DTLS;
+            thisdir->multiplexed_protocols |= RFC7983_DTLS;
 	    init_rtp (thisdir, dir, pudp, prtp, plast);
 	    break;
       }
@@ -725,6 +735,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
   struct sudp_pair *pup;
   u_int8_t pt_rtcp;
   pup = thisdir->pup;
+  int rfc7983_packet_type;
   /* this may be RTP or RTCP...
      version must be 2
      pt must be RTP valid
@@ -734,7 +745,10 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
    */
   /* RTCP */
   pt_rtcp = prtp->pt + (prtp->m << 7);
-  if ( RFC7983_classify ((void*)prtp) == RFC7983_RTCP && 
+  
+  rfc7983_packet_type = RFC7983_classify ((void*)prtp);
+  
+  if ( rfc7983_packet_type == RFC7983_RTCP && 
       (pup->addr_pair.a_port > 1024) && 
       (pup->addr_pair.b_port > 1024))
     {
@@ -742,12 +756,17 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
       char *pdecode = (char *) prtp;
 
       if (thisdir->flow_ptr.rtcp_ptr!=NULL)
-      {
+       {
 	  fprintf (fp_stderr, "Warning: RTCP You are not supposed to be here without a NULL pointer!\n");
-      }
-      
-      if (thisdir->flow_ptr.rtcp_ptr!=NULL)
-        free(thisdir->flow_ptr.rtcp_ptr);
+
+	 /* Release any previously allocated information. rtcp_prt might be a list. */
+         while (thisdir->flow_ptr.rtcp_ptr!=NULL)
+          {
+             rtcp *this = thisdir->flow_ptr.rtcp_ptr;
+             thisdir->flow_ptr.rtcp_ptr = thisdir->flow_ptr.rtcp_ptr->next;
+             free(this);
+          }
+       }
       
       f_rtcp = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
       
@@ -759,30 +778,32 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 
       rtcp_init_stats(f_rtcp,pdecode,pt_rtcp,rc,plast,pup,dir);
       
-      // thisdir->type = FIRST_RTCP;
       thisdir->type = FIRST_RTP_PLUS;
     }
   /* RTP */
-  else if (RFC7983_classify ((void*)prtp) == RFC7983_RTP)
+  else if (rfc7983_packet_type == RFC7983_RTP)
     {
     
       if (thisdir->flow_ptr.rtp_ptr!=NULL)
-      {
+       {
 	  fprintf (fp_stderr, "Warning: RTP You are not supposed to be here without a NULL pointer!\n");
-      }
-
-      if (thisdir->flow_ptr.rtp_ptr!=NULL)
-        free(thisdir->flow_ptr.rtp_ptr);
+	  
+	 /* Release any previously allocated information. rtp_prt might be a list. */
+         while (thisdir->flow_ptr.rtp_ptr!=NULL)
+          {
+             rtp *this = thisdir->flow_ptr.rtp_ptr;
+             thisdir->flow_ptr.rtp_ptr = thisdir->flow_ptr.rtp_ptr->next;
+             free(this);
+          }
+       }
       
       f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
       
       thisdir->flow_ptr.rtp_ptr = f_rtp;
       f_rtp->next = NULL;
 
-//      thisdir->type = FIRST_RTP;
       thisdir->type = FIRST_RTP_PLUS;
     }
-
 
 }
 
@@ -792,15 +813,15 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
 void
 rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast)
 {
-   int packet_type;
+   int rfc7983_packet_type;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
    u_int8_t pt_rtcp;
    pt_rtcp = prtp->pt + (prtp->m << 7);
    
-   packet_type = RFC7983_classify ((void*)prtp);
+   rfc7983_packet_type = RFC7983_classify ((void*)prtp);
    
-   switch(packet_type)
+   switch(rfc7983_packet_type)
     {
      case RFC7983_RTP:
        // Check RTP stuff
@@ -855,7 +876,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
           else
             {
 	     // Correct SSRC but wrong SeqNo?
-	     printf("Wrong starting RTP seqno\n");
+	     fprintf (fp_stderr, "Warning: Ignoring not matching starting RTP seqno\n");
             }
          }
        else
@@ -910,7 +931,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
                 add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
                 break;
              }
-            rtcp_stat (thisdir, f_rtcp, dir, prtp, plast);
+            rtcp_stat (thisdir, f_rtcp, prtp, dir, plast);
      //      thisdir->type = RTCP;
             thisdir->type = RTP_PLUS;
             thisdir->multiplexed_protocols |= RFC7983_RTCP;
@@ -919,8 +940,8 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 	   {
 	     // Found but counter != 1
 	     // Correct SSRC but wrong SeqNo?
-	     printf("Wrong starting RTCP seqno?\n");
-
+	     fprintf (fp_stderr, "Warning: Ignoring RTCP packet not matching the sequence\n");
+	     // Probably impossible due to the state machine workings
 	   }   
 	  
        }
@@ -945,13 +966,16 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
      case RFC7983_UNK:
         // reset status
         /* No minimal matching. No subflow and flow status reset */
+	/* At the next iteration, this might trigger a warning (Pointer not NULL), 
+	 * and the release of the existing rtp_plus data structures
+	 */
        thisdir->type = UDP_UNKNOWN;
        break;
 
      default:
         // ignore and set flag
         /* Ignored allowed non RTP packet */
-       thisdir->multiplexed_protocols |= packet_type;
+       thisdir->multiplexed_protocols |= rfc7983_packet_type;
        break;
    }
  
@@ -959,16 +983,16 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 
 void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp,void *plast)
 {
-   int packet_type;
+   int rfc7983_packet_type;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
    
    u_int8_t pt_rtcp;
    pt_rtcp = prtp->pt + (prtp->m << 7);
    
-   packet_type = RFC7983_classify ((void*)prtp);
+   rfc7983_packet_type = RFC7983_classify ((void*)prtp);
    
-   switch(packet_type)
+   switch(rfc7983_packet_type)
    {
      case RFC7983_RTP:
        // Check RTP stuff
@@ -1000,7 +1024,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
           if (f_rtcp!=NULL)
 	   { 
              thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	     rtcp_stat (thisdir, f_rtcp, dir, prtp, plast);
+	     rtcp_stat (thisdir, f_rtcp, prtp, dir, plast);
 	   }
 	  else
 	   {
@@ -1021,7 +1045,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
         }
        else
         {
-	  // Ports are wrong. It should have not been RTP_PLUS from the start
+	  // Ports are wrong. It should have not been RTP_PLUS from the beginning
           thisdir->type = UDP_UNKNOWN; 
         }
        break;
@@ -1035,7 +1059,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
      default:
        // ignore and set flag
        /* Ignored allowed non RTP packet */
-       thisdir->multiplexed_protocols |= packet_type;
+       thisdir->multiplexed_protocols |= rfc7983_packet_type;
        break;
    }
   
@@ -1524,7 +1548,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 /******* Statistics about RTCP flows ********/
 
 void
-rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prtp, void *plast)
+rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int dir, void *plast)
 {
 
 
@@ -1555,7 +1579,7 @@ rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prt
   pdecode += 8;
   switch (pt_rtcp)
     {
-    case 200:			/* Sender Report */
+    case RTCP_PT_SR:			/* Sender Report */
       if ((void *) (pdecode + sizeof (struct rtcp_SR)) > plast)
       {
 	f_rtcp->rtcp_header_error |= E_TRUNCATED;
@@ -1623,7 +1647,7 @@ rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prt
       if (rc == 0)
 	break;
       pdecode += 20;
-    case 201:			/* Receiver Report */
+    case RTCP_PT_RR:			/* Receiver Report */
       if (rc == 0)
 	break;
 
@@ -1665,26 +1689,39 @@ rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prt
       else
 	otherdir = &pup->c2s;
 
-      if (otherdir->type == RTCP || otherdir->type == FIRST_RTCP)	/* must be bidirectional RTCP */
-	if (swap32 (RR->lsr) != 0)	/* must be different from 0   */
-	  {
-	    if (swap32 (RR->lsr) == otherdir->flow_ptr.rtcp_ptr->last_SR_id)	/* do we have the correct SR ? */
-	      {
-		rtt =
-		  elapsed (otherdir->flow_ptr.rtcp_ptr->last_SR,
-			   current_time) / 1000.0 -
-		  swap32 (RR->dlsr) * 1000.0 / 65536.0;
-		if (rtt >= 0)
-		  {
-		    if (f_rtcp->rtt_min > rtt || f_rtcp->rtt_sum == 0)
-		      f_rtcp->rtt_min = rtt;
-		    if (f_rtcp->rtt_max < rtt || f_rtcp->rtt_sum == 0)
-		      f_rtcp->rtt_max = rtt;
-		    f_rtcp->rtt_sum += rtt;
-		    f_rtcp->rtt_samples++;
-		  }
-	      }
-	  }
+      if ( ( otherdir->type == RTP_PLUS || otherdir->type == FIRST_RTP_PLUS )
+	    && otherdir->flow_ptr.rtcp_ptr!=NULL )	/* must be bidirectional RTCP */
+         /* The other direction is RTC_PLUS and I've seen at least one RTCP packet */
+	 {
+	   u_int32_t RR_lst = swap32 (RR->lsr);
+
+	   if ( RR_lst != 0)	/* must be different from 0   */
+	    {
+	      /* Should locate the correct RTCP subflow in the opposite direction */
+	      rtcp *matched_record;
+	      matched_record = otherdir->flow_ptr.rtcp_ptr;
+	      while (matched_record!=NULL)
+	       {
+	          if ( RR_lst == matched_record->last_SR_id ) /* do we have the correct SR ? */
+		   {
+		     rtt =
+		        elapsed (matched_record->last_SR,current_time) / 1000.0 -
+		              swap32 (RR->dlsr) * 1000.0 / 65536.0;
+		     if (rtt >= 0)
+		       {
+		          if (f_rtcp->rtt_min > rtt || f_rtcp->rtt_sum == 0)
+		             f_rtcp->rtt_min = rtt;
+		          if (f_rtcp->rtt_max < rtt || f_rtcp->rtt_sum == 0)
+		             f_rtcp->rtt_max = rtt;
+		          f_rtcp->rtt_sum += rtt;
+		          f_rtcp->rtt_samples++;
+		       }
+		     break;
+		   }
+		  matched_record = matched_record->next;
+	       }
+	    }
+	 }
       /* histograms update */
       if (pup->internal_src && !pup->internal_dst)
 	{
@@ -1806,6 +1843,8 @@ rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, int dir, struct rtphdr *prt
 	      add_histo (rtcp_rtt_loc, rtt);
 	    }
 	}
+      break;
+     default: /* Any other RTCP_PT_XXX type */
       break;
     }
   f_rtcp->last_time = current_time;
@@ -2071,48 +2110,48 @@ update_conn_log_v3(udp_pair *flow)
   static char common_head[128],
               common_head2[128];
   
-//  if (flow->c2s.type != RTP && flow->c2s.type != RTCP &&
-//      flow->s2c.type != RTP && flow->s2c.type != RTCP)
-//	  return;
   if (flow->c2s.type != RTP_PLUS &&
       flow->s2c.type != RTP_PLUS )
 	  return;
 
   /* Request C-->S */
   if (flow->crypto_src==FALSE)
-     sprintf (common_head2, "%d %s %s %u %u",
+     sprintf (common_head2, "%d %s %s %u %u %u",
 	  flow->c2s.type,
 	  HostName (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
 	  flow->internal_src,
+	  flow->crypto_src,
 	  flow->c2s.multiplexed_protocols);
   else 
-     sprintf (common_head2, "%d %s %s %u %u",
+     sprintf (common_head2, "%d %s %s %u %u %u",
 	  flow->c2s.type,
 	  HostNameEncrypted (flow->addr_pair.a_address),
 	  ServiceName (flow->addr_pair.a_port),
 	  flow->internal_src,
+	  flow->crypto_src,
 	  flow->c2s.multiplexed_protocols);
 
   /* Answer C<--S */
   if (flow->crypto_dst==FALSE)
-     sprintf (common_head, "%s %d %s %s %u %u",
+     sprintf (common_head, "%s %d %s %s %u %u %u",
 	      common_head2,
 	  flow->s2c.type,
 	  HostName (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
 	  flow->internal_dst,
+	  flow->crypto_dst,
 	  flow->s2c.multiplexed_protocols);
   else
-     sprintf (common_head, "%s %d %s %s %u %u",
+     sprintf (common_head, "%s %d %s %s %u %u %u",
 	      common_head2,
 	  flow->s2c.type,
 	  HostNameEncrypted (flow->addr_pair.b_address),
 	  ServiceName (flow->addr_pair.b_port),
 	  flow->internal_dst,
+	  flow->crypto_dst,
 	  flow->s2c.multiplexed_protocols);
 
-//  if (flow->c2s.type == RTP)
   if (flow->c2s.flow_ptr.rtp_ptr!=NULL)
   {
      struct rtp *f_rtp;
@@ -2126,7 +2165,7 @@ update_conn_log_v3(udp_pair *flow)
    wfprintf (fp_rtp_logc, "R C %s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2164,7 +2203,7 @@ update_conn_log_v3(udp_pair *flow)
        f_rtp = f_rtp->next;
      }
   }
-//  else if (flow->c2s.type == RTCP)
+
   if (flow->c2s.flow_ptr.rtcp_ptr!=NULL)
   {
      struct rtcp *f_rtcp;
@@ -2180,7 +2219,7 @@ update_conn_log_v3(udp_pair *flow)
 
    wfprintf (fp_rtp_logc, "T C %s",common_head);
      
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
@@ -2227,7 +2266,6 @@ update_conn_log_v3(udp_pair *flow)
   }
 	
 
-//  if (flow->s2c.type == RTP)
   if (flow->s2c.flow_ptr.rtp_ptr!=NULL)
   {
      struct rtp *f_rtp;
@@ -2241,7 +2279,7 @@ update_conn_log_v3(udp_pair *flow)
    wfprintf (fp_rtp_logc, "R S %s",common_head);
      
      /* Stats */
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x %ld %ld %ld %ld %s %d 0 0 0 0 0 0 0 0 0",
 	      /* Common stats */
               f_rtp->pnum,
 	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
@@ -2279,7 +2317,7 @@ update_conn_log_v3(udp_pair *flow)
        f_rtp = f_rtp->next;
      }
   }
-//  else if (flow->s2c.type == RTCP)
+
   if (flow->s2c.flow_ptr.rtcp_ptr!=NULL)
   {
      struct rtcp *f_rtcp;
@@ -2295,7 +2333,7 @@ update_conn_log_v3(udp_pair *flow)
      
    wfprintf (fp_rtp_logc, "T S %s",common_head);
      
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
+     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g 0x%x 0 0 0 0 %s 0 %d %g %u %u %g %g %g %u %d",
 	      f_rtcp->pnum, 
 	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
 	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
