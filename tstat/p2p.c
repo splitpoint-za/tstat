@@ -834,13 +834,13 @@ int UDP_p2p_to_L7type (ucb *thisflow)
       return L7_FLOW_RTCP;
 
     case RTP_PLUS:
-      if ( (thisflow->multiplexed_protocols && RFC7983_RTP ) == 1 )
+      if ( (thisflow->multiplexed_protocols & RFC7983_RTP ) == 1 )
 	// At least one subflow is RTP, possible to have RTCP subflows
         return L7_FLOW_RTP;
-      else if ( (thisflow->multiplexed_protocols && RFC7983_RTCP ) == 1 )
+      else if ( (thisflow->multiplexed_protocols & RFC7983_RTCP ) == 1 )
 	// At least one RTCP subflow, no RTP subflows
         return L7_FLOW_RTCP;
-      else if ( (thisflow->multiplexed_protocols && RFC7983_DTLS ) == 1 )
+      else if ( (thisflow->multiplexed_protocols & RFC7983_DTLS ) == 1 )
 	// Should not be possible, but just in case
         return L7_FLOW_DTLS;
       else
