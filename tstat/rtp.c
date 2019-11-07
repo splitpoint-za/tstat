@@ -681,13 +681,15 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
     {
     case UDP_UNKNOWN:
       {
-	    init_rtp (thisdir, dir, pudp, prtp, plast);
-	    break;      
+        if (thisdir->flow_ptr.rtcp_ptr==NULL)
+	      init_rtp (thisdir, dir, pudp, prtp, plast);
+	    break; 
       }
     case UDP_DTLS:
       {
-            thisdir->multiplexed_protocols |= RFC7983_DTLS;
-	    init_rtp (thisdir, dir, pudp, prtp, plast);
+        thisdir->multiplexed_protocols |= RFC7983_DTLS;
+        if (thisdir->flow_ptr.rtcp_ptr==NULL)
+	      init_rtp (thisdir, dir, pudp, prtp, plast);
 	    break;
       }
     case FIRST_RTP_PLUS:
