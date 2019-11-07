@@ -781,7 +781,9 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
       thisdir->type = FIRST_RTP_PLUS;
     }
   /* RTP */
-  else if (rfc7983_packet_type == RFC7983_RTP)
+  else if (rfc7983_packet_type == RFC7983_RTP&& 
+           (pup->addr_pair.a_port > 1024) && 
+           (pup->addr_pair.b_port > 1024))
     {
     
       if (thisdir->flow_ptr.rtp_ptr!=NULL)
@@ -1006,21 +1008,31 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
    {
      case RFC7983_RTP:
        // Check RTP stuff
-       f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
-       if (f_rtp!=NULL)
+       if  ( (thisdir->pup->addr_pair.a_port > 1024) && 
+             (thisdir->pup->addr_pair.b_port > 1024) )
         {
-         rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-         thisdir->multiplexed_protocols |= RFC7983_RTP;
+          /* locate previous SSRC record */
+         f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
+         if (f_rtp!=NULL)
+          {
+           rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+           thisdir->multiplexed_protocols |= RFC7983_RTP;
+          }
+         else
+          {
+            // Allocate the new subflow
+            rtp *f_rtp2;
+  
+            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+
+            f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
+            thisdir->flow_ptr.rtp_ptr = f_rtp2;
+          }
         }
        else
         {
-          // Allocate the new subflow
-          rtp *f_rtp2;
-  
-          f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-
-          f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
-          thisdir->flow_ptr.rtp_ptr = f_rtp2;
+	  // Ports are wrong. It should have not been RTP_PLUS from the beginning
+          thisdir->type = UDP_UNKNOWN; 
         }
        break;
        
