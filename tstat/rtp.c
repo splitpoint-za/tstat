@@ -880,7 +880,8 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
           else
             {
 	     // Correct SSRC but wrong SeqNo?
-	     fprintf (fp_stderr, "Warning: Ignoring not matching starting RTP seqno\n");
+	          if (debug > 1)
+	            fprintf (fp_stderr, "Warning: Ignoring not matching starting RTP seqno\n");
             }
          }
        else
@@ -944,7 +945,8 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 	   {
 	     // Found but counter != 1
 	     // Correct SSRC but wrong SeqNo?
-	     fprintf (fp_stderr, "Warning: Ignoring RTCP packet not matching the sequence\n");
+	     if (debug > 1)
+	       fprintf (fp_stderr, "Warning: Ignoring RTCP packet not matching the sequence\n");
 	     // Probably impossible due to the state machine workings
 	   }   
 	  
