@@ -914,6 +914,7 @@ typedef struct rtp rtp;
 typedef struct rtcp rtcp;
 
 #define MAX_COUNT_RTP_PT 10
+#define MAX_COUNT_RTP_SSRC 50
 
 struct rtp
 {
@@ -947,6 +948,8 @@ struct rtp
   int pt_counter[MAX_COUNT_RTP_PT];
   int bogus_reset_during_flow; /* some Cisco implementation reset seqno ... */
   /* end topix */
+  u_int32_t max_payload_bytes;
+  u_int32_t min_payload_bytes;
   rtp *next;
 };
 
@@ -982,6 +985,7 @@ struct rtcp
   /* Track multiple PT per SSRC -MMM- */ 
   unsigned char pt_id[MAX_COUNT_RTP_PT];
   int pt_counter[MAX_COUNT_RTP_PT];
+  u_int64_t rtcp_data_bytes; /* A different databytes counter */
   
   rtcp *next;
 };

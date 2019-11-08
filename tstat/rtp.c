@@ -237,8 +237,8 @@ extern int debug;
 void rtp_plus_check (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
 void rtp_plus_stat (ucb *thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast);
 
-rtp  *rtp_locate_ssrc (rtp *rtp_list, uint32_t ssrc);
-rtcp *rtcp_locate_ssrc (rtcp *rtcp_list, uint32_t ssrc);
+rtp  *rtp_locate_ssrc (rtp *rtp_list, uint32_t ssrc, int *length);
+rtcp *rtcp_locate_ssrc (rtcp *rtcp_list, uint32_t ssrc, int *length);
 int  rtp_valid_pt (u_int8_t pt);
 void rtp_init_pt_counter (rtp * f_rtp);
 void rtcp_init_pt_counter (rtcp * f_rtcp);
@@ -252,41 +252,64 @@ void rtcp_init_stats (rtcp *f_rtcp, char *payload_ptr, u_int8_t pt, unsigned cha
 
 void update_rtp_conn_histo (ucb * thisdir, int dir);
 void update_rtcp_conn_histo (ucb * thisdir, int dir);
-void update_conn_log_v2(udp_pair *flow);
 void update_conn_log_v3(udp_pair *flow);
 
 /* Functions to manage the rtp/rtcp record list */
 
-rtp *rtp_locate_ssrc(rtp *rtp_list,uint32_t ssrc)
+rtp *rtp_locate_ssrc(rtp *rtp_list,uint32_t ssrc, int *length)
 {
+   int iterator;
    rtp *item;
    if (rtp_list==NULL)
-     return(NULL);
+    {
+      *length = 0;
+      return(NULL);
+    }
 
    item = rtp_list;
+   iterator = 1;
    while (item!=NULL)
     {
       if (item->ssrc == ssrc)
+       {
+	*length = iterator;
 	return(item);
+       }
       else
-	item = item->next;
+       {
+	 iterator++;
+	 item = item->next;
+       }
     }
+   *length = iterator;
    return(NULL);
 }
 
-rtcp *rtcp_locate_ssrc(rtcp *rtcp_list,uint32_t ssrc)
+rtcp *rtcp_locate_ssrc(rtcp *rtcp_list,uint32_t ssrc, int *length)
 {
+   int iterator;
    rtcp *item;
    if (rtcp_list==NULL)
-     return(NULL);
+    {
+      *length = 0;
+      return(NULL);
+    }
    item = rtcp_list;
+   iterator = 1;
    while (item!=NULL)
     {
       if (item->ssrc == ssrc)
+       {
+	*length = iterator;
 	return(item);
+       }
       else
-	item = item->next;
+       {
+	 iterator++;
+	 item = item->next;
+       }
     }
+   *length = iterator;
    return(NULL);
   
 }
@@ -516,6 +539,7 @@ rtcp *new_rtcp_subflow(u_int32_t ssrc, u_int8_t pt, u_long initial_bytes)
   f_rtcp->first_time = current_time;
   f_rtcp->last_time = current_time;
   f_rtcp->ssrc = ssrc;
+  f_rtcp->rtcp_data_bytes = 0;
 
   rtcp_init_pt_counter(f_rtcp);
   rtcp_update_pt_counter(f_rtcp,pt);
@@ -769,6 +793,9 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
        }
       
       f_rtcp = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
+      // f_rtcp->rtcp_data_bytes += getpayloadlength(pip,plast) - 8 ;
+      f_rtcp->rtcp_data_bytes += ntohs (pudp->uh_ulen) - 8;
+      //printf("First RTCP %d\n",f_rtcp->rtcp_data_bytes);
       
       thisdir->flow_ptr.rtcp_ptr = f_rtcp;
       f_rtcp->next = NULL;
@@ -816,6 +843,7 @@ void
 rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast)
 {
    int rfc7983_packet_type;
+   int ssrc_list_length;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
    u_int8_t pt_rtcp;
@@ -833,7 +861,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
        // Check RTP stuff
        
        /* locate previous SSRC record */
-       f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc); 
+       f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc,&ssrc_list_length); 
 
        // If found, update status, else, allocate a new one
 
@@ -886,7 +914,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 	            fprintf (fp_stderr, "Warning: Ignoring not matching starting RTP seqno\n");
             }
          }
-       else
+       else if (ssrc_list_length <= MAX_COUNT_RTP_SSRC)
          { 
            rtp *f_rtp2;
       
@@ -898,12 +926,18 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
            thisdir->multiplexed_protocols |= RFC7983_RTP;
            // Do not change the type, since we still do not have a full RTP confirmation
          }
+       else
+         {
+	   // The SSRC list is too long. This is probably a false positive. Forget this flow
+	   fprintf (fp_stderr, "Warning: RTP Too many SSRC associated to the flow!\n");
+	   thisdir->type = UDP_UNKNOWN;
+         }
        break;
 
      case RFC7983_RTCP:
        // Check RTCP stuff
       /* locate previous SSRC record */
-       f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts); 
+       f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts,&ssrc_list_length); 
 
        if (f_rtcp!=NULL)
         {
@@ -938,7 +972,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
                 add_histo (L7_UDP_num_loc, L7_FLOW_RTCP);
                 break;
              }
-            rtcp_stat (thisdir, f_rtcp, prtp, dir, plast);
+            rtcp_stat (thisdir, f_rtcp, prtp, dir, pip, plast);
      //      thisdir->type = RTCP;
             thisdir->type = RTP_PLUS;
             thisdir->multiplexed_protocols |= RFC7983_RTCP;
@@ -953,13 +987,16 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 	   }   
 	  
        }
-       else
+       else if (ssrc_list_length <= MAX_COUNT_RTP_SSRC)
         {
           rtcp *f_rtcp2;
           char *pdecode = (char *) prtp;
           unsigned char rc = prtp->cc + (prtp->x << 4);
  
           f_rtcp2 = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
+      // f_rtcp->rtcp_data_bytes += getpayloadlength(pip,plast) - 8 ;
+      f_rtcp2->rtcp_data_bytes += ntohs (pudp->uh_ulen) - 8;
+      //printf("First RTCP %d\n",f_rtcp2->rtcp_data_bytes);
 
           f_rtcp2->next = thisdir->flow_ptr.rtcp_ptr;
           thisdir->flow_ptr.rtcp_ptr = f_rtcp2;
@@ -969,6 +1006,12 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
           thisdir->multiplexed_protocols |= RFC7983_RTCP;
            // Do not change the type, since we still do not have a full RTP confirmation
         }
+       else
+         {
+	   // The SSRC list is too long. This is probably a false positive. Forget this flow
+	   fprintf (fp_stderr, "Warning: RTCP Too many SSRC associated to the flow!\n");
+	   thisdir->type = UDP_UNKNOWN;
+         }
        break;
 
      case RFC7983_UNK:
@@ -992,6 +1035,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp,void *plast)
 {
    int rfc7983_packet_type;
+   int ssrc_list_length;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
    
@@ -1012,13 +1056,13 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
              (thisdir->pup->addr_pair.b_port > 1024) )
         {
           /* locate previous SSRC record */
-         f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc);
+         f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc,&ssrc_list_length);
          if (f_rtp!=NULL)
           {
            rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
            thisdir->multiplexed_protocols |= RFC7983_RTP;
           }
-         else
+         else if (ssrc_list_length <= MAX_COUNT_RTP_SSRC)
           {
             // Allocate the new subflow
             rtp *f_rtp2;
@@ -1027,6 +1071,11 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
 
             f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
             thisdir->flow_ptr.rtp_ptr = f_rtp2;
+          }
+         else
+          {
+	    // SSRC list became too long. Ignore.
+            thisdir->type = UDP_UNKNOWN; 
           }
         }
        else
@@ -1042,13 +1091,13 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
        if  ( (thisdir->pup->addr_pair.a_port > 1024) && 
              (thisdir->pup->addr_pair.b_port > 1024) )
         {
-	  f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts);
+	  f_rtcp = rtcp_locate_ssrc(thisdir->flow_ptr.rtcp_ptr,pts,&ssrc_list_length);
           if (f_rtcp!=NULL)
 	   { 
              thisdir->multiplexed_protocols |= RFC7983_RTCP;
-	     rtcp_stat (thisdir, f_rtcp, prtp, dir, plast);
+	     rtcp_stat (thisdir, f_rtcp, prtp, dir, pip, plast);
 	   }
-	  else
+	  else if (ssrc_list_length <= MAX_COUNT_RTP_SSRC)
 	   {
 	     // Allocate a new subflow
              rtcp *f_rtcp2;
@@ -1056,6 +1105,9 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
              unsigned char rc = prtp->cc + (prtp->x << 4);
  
              f_rtcp2 = new_rtcp_subflow(pts, pt_rtcp, thisdir->data_bytes - ntohs (pudp->uh_ulen));
+      // f_rtcp->rtcp_data_bytes += getpayloadlength(pip,plast) - 8 ;
+      f_rtcp2->rtcp_data_bytes += ntohs (pudp->uh_ulen) - 8;
+      //printf("First RTCP %d\n",f_rtcp2->rtcp_data_bytes);
 
              f_rtcp2->next = thisdir->flow_ptr.rtcp_ptr;
              thisdir->flow_ptr.rtcp_ptr = f_rtcp2;
@@ -1064,6 +1116,11 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
       
              thisdir->multiplexed_protocols |= RFC7983_RTCP;
 	   }
+         else
+          {
+	    // Ports are wrong. It should have not been RTP_PLUS from the beginning
+            thisdir->type = UDP_UNKNOWN; 
+        }
         }
        else
         {
@@ -1574,7 +1631,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 /******* Statistics about RTCP flows ********/
 
 void
-rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int dir, void *plast)
+rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int dir, struct ip *pip, void *plast)
 {
 
 
@@ -1598,6 +1655,8 @@ rtcp_stat (struct ucb *thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int di
   /* delta_t calculus in  milliseconds */
   delta_t = elapsed (f_rtcp->last_time, current_time) / 1000.0;
   f_rtcp->sum_delta_t += delta_t;
+  f_rtcp->rtcp_data_bytes += getpayloadlength(pip,plast) - 8;
+  //printf("RTCP %d add %d\n",pt_rtcp,(getpayloadlength(pip,plast) - 8));
 
   rtcp_update_pt_counter(f_rtcp, pt_rtcp) ;
 
@@ -1910,227 +1969,6 @@ make_rtp_conn_stats (void * thisflow, int tproto)
 }
 
 void
-update_conn_log_v2(udp_pair *flow)
-{
-  if (flow->c2s.type != RTP && flow->c2s.type != RTCP &&
-      flow->s2c.type != RTP && flow->s2c.type != RTCP)
-	  return;
-
-  /* Request C-->S */
-  if (flow->crypto_src==FALSE)
-     wfprintf (fp_rtp_logc, "%d %d %s %s %u",
-          PROTOCOL_UDP,
-	  flow->c2s.type,
-	  HostName (flow->addr_pair.a_address),
-	  ServiceName (flow->addr_pair.a_port),
-	  flow->internal_src);
-  else 
-     wfprintf (fp_rtp_logc, "%d %d %s %s %u",
-          PROTOCOL_UDP,
-	  flow->c2s.type,
-	  HostNameEncrypted (flow->addr_pair.a_address),
-	  ServiceName (flow->addr_pair.a_port),
-	  flow->internal_src);
-
-  if (flow->c2s.type == RTP)
-  {
-     struct rtp *f_rtp;
-     f_rtp = (flow->c2s.flow_ptr.rtp_ptr);
-     double etime;
-
-     etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
-     
-     /* Stats */
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
-	      /* Common stats */
-              f_rtp->pnum,
-	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
-	      f_rtp->jitter, 
-	      f_rtp->jitter_max,
-	      f_rtp->jitter_min == MAXFLOAT ? 0 : f_rtp->jitter_min,
-	      (double) flow->c2s.ttl_tot / (double) flow->c2s.packets, 
-	      flow->c2s.ttl_max,
-	      flow->c2s.ttl_min, 
-	      (double) f_rtp->first_time.tv_sec + (double) f_rtp->first_time.tv_usec / 1000000.0,
-	      etime / 1000.0 /* [s] */,
-	      f_rtp->data_bytes,
-	      (double) f_rtp->data_bytes / (etime / 1000.0) * 8,
-	      f_rtp->ssrc,
-	      /* RTP only */
-	      f_rtp->n_lost,
-	      f_rtp->n_out_of_sequence,
-	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow);
-              /* RTCP only (zeroed out) */
-	      /* f_rtcp->c_lost,
-	      (float) f_rtcp->f_lost_sum * 100.0 / 256.0, 
-	      f_rtcp->tx_p, 
-	      f_rtcp->tx_b,
-	      (float) f_rtcp->rtt_sum / (float) f_rtcp->rtt_samples,
-	      f_rtcp->rtt_max, 
-	      f_rtcp->rtt_min, 
-	      f_rtcp->rtt_samples,
-	      f_rtcp->rtcp_header_error); */
-  }
-  else if (flow->c2s.type == RTCP)
-  {
-     struct rtcp *f_rtcp;
-     f_rtcp = (flow->c2s.flow_ptr.rtcp_ptr);
-     double etime;
-     uint64_t data_bytes;
-
-     etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
-     data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
-     
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
-	      f_rtcp->pnum, 
-	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
-	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
-	      f_rtcp->jitter_max,
-	      f_rtcp->jitter_min,
-	      (double) flow->c2s.ttl_tot / (double) flow->c2s.packets, 
-	      flow->c2s.ttl_max,
-	      flow->c2s.ttl_min,
-	      (double) f_rtcp->first_time.tv_sec + (double) f_rtcp->first_time.tv_usec / 1000000.0,
-	      etime,	/* [s] */
-	      data_bytes,
-	      (double) data_bytes / etime * 8,
-              f_rtcp->ssrc,
-	      /* RTP only (zeroed out)*/
-	      /* f_rtp->n_lost,
-	      f_rtp->n_out_of_sequence,
-	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow); */
-	      /* RTCP only */
-	      f_rtcp->c_lost,
-	      (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, 
-	      f_rtcp->tx_p, 
-	      f_rtcp->tx_b,
-	      (float) f_rtcp->rtt_sum / (float) f_rtcp->rtt_samples,
-	      f_rtcp->rtt_max, 
-	      f_rtcp->rtt_min, 
-	      f_rtcp->rtt_samples,
-	      f_rtcp->rtcp_header_error);
-  }
-  else
-  {
-     /* we miss the request */
-     wfprintf (fp_rtp_logc, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
-
-  }
-	
-  /* Answer C<--S */
-  if (flow->crypto_dst==FALSE)
-     wfprintf (fp_rtp_logc, " %d %s %s %u",
-	  flow->s2c.type,
-	  HostName (flow->addr_pair.b_address),
-	  ServiceName (flow->addr_pair.b_port),
-	  flow->internal_dst);
-  else
-     wfprintf (fp_rtp_logc, " %d %s %s %u",
-	  flow->s2c.type,
-	  HostNameEncrypted (flow->addr_pair.b_address),
-	  ServiceName (flow->addr_pair.b_port),
-	  flow->internal_dst);
-
-  if (flow->s2c.type == RTP)
-  {
-     struct rtp *f_rtp;
-     f_rtp = (flow->s2c.flow_ptr.rtp_ptr);
-     double etime;
-
-     etime = elapsed (f_rtp->first_time, f_rtp->last_time) / 1000.0;
-     
-     /* Stats */
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u %ld %ld %ld %ld %u %d 0 0 0 0 0 0 0 0 0 0 0 0 0",
-	      /* Common stats */
-              f_rtp->pnum,
-	      (f_rtp->sum_delta_t / f_rtp->n_delta_t),
-	      f_rtp->jitter, 
-	      f_rtp->jitter_max,
-	      f_rtp->jitter_min == MAXFLOAT ? 0 : f_rtp->jitter_min,
-	      (double) flow->s2c.ttl_tot / (double) flow->s2c.packets, 
-	      flow->s2c.ttl_max,
-	      flow->s2c.ttl_min, 
-	      (double) f_rtp->first_time.tv_sec + (double) f_rtp->first_time.tv_usec / 1000000.0,
-	      etime / 1000.0 /* [s] */,
-	      f_rtp->data_bytes,
-	      (double) f_rtp->data_bytes / (etime / 1000.0) * 8,
-	      f_rtp->ssrc,
-	      /* RTP only */
-	      f_rtp->n_lost,
-	      f_rtp->n_out_of_sequence,
-	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow);
-              /* RTCP only (zeroed out) */
-	      /* f_rtcp->c_lost,
-	      (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0,    
-	      f_rtcp->tx_p, 
-	      f_rtcp->tx_b,
-	      (float) f_rtcp->rtt_sum / (float) f_rtcp->rtt_samples,
-	      f_rtcp->rtt_max, 
-	      f_rtcp->rtt_min, 
-	      f_rtcp->rtt_samples,
-	      f_rtcp->rtcp_header_error); */
-  }
-  else if (flow->s2c.type == RTCP)
-  {
-     struct rtcp *f_rtcp;
-     f_rtcp = (flow->s2c.flow_ptr.rtcp_ptr);
-     double etime;
-     uint64_t data_bytes;
-
-     etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
-     data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
-     
-     wfprintf (fp_rtp_logc, " %lu %g %g %g %g %g %u %u %f %f %llu %g %u 0 0 0 0 0 0 %d %g %u %u %g %g %g %u %d 0 0 0 0",
-	      f_rtcp->pnum, 
-	      (float) f_rtcp->sum_delta_t / (float) f_rtcp->pnum, 
-	      (float) f_rtcp->jitter_sum / (float) f_rtcp->jitter_samples,
-	      f_rtcp->jitter_max,
-	      f_rtcp->jitter_min,
-	      (double) flow->s2c.ttl_tot / (double) flow->s2c.packets, 
-	      flow->s2c.ttl_max,
-	      flow->s2c.ttl_min,
-	      (double) f_rtcp->first_time.tv_sec + (double) f_rtcp->first_time.tv_usec / 1000000.0,
-	      etime,	/* [s] */
-	      data_bytes,
-	      (double) data_bytes / etime * 8,
-              f_rtcp->ssrc,
-	      /* RTP only (zeroed out)*/
-	      /* f_rtp->n_lost,
-	      f_rtp->n_out_of_sequence,
-	      f_rtp->n_dup,
-	      f_rtp->n_late,
-	      f_rtp->pt,
-	      f_rtp->bogus_reset_during_flow); */
-	      /* RTCP only */
-	      f_rtcp->c_lost,  
-	      (float) f_rtcp->f_lost_sum / (float) f_rtcp->jitter_samples * 100.0 / 256.0, 
-	      f_rtcp->tx_p, 
-	      f_rtcp->tx_b,
-	      (float) f_rtcp->rtt_sum / (float) f_rtcp->rtt_samples,
-	      f_rtcp->rtt_max, 
-	      f_rtcp->rtt_min, 
-	      f_rtcp->rtt_samples,
-	      f_rtcp->rtcp_header_error);
-  }
-  else
-  {
-     /* we miss the answer */
-     wfprintf (fp_rtp_logc, " 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0");
-  }
-  /* write stat to file */
-  wfprintf (fp_rtp_logc, "\n");
-}
-
-void
 update_conn_log_v3(udp_pair *flow)
 {
   static char common_head[128],
@@ -2241,7 +2079,8 @@ update_conn_log_v3(udp_pair *flow)
      {
 
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
-     data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
+//     data_bytes = flow->c2s.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
+     data_bytes = f_rtcp->rtcp_data_bytes;
 
    wfprintf (fp_rtp_logc, "T C %s",common_head);
      
@@ -2355,7 +2194,8 @@ update_conn_log_v3(udp_pair *flow)
      {
 
      etime = elapsed (f_rtcp->first_time, f_rtcp->last_time) / 1000.0;
-     data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
+//     data_bytes = flow->s2c.data_bytes - f_rtcp->initial_data_bytes - (f_rtcp->pnum << 3);
+     data_bytes = f_rtcp->rtcp_data_bytes;
      
    wfprintf (fp_rtp_logc, "T S %s",common_head);
      

@@ -171,7 +171,7 @@ void init_rtp (ucb * thisdir, int dir, struct udphdr *pudp,
 void rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	       struct ip *pip, void *plast);
 void rtcp_stat (ucb * thisdir, struct rtcp *f_rtcp, struct rtphdr *prtp, int dir,
-	       void *plast);
+	       struct ip *pip, void *plast);
 void make_rtp_conn_stats (void * thisdir, int tproto);
 
 u_int16_t swap16 (u_int16_t val);
