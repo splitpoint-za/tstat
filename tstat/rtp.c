@@ -827,6 +827,9 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
        }
       
       f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+      f_rtp->data_bytes = f_rtp->max_payload_bytes = f_rtp->min_payload_bytes = 
+          ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
+      f_rtp->squared_data_bytes = f_rtp->data_bytes * f_rtp->data_bytes;
       
       thisdir->flow_ptr.rtp_ptr = f_rtp;
       f_rtp->next = NULL;
@@ -919,6 +922,9 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
            rtp *f_rtp2;
       
            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+           f_rtp2->data_bytes = f_rtp2->max_payload_bytes = f_rtp2->min_payload_bytes = 
+                 ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
+           f_rtp2->squared_data_bytes = f_rtp2->data_bytes * f_rtp2->data_bytes;
 
            f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
            thisdir->flow_ptr.rtp_ptr = f_rtp2;
@@ -1068,6 +1074,9 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
             rtp *f_rtp2;
   
             f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
+            f_rtp2->data_bytes = f_rtp2->max_payload_bytes = f_rtp2->min_payload_bytes = 
+                 ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
+            f_rtp2->squared_data_bytes = f_rtp2->data_bytes * f_rtp2->data_bytes;
 
             f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
             thisdir->flow_ptr.rtp_ptr = f_rtp2;
@@ -1182,8 +1191,19 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
   /* TOPIX compute data length */
   /* IP_len - IP_header - UDP_header - RTP_(fixed header+optional header) */
   /*    ntohs (pip->ip_len) - pip->ip_hl * 4 - 8 - 12 - prtp->cc * 4; */
-  f_rtp->data_bytes +=
+  int packet_payload = 
       getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4; /* Should be OK also for IPv6 */
+//  f_rtp->data_bytes +=
+//      getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4; /* Should be OK also for IPv6 */
+  if (packet_payload<0)
+   {
+     printf("RTP Packet with negative payload. Possible mismatch.\n");
+     packet_payload = 0;
+   }
+  f_rtp->data_bytes += packet_payload;
+  f_rtp->max_payload_bytes = max(f_rtp->max_payload_bytes,packet_payload);
+  f_rtp->min_payload_bytes = min(f_rtp->min_payload_bytes,packet_payload);
+  f_rtp->squared_data_bytes += packet_payload*packet_payload;
 
 
 /** management of the window used for oos, duplicate, late or lost packets **/
@@ -2063,6 +2083,12 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtcp_header_error); */
 
 	      /* write stat to file */
+       wfprintf (fp_rtp_logc, " %d %d %f %f",
+		 f_rtp->max_payload_bytes,
+		 f_rtp->min_payload_bytes,
+		 f_rtp->data_bytes*1.0/f_rtp->pnum,
+		 (f_rtp->pnum>1?sqrt(f_rtp->squared_data_bytes-(double)f_rtp->data_bytes*(double)f_rtp->data_bytes/(double)f_rtp->pnum)*1.0/(f_rtp->pnum-1):0.0));
+
        wfprintf (fp_rtp_logc, "\n");
        f_rtp = f_rtp->next;
      }
@@ -2116,6 +2142,7 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtt_samples,
 	      f_rtcp->rtcp_header_error);
      
+       wfprintf (fp_rtp_logc, " 0 0 0.0 0.0");
        wfprintf (fp_rtp_logc, "\n");
        f_rtcp = f_rtcp->next;
      }
@@ -2178,6 +2205,12 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtcp_header_error); */
 
 	      /* write stat to file */
+       wfprintf (fp_rtp_logc, " %d %d %f %f",
+		 f_rtp->max_payload_bytes,
+		 f_rtp->min_payload_bytes,
+		 f_rtp->data_bytes*1.0/f_rtp->pnum,
+		 (f_rtp->pnum>1?sqrt( f_rtp->squared_data_bytes-(double)f_rtp->data_bytes*(double)f_rtp->data_bytes/(double)f_rtp->pnum)*1.0/(f_rtp->pnum-1):0.0));
+
        wfprintf (fp_rtp_logc, "\n");
        f_rtp = f_rtp->next;
      }
@@ -2230,6 +2263,8 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtt_min, 
 	      f_rtcp->rtt_samples,
 	      f_rtcp->rtcp_header_error);
+     
+       wfprintf (fp_rtp_logc, " 0 0 0.0 0.0");
        wfprintf (fp_rtp_logc, "\n");
        f_rtcp = f_rtcp->next;
      }

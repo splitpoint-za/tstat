@@ -950,6 +950,7 @@ struct rtp
   /* end topix */
   u_int32_t max_payload_bytes;
   u_int32_t min_payload_bytes;
+  double squared_data_bytes;
   rtp *next;
 };
 
