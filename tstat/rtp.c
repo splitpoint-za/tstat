@@ -1065,8 +1065,18 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
          f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc,&ssrc_list_length);
          if (f_rtp!=NULL)
           {
-           rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
-           thisdir->multiplexed_protocols |= RFC7983_RTP;
+           int packet_payload = getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4;
+           if (packet_payload >= 0 )
+             {
+               rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
+               thisdir->multiplexed_protocols |= RFC7983_RTP;
+             }
+           else
+             {
+               thisdir->type = UDP_UNKNOWN; 
+               if (debug > 1)
+	             fprintf (fp_stderr, "Warning: RTP packet with negative payload length\n");
+             }
           }
          else if (ssrc_list_length <= MAX_COUNT_RTP_SSRC)
           {
