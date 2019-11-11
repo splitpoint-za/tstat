@@ -3725,8 +3725,9 @@ make_conn_stats (tcp_pair * ptp_save, Bool complete)
    if(!fp_rtp_logc || (((ptp_save->con_type & RTP_PROTOCOL) == 0)
       && ((ptp_save->con_type & ICY_PROTOCOL) == 0)))
       return;
-      
-    update_conn_log_mm_v2(ptp_save,pab,pba);
+   
+   /* Disable any TCP log in log_mm_complete, even for ICY -MMM- */   
+   // update_conn_log_mm_v2(ptp_save,pab,pba);
 }
 
 Bool is_video(tcp_pair *ptp_save)

@@ -1523,6 +1523,12 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," rtt_min:%d", col++);	 // 31: client RTT min
      wfprintf(fp," rtt_samples:%d", col++);	 // 32: client RTT samples
      wfprintf(fp," rtcp_trunc:%d", col++);	 // 33: client RTCP truncated header
+
+     wfprintf(fp," rtp_max_payload:%d", col++);	 // 
+     wfprintf(fp," rtp_min_payload:%d", col++);	 // 
+     wfprintf(fp," rtp_avg_payload:%d", col++);	 // 
+     wfprintf(fp," rtp_stdev_payload:%d", col++);	 // 
+     
      wfprintf (fp, "\n");
    }
   
@@ -4527,16 +4533,22 @@ void log_parse_ini_arg(char *param_name, param_value enabled) {
         log_parse_ini_arg_log_bitmask(fp_udp_logc, LOG_UDP_COMPLETE, "log_udp_complete", enabled.value.ivalue);
     }
     else if (strcmp(param_name, "log_mm_complete") == 0) {
-        log_parse_ini_arg_log_bitmask(fp_rtp_logc, LOG_MM_COMPLETE, "log_mm_complete", enabled.value.ivalue);
+       log_parse_ini_arg_log_bitmask(fp_rtp_logc, LOG_MM_COMPLETE, "log_mm_complete", enabled.value.ivalue);
     }
     else if (strcmp(param_name, "log_skype_complete") == 0) {
+#ifdef SKYPE_CLASSIFIER
         log_parse_ini_arg_log_bitmask(fp_skype_logc, LOG_SKYPE_COMPLETE, "log_skype_complete", enabled.value.ivalue);
+#endif
     }
     else if (strcmp(param_name, "log_chat_complete") == 0) {
+#if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
         log_parse_ini_arg_log_bitmask(fp_chat_logc, LOG_CHAT_COMPLETE, "log_chat_complete", enabled.value.ivalue);
+#endif
     }
     else if (strcmp(param_name, "log_chat_messages") == 0) {
+#if defined(MSN_CLASSIFIER) || defined(YMSG_CLASSIFIER) || defined(XMPP_CLASSIFIER)
         log_parse_ini_arg_log_bitmask(fp_chat_log_msg, LOG_CHAT_MESSAGES, "log_chat_messages", enabled.value.ivalue);
+#endif
     }
 #if defined(VIDEO_DETAILS)||defined(STREAMING_CLASSIFIER)
     else if (strcmp(param_name, "log_video_complete") == 0) {
