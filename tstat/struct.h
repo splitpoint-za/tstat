@@ -914,7 +914,7 @@ typedef struct rtp rtp;
 typedef struct rtcp rtcp;
 
 #define MAX_COUNT_RTP_PT 10
-#define MAX_COUNT_RTP_SSRC 50
+#define MAX_COUNT_RTP_SSRC 100
 
 struct rtp
 {
