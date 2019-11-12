@@ -108,6 +108,19 @@ currently classified as RTP+ (RTP_PLUS).
 # 42    # RTT              # ms    # Round Trip Time (RTT) (samples)                         # TCP, RTCP
 # 43    # Truncated RTCP header # - # Truncated RTCP header                                  # RTCP
 ###########################################################################################################
+# 44    # RTP Max Payload  # bytes # RTP payload max                                         # RTP
+# 45    # RTP Min Payload  # bytes # RTP payload min                                         # RTP
+# 46    # RTP Avg Payload  # bytes # RTP payload average                                     # RTP
+# 47    # RTP Stdev Payload# bytes # RTP payload standard deviation                          # RTP
+##########################################################################################################
+# 48    # Jitter 8k Avg    # ms    # Jitter (average), as for 8000 Hz Audio (RFC3550)        # RTP
+# 49    # Jitter 8k Max    # ms    # Jitter (max), as for 8000 Hz Audio (RFC3550)            # RTP
+# 50    # Jitter 8k Min    # ms    # Jitter (min), as for 8000 Hz Audio (RFC3550)            # RTP
+# 51    # Jitter 8k Avg    # ms    # Jitter (average), as for 90000 Hz Video (RFC3550)       # RTP
+# 52    # Jitter 8k Max    # ms    # Jitter (max), as for 90000 Hz Video (RFC3550)           # RTP
+# 53    # Jitter 8k Min    # ms    # Jitter (min), as for 90000 Hz Video (RFC3550)           # RTP
+##########################################################################################################
+
 
 [*] Multiplexed Protocols according to RFC7983
    XXXXXXXX

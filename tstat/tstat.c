@@ -1529,6 +1529,12 @@ void write_log_header(FILE *fp, int log_type)
      wfprintf(fp," rtp_avg_payload:%d", col++);	 // 
      wfprintf(fp," rtp_stdev_payload:%d", col++);	 // 
      
+     wfprintf(fp," jitter8k_avg:%d", col++);	 // 8:  client jitter (average)
+     wfprintf(fp," jitter8k_max:%d", col++);	 // 9:  client jitter (max)
+     wfprintf(fp," jitter8k_min:%d", col++);	 // 10: client jitter (min)
+     wfprintf(fp," jitter90k_avg:%d", col++);	 // 8:  client jitter (average)
+     wfprintf(fp," jitter90k_max:%d", col++);	 // 9:  client jitter (max)
+     wfprintf(fp," jitter90k_min:%d", col++);	 // 10: client jitter (min)
      wfprintf (fp, "\n");
    }
   

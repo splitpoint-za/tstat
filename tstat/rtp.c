@@ -516,6 +516,8 @@ rtp *new_rtp_subflow(u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq)
   f_rtp->first_time = current_time;
   f_rtp->last_time = current_time;
   f_rtp->jitter_min = MAXFLOAT;
+  f_rtp->av_jitter_min[0] = MAXFLOAT;
+  f_rtp->av_jitter_min[1] = MAXFLOAT;
   f_rtp->first_ts = ts;
   f_rtp->largest_ts = ts;
   f_rtp->bogus_reset_during_flow = FALSE;
@@ -1277,6 +1279,58 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 	  if (f_rtp->jitter_min > f_rtp->jitter)
 	    f_rtp->jitter_min = f_rtp->jitter;
 	}
+	
+      if (freq!=0 || (f_rtp->pt>=96 && f_rtp->pt<=127))
+        {
+	  // We are using a dynamic payload type.
+	  // It's either audio or video. Let's compute 2 jitters, for the two reference
+	  // rates 8000 and 90000
+	  // We do it anyway also for others valid PT, as a comparison
+
+	  double audio_period,video_period;
+	  
+	  audio_period = 1000. / 8000.;
+	  video_period = 1000. / 90000.;
+	  
+	  /* Audio 8kHz */
+	  /* alignment of the scales */
+
+	  t = elapsed (f_rtp->first_time, current_time);
+	  t = t / 1000.0;
+	  ts = (((double) pts - (double) f_rtp->first_ts) * audio_period);
+
+	  /* jitter is computed as in the definition from RFC 3550 */
+	  transit = t - ts;
+	  d = transit - f_rtp->av_transit[0];
+	  f_rtp->av_transit[0] = transit;
+	  if (d < 0)
+	    d = -d;
+	  f_rtp->av_jitter[0] += (1. / 16.) * (d - f_rtp->av_jitter[0]);
+	  if (f_rtp->av_jitter_max[0] < f_rtp->av_jitter[0])
+	    f_rtp->av_jitter_max[0] = f_rtp->av_jitter[0];
+	  if (f_rtp->av_jitter_min[0] > f_rtp->av_jitter[0])
+	    f_rtp->av_jitter_min[0] = f_rtp->av_jitter[0];
+	  
+
+	  /* Video 90 kHz */
+	  
+	  t = elapsed (f_rtp->first_time, current_time);
+	  t = t / 1000.0;
+	  ts = (((double) pts - (double) f_rtp->first_ts) * video_period);
+
+	  /* jitter is computed as in the definition from RFC 3550 */
+	  transit = t - ts;
+	  d = transit - f_rtp->av_transit[1];
+	  f_rtp->av_transit[1] = transit;
+	  if (d < 0)
+	    d = -d;
+	  f_rtp->av_jitter[1] += (1. / 16.) * (d - f_rtp->av_jitter[1]);
+	  if (f_rtp->av_jitter_max[1] < f_rtp->av_jitter[1])
+	    f_rtp->av_jitter_max[1] = f_rtp->av_jitter[1];
+	  if (f_rtp->av_jitter_min[1] > f_rtp->av_jitter[1])
+	    f_rtp->av_jitter_min[1] = f_rtp->av_jitter[1];
+	  
+        }
 
       /* end jitter evaluation */
     }
@@ -2099,6 +2153,14 @@ update_conn_log_v3(udp_pair *flow)
 		 f_rtp->data_bytes*1.0/f_rtp->pnum,
 		 (f_rtp->pnum>1?sqrt(f_rtp->squared_data_bytes-(double)f_rtp->data_bytes*(double)f_rtp->data_bytes/(double)f_rtp->pnum)*1.0/(f_rtp->pnum-1):0.0));
 
+       wfprintf (fp_rtp_logc, " %g %g %g %g %g %g",
+		 f_rtp->av_jitter[0],
+		 f_rtp->av_jitter_max[0],
+		 f_rtp->av_jitter_min[0] == MAXFLOAT ? 0 : f_rtp->av_jitter_min[0],
+		 f_rtp->av_jitter[1],
+		 f_rtp->av_jitter_max[1],
+		 f_rtp->av_jitter_min[1] == MAXFLOAT ? 0 : f_rtp->av_jitter_min[1]);
+
        wfprintf (fp_rtp_logc, "\n");
        f_rtp = f_rtp->next;
      }
@@ -2153,6 +2215,8 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtcp_header_error);
      
        wfprintf (fp_rtp_logc, " 0 0 0.0 0.0");
+       wfprintf (fp_rtp_logc, " 0.0 0.0 0.0 0.0 0.0 0.0");
+
        wfprintf (fp_rtp_logc, "\n");
        f_rtcp = f_rtcp->next;
      }
@@ -2221,6 +2285,14 @@ update_conn_log_v3(udp_pair *flow)
 		 f_rtp->data_bytes*1.0/f_rtp->pnum,
 		 (f_rtp->pnum>1?sqrt( f_rtp->squared_data_bytes-(double)f_rtp->data_bytes*(double)f_rtp->data_bytes/(double)f_rtp->pnum)*1.0/(f_rtp->pnum-1):0.0));
 
+       wfprintf (fp_rtp_logc, " %g %g %g %g %g %g",
+		 f_rtp->av_jitter[0],
+		 f_rtp->av_jitter_max[0],
+		 f_rtp->av_jitter_min[0] == MAXFLOAT ? 0 : f_rtp->av_jitter_min[0],
+		 f_rtp->av_jitter[1],
+		 f_rtp->av_jitter_max[1],
+		 f_rtp->av_jitter_min[1] == MAXFLOAT ? 0 : f_rtp->av_jitter_min[1]);
+
        wfprintf (fp_rtp_logc, "\n");
        f_rtp = f_rtp->next;
      }
@@ -2275,6 +2347,7 @@ update_conn_log_v3(udp_pair *flow)
 	      f_rtcp->rtcp_header_error);
      
        wfprintf (fp_rtp_logc, " 0 0 0.0 0.0");
+       wfprintf (fp_rtp_logc, " 0.0 0.0 0.0 0.0 0.0 0.0");
        wfprintf (fp_rtp_logc, "\n");
        f_rtcp = f_rtcp->next;
      }

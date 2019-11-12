@@ -951,6 +951,12 @@ struct rtp
   u_int32_t max_payload_bytes;
   u_int32_t min_payload_bytes;
   double squared_data_bytes;
+  // Audio/Video reference values
+  int av_transit[2];
+  double av_jitter[2];
+  float av_jitter_max[2];
+  float av_jitter_min[2];
+  
   rtp *next;
 };
 
