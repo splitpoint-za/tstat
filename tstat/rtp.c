@@ -220,6 +220,10 @@
 
 #include "tstat.h"
 
+#define get_u8(X,O)   (*(tt_uint8  *)(X + O))
+#define get_u16(X,O)  (*(tt_uint16 *)(X + O))
+#define get_u32(X,O)  (*(tt_uint32 *)(X + O))
+
 extern unsigned long int f_RTP_count;
 extern unsigned long int f_RTCP_count;
 extern FILE *fp_rtp_logc;
@@ -667,6 +671,39 @@ void rtcp_init_stats(rtcp *f_rtcp, char *payload_ptr,u_int8_t pt,unsigned char r
   return;
 }
 
+int rtp_extensions_size(struct rtphdr *prtp)
+{
+  int extension_size = 0;
+  char *base = (char *)prtp;
+  
+  if (prtp->x == 0)
+    return 0;
+  
+//  printf("We have an RTP extension!!! ");
+
+  extension_size = 4;
+  base += 12 + prtp->cc * 4;
+  
+  if (get_u8(base,0)==0xbe && get_u8(base,1)==0xde)
+   {
+     // RFC 5285  1-byte extensions
+//     printf(" %d bytes\n",4*ntohs(get_u16(base,2)));
+     extension_size += 4*ntohs(get_u16(base,2));
+   }
+  else if (get_u8(base,0)==0x10 && (get_u8(base,1) & 0xf0 ) == 0 )
+   {
+     // RFC 5285  2-byte extensions
+ //    printf(" %d bytes - 2-bytes extensions\n",4*ntohs(get_u16(base,2)));
+     extension_size += 4*ntohs(get_u16(base,2));
+   }
+  else
+   {
+     if (debug>1)
+       fprintf (fp_stderr,"Warning: RTP Unknown extension format!\n");
+   } 
+  return extension_size;
+}
+
 /******** function used to find the RTP packet starting point **********/
 
 struct rtphdr *
@@ -761,6 +798,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
   u_int8_t pt_rtcp;
   pup = thisdir->pup;
   int rfc7983_packet_type;
+  int packet_payload;
   
   u_int32_t pssrc = swap32 (prtp->ssrc);
   u_int32_t pts = swap32 (prtp->ts);
@@ -832,7 +870,8 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
           }
        }
       
-      f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
+      packet_payload = ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 - rtp_extensions_size(prtp);
+      f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, packet_payload );
       
       thisdir->flow_ptr.rtp_ptr = f_rtp;
       f_rtp->next = NULL;
@@ -849,6 +888,7 @@ void
 rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp, void *plast)
 {
    int rfc7983_packet_type;
+   int packet_payload;
    int ssrc_list_length;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
@@ -924,7 +964,8 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
          { 
            rtp *f_rtp2;
       
-           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq,  ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
+	   packet_payload = ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 -rtp_extensions_size(prtp);
+           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq,packet_payload);
 
            f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
            thisdir->flow_ptr.rtp_ptr = f_rtp2;
@@ -1041,6 +1082,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
 void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, struct udphdr *pudp,void *plast)
 {
    int rfc7983_packet_type;
+   int packet_payload;
    int ssrc_list_length;
    struct rtp *f_rtp = NULL;
    struct rtcp *f_rtcp = NULL;
@@ -1065,7 +1107,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
          f_rtp = rtp_locate_ssrc(thisdir->flow_ptr.rtp_ptr,pssrc,&ssrc_list_length);
          if (f_rtp!=NULL)
           {
-           int packet_payload = getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4;
+           packet_payload = getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4 - rtp_extensions_size(prtp);
            if (packet_payload >= 0 )
              {
                rtp_stat (thisdir, f_rtp, prtp, dir, pip, plast);
@@ -1083,7 +1125,8 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
             // Allocate the new subflow
             rtp *f_rtp2;
   
-            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
+	    packet_payload = ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 - rtp_extensions_size(prtp);
+            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, packet_payload );
 
             f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
             thisdir->flow_ptr.rtp_ptr = f_rtp2;
@@ -1202,6 +1245,9 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
       getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4; /* Should be OK also for IPv6 */
 //  f_rtp->data_bytes +=
 //      getpayloadlength(pip,plast) - 8 - 12 - prtp->cc * 4; /* Should be OK also for IPv6 */
+
+  packet_payload -= rtp_extensions_size(prtp);
+  
   if (packet_payload<0)
    {
      printf("RTP Packet with negative payload. Possible mismatch.\n");
@@ -1211,7 +1257,6 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
   f_rtp->max_payload_bytes = max(f_rtp->max_payload_bytes,packet_payload);
   f_rtp->min_payload_bytes = min(f_rtp->min_payload_bytes,packet_payload);
   f_rtp->squared_data_bytes += packet_payload*packet_payload;
-
 
 /** management of the window used for oos, duplicate, late or lost packets **/
 
@@ -1405,7 +1450,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 //		) * period;
               /* Possible bug above, *4 missing in ip_hl  */
 	      byte_period = (getpayloadlength(pip,plast) - 8	/* udp header len */
-			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
+			     - (12 + ntohs (prtp->cc) * 4 + rtp_extensions_size(prtp) )	/* rtp header len */
 		) * period;
 	      delay =
 		//((u_int16_t) (f_rtp->largest_seqno - pseq) * byte_period) +
@@ -1578,7 +1623,7 @@ rtp_stat (ucb * thisdir, struct rtp *f_rtp, struct rtphdr *prtp, int dir,
 //		) * period;
               /* Possible bug above, *4 missing in ip_hl  */
 	      byte_period = (getpayloadlength(pip,plast) - 8	/* udp header len */
-			     - (12 + ntohs (prtp->cc) * 4)	/* rtp header len */
+			     - (12 + ntohs (prtp->cc) * 4 + rtp_extensions_size(prtp))	/* rtp header len */
 		) * period;
 	      delay =
 		//((u_int16_t) (f_rtp->largest_seqno - pseq) * byte_period) +
