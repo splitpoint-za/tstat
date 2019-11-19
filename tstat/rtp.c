@@ -246,7 +246,7 @@ void rtp_update_pt_counter (rtp* f_rtp, u_int8_t pt);
 void rtcp_update_pt_counter (rtcp* f_rtcp, u_int8_t pt);
 char *rtp_pt_lists (rtp *f_rtp);
 char *rtcp_pt_lists (rtcp *f_rtcp);
-rtp  *new_rtp_subflow (u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq);
+rtp  *new_rtp_subflow (u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq, u_int32_t data_bytes);
 rtcp *new_rtcp_subflow (u_int32_t ssrc, u_int8_t pt, u_long initial_bytes);
 void rtcp_init_stats (rtcp *f_rtcp, char *payload_ptr, u_int8_t pt, unsigned char rc, void *plast, struct sudp_pair *pup, int dir);
 
@@ -500,7 +500,7 @@ char *rtcp_pt_lists(rtcp *f_rtcp)
   return(buffer); 
 }
 
-rtp *new_rtp_subflow(u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq)
+rtp *new_rtp_subflow(u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq, u_int32_t data_bytes)
 {
   rtp *f_rtp;
   
@@ -521,6 +521,10 @@ rtp *new_rtp_subflow(u_int32_t ssrc, u_int8_t pt, u_int32_t ts, u_int16_t seq)
   f_rtp->first_ts = ts;
   f_rtp->largest_ts = ts;
   f_rtp->bogus_reset_during_flow = FALSE;
+  f_rtp->data_bytes = data_bytes;
+  f_rtp->max_payload_bytes = data_bytes;
+  f_rtp->min_payload_bytes = data_bytes;
+  f_rtp->squared_data_bytes = data_bytes * data_bytes;
   rtp_init_pt_counter(f_rtp);
   rtp_update_pt_counter(f_rtp,pt);
   f_rtp->next = NULL;
@@ -828,10 +832,7 @@ init_rtp (ucb * thisdir, int dir, struct udphdr *pudp, struct rtphdr *prtp,
           }
        }
       
-      f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-      f_rtp->data_bytes = f_rtp->max_payload_bytes = f_rtp->min_payload_bytes = 
-          ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
-      f_rtp->squared_data_bytes = f_rtp->data_bytes * f_rtp->data_bytes;
+      f_rtp = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
       
       thisdir->flow_ptr.rtp_ptr = f_rtp;
       f_rtp->next = NULL;
@@ -923,10 +924,7 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
          { 
            rtp *f_rtp2;
       
-           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-           f_rtp2->data_bytes = f_rtp2->max_payload_bytes = f_rtp2->min_payload_bytes = 
-                 ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
-           f_rtp2->squared_data_bytes = f_rtp2->data_bytes * f_rtp2->data_bytes;
+           f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq,  ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
 
            f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
            thisdir->flow_ptr.rtp_ptr = f_rtp2;
@@ -1085,10 +1083,7 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
             // Allocate the new subflow
             rtp *f_rtp2;
   
-            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq);
-            f_rtp2->data_bytes = f_rtp2->max_payload_bytes = f_rtp2->min_payload_bytes = 
-                 ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4;
-            f_rtp2->squared_data_bytes = f_rtp2->data_bytes * f_rtp2->data_bytes;
+            f_rtp2 = new_rtp_subflow(pssrc,prtp->pt,pts,pseq, ntohs (pudp->uh_ulen) - 8 - 12 - prtp->cc * 4 );
 
             f_rtp2->next = thisdir->flow_ptr.rtp_ptr;
             thisdir->flow_ptr.rtp_ptr = f_rtp2;
