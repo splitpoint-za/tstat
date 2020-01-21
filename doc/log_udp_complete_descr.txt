@@ -72,6 +72,8 @@ UDP type - col. 9, 18 (see struct.h)
 # 25    # UDP_SIP       # SIP over UDP messages                         #
 # 26    # UDP_DTLS      # DTLS protocol                                 #
 # 27    # UDP_QUIC      # QUIC protocol                                 #
+# 28   # FIRST_RTP_PLUS # Unknown (possible unclassified RTP_PLUS flow) #
+# 29    # RTP_PLUS      # RTP_PLUS (RTP/RTCP/STUN/DTLS multiplexed flow)#
 #########################################################################
 
 [*] Unless explicitely enabled at compilation time by P2P_OLDPROTO, these 
