@@ -22,7 +22,7 @@
 #include "tstat.h"
 
 #define UDP_HDR_SZ 8
-#define MAX_STR_DNS 256
+#define MAX_STR_DNS 4096
 #define REPLACE_FIELDS 4
 #define MAX_SUB 65535
 #define swap(x,y) { x = x + y; y = x - y; x = x - y; }
