@@ -104,6 +104,7 @@
 #define RFC7983_STUN 8
 #define RFC7983_TURN 16
 #define RFC7983_ZRTP 32
+#define RFC7983_MTURN 64
 
 struct rtphdr
 {

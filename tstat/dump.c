@@ -351,6 +351,7 @@ void dump_init(void) {
     dump_reset_dump_file(proto2dump, DUMP_TCP_VIDEOSTREAMING, "tcp_videostreaming");
     dump_reset_dump_file(proto2dump, DUMP_TCP_COMPLETE, "tcp_complete");
     dump_reset_dump_file(proto2dump, DUMP_UDP_STUN, "udp_stun");
+    dump_reset_dump_file(proto2dump, UDP_MTURN, "udp_mturn");
 }
 
 /*

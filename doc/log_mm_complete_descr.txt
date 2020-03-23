@@ -131,6 +131,7 @@ currently classified as RTP+ (RTP_PLUS).
      |||_______ STUN
      ||________ TURN
      |_________ ZRTP
+    ^__________ MTURN (Not in RFC7983, bit added if MTURN were ever muxed with the other flows)
      
  No bit set (0) means "No protocol/Unknown", while the other bits are set to 1 when a packet for that type is registered for on the flow.
  Common values should be 1 (RTP), 3 (RTP/RTCP), 7 (RTP/RTCP/DTLS), 11 (RTP/RTCP/STUN), and 15 (RTP/RTCP/DTLS/STUN).

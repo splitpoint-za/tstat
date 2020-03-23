@@ -315,6 +315,9 @@ p2p_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir,
 	    case IPP2P_QUIC:
 	      udir->type = UDP_QUIC;
 	      break;  
+	    case IPP2P_MTURN:
+	      udir->type = UDP_MTURN;
+	      break;  
 	   }
 
 #ifdef P2P_DETAILS
@@ -919,6 +922,9 @@ int UDP_p2p_to_L7type (ucb *thisflow)
     case UDP_QUIC:
       return L7_FLOW_QUIC;
 
+    case UDP_MTURN:
+      return L7_FLOW_MTURN;
+      
     case UDP_UNKNOWN:
     case FIRST_RTP:
     case FIRST_RTCP:

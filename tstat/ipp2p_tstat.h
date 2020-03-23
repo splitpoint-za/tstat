@@ -47,6 +47,7 @@ struct ipt_p2p_info {
 #define IPP2P_SIP		    25
 #define IPP2P_DTLS		    26
 #define IPP2P_QUIC		    27
+#define IPP2P_MTURN         28
 
 int search_all_edk (const unsigned char *, const int, int);
 int search_kazaa (const unsigned char *, const int, int);
@@ -79,6 +80,7 @@ int udp_search_teredo (unsigned char *, const int, int);
 int udp_search_sip (unsigned char *, const int, int);
 int udp_search_dtls (unsigned char *, const int, int);
 int udp_search_quic (unsigned char *, const int, int);
+int udp_search_mturn (unsigned char *, const int, int);
 
 struct udpmatch
 {

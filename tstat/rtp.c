@@ -361,6 +361,8 @@ int RFC7983_classify(void * hdr)
           return RFC7983_RTCP;
         }
     }
+  else if (first_byte == 0xff && (((uint8_t*)hdr)[1])==0x10 )
+    return RFC7983_MTURN;
   else
     {
       return RFC7983_UNK;
@@ -759,6 +761,14 @@ rtp_flow_stat (struct ip *pip, void *pproto, int tproto, void *pdir, int dir,
 	      init_rtp (thisdir, dir, pudp, prtp, plast);
 	    break;
       }
+//    This could be enabled if MTURN and RTP could mix -MMM-  
+//    case UDP_MTURN:
+//      {
+//        thisdir->multiplexed_protocols |= RFC7983_MTURN;
+//        if ( (thisdir->flow_ptr.rtcp_ptr==NULL) && (thisdir->flow_ptr.rtp_ptr==NULL) )
+//	      init_rtp (thisdir, dir, pudp, prtp, plast);
+//	    break;
+//      }
     case FIRST_RTP_PLUS:
       {
 	    /* we got either a RTP or a RTCP packet ... double check until we have
@@ -1070,6 +1080,16 @@ rtp_plus_check (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip, str
        thisdir->type = UDP_UNKNOWN;
        break;
 
+     case RFC7983_MTURN:
+         // Verify that the MTURN format stands (0xff10 + length + 64bit id)
+         // https://patents.google.com/patent/US20160380789
+         if (ntohs (pudp->uh_ulen) == (ntohs(get_u16((char*)prtp,2)) + 12) )
+             // Ignore allowed non RTP packet
+           thisdir->multiplexed_protocols |= rfc7983_packet_type;
+         else
+             // MTURN check failed. Convert to UDP_UNKNOWN
+           thisdir->type = UDP_UNKNOWN; 
+         break;
      default:
         // ignore and set flag
         /* Ignored allowed non RTP packet */
@@ -1194,6 +1214,17 @@ void rtp_plus_stat (ucb * thisdir, struct rtphdr *prtp, int dir, struct ip *pip,
        thisdir->type = UDP_UNKNOWN;
        break;
 
+     case RFC7983_MTURN:
+         // Verify that the MTURN format stands (0xff10 + length + 64bit id)
+         // https://patents.google.com/patent/US20160380789
+         if (ntohs (pudp->uh_ulen) == (ntohs(get_u16((char*)prtp,2)) + 12) )
+             // Ignore allowed non RTP packet
+           thisdir->multiplexed_protocols |= rfc7983_packet_type;
+         else
+             // MTURN check failed. Convert to UDP_UNKNOWN
+           thisdir->type = UDP_UNKNOWN; 
+         break;
+       
      default:
        // ignore and set flag
        /* Ignored allowed non RTP packet */

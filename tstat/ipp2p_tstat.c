@@ -710,6 +710,24 @@ udp_search_sopcast (unsigned char *haystack,
 }
 
 int
+udp_search_mturn (unsigned char *haystack, 
+                   const int packet_len,
+		           int payload_len)
+{ // Actually MTURN 
+    //byte1 (8): 0xff
+    //byte2 (9): 0x10
+    //byte3-4 (10-11): check payload length
+    if (get_u8(haystack, 8) != 0xff ||
+        get_u8(haystack, 9) != 0x10 )
+        return 0;
+
+    if ( ntohs(get_u16(haystack,10)) != packet_len - 12 )
+      return 0;
+
+    return (IPP2P_MTURN * 100 + 0);
+}
+
+int
 udp_search_tvants (unsigned char *haystack, 
                    const int packet_len,
 		           int payload_len)
@@ -1778,6 +1796,7 @@ struct udpmatch udp_list[] = {
   {IPP2P_TEREDO, SHORT_HAND_IPP2P, 21, &udp_search_teredo},
   {IPP2P_DTLS, SHORT_HAND_IPP2P, 25, &udp_search_dtls},
 //  {IPP2P_QUIC, SHORT_HAND_IPP2P, 30, &udp_search_quic}, // Disabled, since there is new code for it
+  {IPP2P_MTURN, SHORT_HAND_IPP2P, 22, &udp_search_mturn},
   {0, 0, 0, NULL}
 };
 
@@ -1802,6 +1821,7 @@ struct udpmatch udp_list[] = {
   {IPP2P_TEREDO, SHORT_HAND_IPP2P, 21, &udp_search_teredo},
   {IPP2P_DTLS, SHORT_HAND_IPP2P, 25, &udp_search_dtls},
 //  {IPP2P_QUIC, SHORT_HAND_IPP2P, 30, &udp_search_quic}, // Disabled, since there is new code for it
+  {IPP2P_MTURN, SHORT_HAND_IPP2P, 22, &udp_search_mturn},
   {0, 0, 0, NULL}
 };
 
