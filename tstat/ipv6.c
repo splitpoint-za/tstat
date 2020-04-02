@@ -431,7 +431,7 @@ findheader_ipv6 (void *pplast, struct ip *pip, unsigned int *proto_type)
 	      }
 
 	    next_header = (int) pfrag->ip6ext_fr_nheader;
-        next_header6 = (char *) (next_header6 + sizeof (struct ipv6_ext_frag));
+        next_header6 = (char *) (next_header6 + 8 );
         *proto_type = next_header;
 	    break;
 	  }
