@@ -26,10 +26,15 @@
 #define REPLACE_FIELDS 4
 #define MAX_SUB 65535
 #define swap(x,y) { x = x + y; y = x - y; x = x - y; }
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 extern FILE *fp_dns_logc;
 
 // Utility function prototype
-static inline char * replace_char (char *s, char find, char replace, int max_replace);
+static char * replace_char (char *s, char find, char replace, int max_replace);
 static inline char * pkt_rcode2str(ldns_pkt_rcode rcode);
 static inline char * rr_class2str(ldns_rr_class rcode);
 static inline char * rr_type2str(ldns_rr_type rcode);
@@ -47,7 +52,7 @@ check_dns(struct udphdr *pudp, int tproto, void *pdir, void *plast)
 void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 		int dir, void *hdr, void *plast)
 {
-  
+
   ldns_pkt * pkt;
   ldns_rr * rr;
   int i;
@@ -59,6 +64,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
   char * type;
   struct sudp_pair *pup;
   int internal_client, crypto_client,  internal_server, crypto_server;
+  int this_size;
 
   if (fp_dns_logc == NULL || !(LOG_IS_ENABLED(LOG_DNS_COMPLETE)))
     return;
@@ -85,7 +91,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
   // Check it is a well formed DNS packet
   ldns_status ret = ldns_wire2pkt ( &pkt, (const uint8_t *) hdr + UDP_HDR_SZ , getpayloadlength(pip, plast) - UDP_HDR_SZ  ) ;
-  if (ret == LDNS_STATUS_OK)
+  if (ret == LDNS_STATUS_OK && pkt)
   {
 
     // Check if it is Request or Response and parse Packet Fields
@@ -95,7 +101,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
       type="RESP";
       rr_list =  ldns_pkt_answer (pkt ) ;
       rcode = ldns_pkt_get_rcode (pkt);
-    } 
+    }
     else
     {
       is_query=1;
@@ -103,7 +109,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
       type = "REQ";
     }
 
-    // <pkt_id> contains transaction ID 
+    // <pkt_id> contains transaction ID
     pkt_id = ldns_pkt_id (pkt);
 
     // Get Flags
@@ -126,7 +132,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
 
     // <tuple_str_src> contains L3 and L4 information for Source
-    char tuple_str_src [MAX_STR_DNS]; 
+    char tuple_str_src [MAX_STR_DNS];
     if (pup->crypto_src==FALSE)
       sprintf (tuple_str_src, "%s %s", HostName (pup->addr_pair.a_address), ServiceName (pup->addr_pair.a_port));
     else
@@ -135,8 +141,8 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
     internal_client = pup->internal_src;
     crypto_client = pup->crypto_src;
 
-    // <tuple_str_dst> contains L3 and L4 information for Destination        
-    char tuple_str_dst [MAX_STR_DNS]; 
+    // <tuple_str_dst> contains L3 and L4 information for Destination
+    char tuple_str_dst [MAX_STR_DNS];
     if (pup->crypto_dst==FALSE)
       sprintf (tuple_str_dst,"%s %s", HostName (pup->addr_pair.b_address), ServiceName (pup->addr_pair.b_port));
     else
@@ -166,7 +172,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
     // Check if it is an <error response> and, in case, print Error code and eventual question
     if ( is_query==0 && rcode != LDNS_RCODE_NOERROR )
-    { 
+    {
       char * type = "RESP_ERR";
       char * rcode_str = pkt_rcode2str(rcode);
       char question [MAX_STR_DNS];
@@ -181,36 +187,37 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
         // Copy the Owner of the first question
         rr = ldns_rr_list_rr(rr_list_question, 0);
-        ldns_rdf* rdf = ldns_rr_owner(rr);
-        memcpy(question,rdf->_data,rdf->_size );
-        question[rdf->_size]=0;
+        if (rr){ // Proceed only if not null
 
-        //Find and replace the label counts with '.'
-        int index=0;
-        while (index < rdf->_size)
-        {
-          int tmp_len=question[index];
-          question[index]='.';
-          index += (tmp_len+1);
-        }
-        // Replace empty string with "-"
-        if (question[1] == '\0')      
-          strcpy(question+1,"-");
+            ldns_rdf* rdf = ldns_rr_owner(rr);
+            if (rdf && rdf->_data){ // Proceed only if not null
+                this_size = min(rdf->_size , MAX_STR_DNS); // Safe define size
+                memcpy(question,rdf->_data,this_size );
+                question[this_size]=0;
 
-        // Sanitize Question
-        replace_char ( question+1, ' ',  '\t', MAX_SUB);
-        replace_char ( question+1, '\n', '\t', MAX_SUB);
+                //Find and replace the label counts with '.'
+                int index=0;
+                while (index < this_size && index >= 0)
+                {
+                  int tmp_len=question[index];
+                  question[index]='.';
+                  index += (tmp_len+1);
+                }
+                // Replace empty string with "-"
+                if (question[1] == '\0')
+                  strcpy(question+1,"-");
 
-        // Get class and type
-        class_str =	rr_class2str(ldns_rr_get_class (rr));
-        type_str =	rr_type2str (ldns_rr_get_type (rr));
-
+                // Get class and type
+                class_str =	rr_class2str(ldns_rr_get_class (rr));
+                type_str =	rr_type2str (ldns_rr_get_type (rr));
+              }
+          }
       }
-      
+
       wfprintf (fp_dns_logc,"%s %d %d %s %d %d %f %s 0x%04x %s - %s %s %s 0x%02x %d %d %d %d %d\n",
                 client_str, internal_client, crypto_client,
                 server_str, internal_server, crypto_server,
-                time2double(current_time)/1e3, 
+                time2double(current_time)/1e3,
                 type,pkt_id,question+1,class_str,type_str,rcode_str,flags,
                 qdcount,ancount,nscount,arcount, size);
     }
@@ -224,64 +231,74 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
         {
           char question [MAX_STR_DNS];
           rr = ldns_rr_list_rr(rr_list, i);
-          ldns_rdf* rdf = ldns_rr_owner(rr);
+          if (rr){ // Proceed only if not null
 
-          // Find the Owner of the question
-          memcpy(question,rdf->_data,rdf->_size );
-          question[rdf->_size]=0;
-          
-          //Find and replace the label counts with '.'
-          int index=0;
-          while (index < rdf->_size)
-          {
-            int tmp_len=question[index];
-            question[index]='.';
-            index += (tmp_len+1);
-          }
-          // Replace empty string with "-"
-          if (question[1] == '\0')      
-            strcpy(question+1,"-");
+              ldns_rdf* rdf = ldns_rr_owner(rr);
+              if (rdf && rdf->_data){ // Proceed only if not null
 
-          // Sanitize Question
-          replace_char ( question+1, ' ',  '\t', MAX_SUB);
-          replace_char ( question+1, '\n', '\t', MAX_SUB);
+                  // Find the Owner of the question
+                  this_size = min(rdf->_size , MAX_STR_DNS);
+                  memcpy(question,rdf->_data,this_size );
+                  question[this_size]=0;
 
-          // Get class and type
-          char * class_str =	rr_class2str(ldns_rr_get_class (rr));
-          char * type_str =	rr_type2str (ldns_rr_get_type (rr));
+                  //Find and replace the label counts with '.'
+                  int index=0;
+                  while (index < this_size && index >= 0)
+                  {
+                    int tmp_len=question[index];
+                    question[index]='.';
+                    index += (tmp_len+1);
+                  }
+                  // Replace empty string with "-"
+                  if (question[1] == '\0')
+                    strcpy(question+1,"-");
 
-          wfprintf (fp_dns_logc,"%s %d %d %s %d %d %f %s 0x%04x %s - %s %s - 0x%02x %d %d %d %d %d\n",
-                    client_str, internal_client, crypto_client,
-                    server_str, internal_server, crypto_server,
-                    time2double(current_time)/1e3, 
-                    type, pkt_id, question+1,class_str,type_str,flags,
-                    qdcount,ancount,nscount,arcount, size); 
+                  // Get class and type
+                  char * class_str =	rr_class2str(ldns_rr_get_class (rr));
+                  char * type_str =	rr_type2str (ldns_rr_get_type (rr));
 
+                  wfprintf (fp_dns_logc,"%s %d %d %s %d %d %f %s 0x%04x %s - %s %s - 0x%02x %d %d %d %d %d\n",
+                            client_str, internal_client, crypto_client,
+                            server_str, internal_server, crypto_server,
+                            time2double(current_time)/1e3,
+                            type, pkt_id, question+1,class_str,type_str,flags,
+                            qdcount,ancount,nscount,arcount, size);
+
+                }
+            }
         }
         // It is a response
         else
         {
 
           rr = ldns_rr_list_rr(rr_list, i);
+          if (rr){ // Proceed only if not null
 
-          // <rr_str> contains DNS information
-          char * rr_str = ldns_rr2str(rr);
+              // <rr_str> contains DNS information
+              char * rr_str = ldns_rr2str(rr);
 
-          // Replace delimiters with spaces, and intra-field spaces with tabs
-          char * last_field = replace_char (rr_str, '\t', ' ',REPLACE_FIELDS);
-          replace_char ( last_field, ' ', '\t', MAX_SUB);
+              if (rr_str){ // Proceed only if not null
 
-          // Remove \n in last position
-          int len = strlen(rr_str);
-          rr_str[len-1]='\0';
+                  // Check not too long - Put a delimiter
+                  rr_str[MAX_STR_DNS] = '\0';
 
-          wfprintf (fp_dns_logc,"%s %d %d %s %d %d %f %s 0x%04x %s 0x%02x %d %d %d %d %d\n",
-                    client_str, internal_client, crypto_client,
-                    server_str, internal_server, crypto_server,
-                    time2double(current_time)/1e3, type, pkt_id, rr_str, flags,
-                    qdcount,ancount,nscount,arcount, size); 
+                  // Replace delimiters with spaces, and intra-field spaces with tabs
+                  char * last_field = replace_char (rr_str, '\t', ' ',REPLACE_FIELDS);
+                  replace_char ( last_field, ' ', '\t', MAX_SUB);
 
-          free (rr_str);
+                  // Remove \n in last position
+                  int len = strnlen(rr_str, MAX_STR_DNS);
+                  rr_str[len-1]='\0';
+
+                  wfprintf (fp_dns_logc,"%s %d %d %s %d %d %f %s 0x%04x %s 0x%02x %d %d %d %d %d\n",
+                            client_str, internal_client, crypto_client,
+                            server_str, internal_server, crypto_server,
+                            time2double(current_time)/1e3, type, pkt_id, rr_str, flags,
+                            qdcount,ancount,nscount,arcount, size);
+
+                  free (rr_str);
+              }
+          }
         }
       }
     }
@@ -296,11 +313,11 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
 
 // Utility Function to replace Char with Tab; no more than <max_replace> are performed
-static inline char * replace_char (char *s, char find, char replace, int max_replace) {
+static char * replace_char (char *s, char find, char replace, int max_replace) {
   int replaced = 0;
   char * last_field = s;
 
-  while (*s != 0)
+  while (*s != '\0')
   {
     if (*s == find && replaced < max_replace){
       *s = replace;
@@ -358,7 +375,7 @@ static inline char * pkt_rcode2str(ldns_pkt_rcode rcode)
 // Utility Function to get string representation of error codes
 static inline char * rr_class2str(ldns_rr_class rcode)
 {
-  switch (rcode) 
+  switch (rcode)
   {
       case LDNS_RR_CLASS_IN:
           return ( "IN");
@@ -469,4 +486,3 @@ static inline char * rr_type2str(ldns_rr_type rcode)
 
 
 #endif //HAVE_LDNS
-
