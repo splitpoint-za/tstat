@@ -26,7 +26,7 @@
 #define REPLACE_FIELDS 4
 #define MAX_SUB 65535
 #define swap(x,y) { x = x + y; y = x - y; x = x - y; }
-#define min(a,b) \
+#define safe_min(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
@@ -191,7 +191,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
 
             ldns_rdf* rdf = ldns_rr_owner(rr);
             if (rdf && rdf->_data){ // Proceed only if not null
-                this_size = min(rdf->_size , MAX_STR_DNS); // Safe define size
+                this_size = safe_min(rdf->_size , MAX_STR_DNS); // Safe define size
                 memcpy(question,rdf->_data,this_size );
                 question[this_size]=0;
 
@@ -237,7 +237,7 @@ void dns_flow_stat(struct ip *pip, void *pproto, int tproto, void *pdir,
               if (rdf && rdf->_data){ // Proceed only if not null
 
                   // Find the Owner of the question
-                  this_size = min(rdf->_size , MAX_STR_DNS);
+                  this_size = safe_min(rdf->_size , MAX_STR_DNS);
                   memcpy(question,rdf->_data,this_size );
                   question[this_size]=0;
 
